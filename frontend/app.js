@@ -1,4 +1,4 @@
-const API_BASE = "http://localhost:8000";
+const API_BASE = "";
 
 const btn        = document.getElementById("generateBtn");
 const loadingEl  = document.getElementById("loading");
