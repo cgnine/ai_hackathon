@@ -19,6 +19,7 @@ from backend.services import rule_validator
 
 LOGS_DIR = Path(__file__).parent.parent / "logs"
 LOGS_DIR.mkdir(exist_ok=True)
+MAX_RETRY_COUNT = 2
 
 GENERATE_SYSTEM_PROMPT = """\
 당신은 IT 개발자 역량평가 시험 문제 출제 전문가입니다.
@@ -83,7 +84,7 @@ def run(request: GenerateRequest) -> GenerateResponse:
     judge_result = None
     raw_response = ""
 
-    for attempt in range(2):
+    for attempt in range(MAX_RETRY_COUNT + 1):
         if attempt > 0:
             recovery_used = True
             retry_count = attempt
