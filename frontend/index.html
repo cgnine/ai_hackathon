@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>개발자 역량평가 AI Agent</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+
+<header>
+  <h1>개발자 역량평가 AI Agent</h1>
+  <p>PDF 교재 기반 문제 생성 · Harness 검증 파이프라인</p>
+</header>
+
+<main>
+
+  <!-- 생성 버튼 -->
+  <div class="card action-area">
+    <p>Practice Books/ 의 PDF에서 텍스트를 추출하고 Bedrock으로 문제를 생성합니다.</p>
+    <button id="generateBtn">PDF 기반 문제 생성 및 Harness 실행</button>
+  </div>
+
+  <!-- 로딩 -->
+  <div id="loading">
+    <div class="spinner"></div>
+    문제를 생성하고 Harness 검증 중입니다...
+  </div>
+
+  <!-- 에러 -->
+  <div id="error" class="card">
+    <div class="error-msg" id="errorMsg"></div>
+  </div>
+
+  <!-- 결과 -->
+  <div id="result">
+
+    <!-- 상태 -->
+    <div class="card">
+      <div class="status-bar">
+        <span class="badge" id="statusBadge">-</span>
+        <span class="run-id" id="runId"></span>
+      </div>
+
+      <div class="question-text" id="questionText"></div>
+
+      <ul class="choices" id="choicesList"></ul>
+
+      <div class="meta" id="metaTags"></div>
+    </div>
+
+    <!-- 정답 & 해설 -->
+    <div class="card">
+      <div class="section-title">정답 & 해설</div>
+      <p style="margin-bottom:8px; font-weight:600;">정답: <span id="answerNum">-</span></p>
+      <p class="explanation-text" id="explanation"></p>
+    </div>
+
+    <!-- 원문 요약 -->
+    <div class="card">
+      <div class="section-title">원문 출처 요약</div>
+      <p class="source-text" id="sourceSummary"></p>
+    </div>
+
+    <!-- Rule Validation -->
+    <div class="card">
+      <div class="section-title">Rule Validation 결과</div>
+      <div id="ruleResult"></div>
+    </div>
+
+    <!-- LLM Judge -->
+    <div class="card">
+      <div class="section-title">LLM-as-Judge 평가</div>
+      <div id="judgeResult"></div>
+    </div>
+
+    <!-- 실행 메타 -->
+    <div class="card">
+      <div class="section-title">실행 정보</div>
+      <div class="meta-row" id="recoveryRow"></div>
+    </div>
+
+  </div><!-- /#result -->
+
+</main>
+
+<script src="app.js"></script>
+</body>
+</html>
