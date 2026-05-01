@@ -7,7 +7,7 @@ import boto3
 from botocore.config import Config
 
 MODEL_ID = os.environ.get(
-    "BEDROCK_MODEL_ID", "anthropic.claude-sonnet-4-20250514-v1:0"
+    "BEDROCK_MODEL_ID", "apac.anthropic.claude-sonnet-4-20250514-v1:0"
 )
 AWS_REGION = os.environ.get("AWS_REGION", "ap-northeast-2")
 

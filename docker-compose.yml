@@ -8,10 +8,10 @@ services:
     ports:
       - "8000:8000"
     environment:
-      - AWS_REGION=${AWS_REGION:-us-east-1}
+      - AWS_REGION=${AWS_REGION:-ap-northeast-2}
       - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}
       - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}
-      - BEDROCK_MODEL_ID=${BEDROCK_MODEL_ID:-anthropic.claude-3-5-sonnet-20240620-v1:0}
+      - BEDROCK_MODEL_ID=${BEDROCK_MODEL_ID:-apac.anthropic.claude-sonnet-4-20250514-v1:0}
     volumes:
       - ./backend/logs:/app/backend/logs
     restart: unless-stopped
