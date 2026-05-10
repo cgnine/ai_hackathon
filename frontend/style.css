@@ -105,7 +105,7 @@ button:disabled {
 
 .nav-btn.active,
 .nav-btn:hover {
-  background: #e9f5f2;
+  background: #fff3bf;
   color: var(--primary-dark);
 }
 
@@ -130,6 +130,33 @@ button:disabled {
 .page-shell {
   width: min(1180px, calc(100% - 48px));
   margin: 30px auto;
+}
+
+.toast {
+  position: fixed;
+  left: 50%;
+  top: 88px;
+  z-index: 30;
+  min-width: 240px;
+  max-width: calc(100% - 32px);
+  padding: 14px 18px;
+  border: 1px solid rgba(74, 59, 18, 0.18);
+  border-radius: 8px;
+  background: #17202a;
+  color: #fff;
+  box-shadow: var(--shadow);
+  font-size: 0.95rem;
+  font-weight: 800;
+  text-align: center;
+  opacity: 0;
+  pointer-events: none;
+  transform: translate(-50%, -12px);
+  transition: opacity 0.18s ease, transform 0.18s ease;
+}
+
+.toast.show {
+  opacity: 1;
+  transform: translate(-50%, 0);
 }
 
 .screen {
@@ -204,7 +231,7 @@ button:disabled {
 
 .subject-card:hover,
 .mode-choice:hover {
-  border-color: rgba(15, 118, 110, 0.5);
+  border-color: rgba(255, 204, 0, 0.85);
   background: var(--surface-soft);
 }
 
@@ -301,11 +328,11 @@ button:disabled {
 .question-jump.active {
   border-color: var(--primary);
   background: var(--primary);
-  color: #fff;
+  color: var(--primary-dark);
 }
 
 .question-jump.answered {
-  background: #e9f5f2;
+  background: #fff8dc;
   color: var(--primary-dark);
 }
 
@@ -371,6 +398,7 @@ button:disabled {
 
 .primary-btn:hover {
   background: var(--primary-dark);
+  color: #fff;
 }
 
 .full {
@@ -412,6 +440,7 @@ button:disabled {
   font-size: 1.22rem;
   font-weight: 900;
   line-height: 1.62;
+  white-space: pre-wrap;
 }
 
 .choices {
@@ -419,6 +448,43 @@ button:disabled {
   gap: 10px;
   margin-top: 24px;
   list-style: none;
+}
+
+.coding-answer {
+  display: grid;
+  gap: 10px;
+}
+
+.coding-label {
+  color: var(--primary-dark);
+  font-size: 0.9rem;
+  font-weight: 900;
+}
+
+.code-input {
+  width: 100%;
+  min-height: 300px;
+  padding: 16px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: #111827;
+  color: #f8fafc;
+  font-family: Consolas, "Courier New", monospace;
+  font-size: 0.92rem;
+  line-height: 1.55;
+  resize: vertical;
+  tab-size: 4;
+}
+
+.code-input:focus {
+  outline: 3px solid rgba(255, 204, 0, 0.32);
+  border-color: var(--primary);
+}
+
+.coding-guide {
+  color: var(--muted);
+  font-size: 0.88rem;
+  line-height: 1.5;
 }
 
 .choice-btn {
@@ -434,22 +500,25 @@ button:disabled {
   color: var(--ink);
   text-align: left;
   line-height: 1.45;
+  white-space: pre-wrap;
 }
 
 .choice-btn:hover,
 .choice-btn.selected {
-  border-color: rgba(15, 118, 110, 0.55);
-  background: #eff8f6;
+  border-color: rgba(255, 204, 0, 0.9);
+  background: #fff8dc;
 }
 
 .choice-btn.correct {
   border-color: rgba(21, 128, 61, 0.55);
   background: var(--success-soft);
+  color: var(--ink);
 }
 
 .choice-btn.wrong {
   border-color: rgba(220, 38, 38, 0.45);
   background: var(--danger-soft);
+  color: var(--ink);
 }
 
 .choice-num {
@@ -504,6 +573,7 @@ button:disabled {
 .feedback-panel p {
   color: var(--muted);
   line-height: 1.65;
+  white-space: pre-wrap;
 }
 
 .result-hero {
@@ -544,6 +614,7 @@ button:disabled {
 
 .item-title {
   font-weight: 900;
+  white-space: pre-wrap;
 }
 
 .item-sub {
@@ -551,6 +622,7 @@ button:disabled {
   color: var(--muted);
   font-size: 0.9rem;
   line-height: 1.45;
+  white-space: pre-wrap;
 }
 
 .harness-panel {
@@ -599,6 +671,10 @@ button:disabled {
   .feedback-panel,
   .harness-panel {
     grid-template-columns: 1fr;
+  }
+
+  .work-area {
+    order: -1;
   }
 }
 
