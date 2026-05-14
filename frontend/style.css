@@ -423,7 +423,19 @@ button:disabled {
 
 .side-panel {
   align-self: start;
+  position: sticky;
+  top: 92px;
+  max-height: calc(100vh - 112px);
+  overflow-y: auto;
   padding: 20px;
+}
+
+.side-panel .full {
+  position: sticky;
+  bottom: 0;
+  z-index: 2;
+  margin-top: 12px;
+  box-shadow: 0 -8px 18px rgba(255, 255, 255, 0.92);
 }
 
 .side-summary {
@@ -541,6 +553,15 @@ button:disabled {
 
 .question-panel {
   padding: 30px;
+}
+
+.mock-question-list {
+  display: grid;
+  gap: 16px;
+}
+
+.mock-question-panel {
+  scroll-margin-top: 88px;
 }
 
 .question-head {
@@ -1193,6 +1214,17 @@ button:disabled {
 
   .work-area {
     order: -1;
+  }
+
+  .side-panel {
+    position: static;
+    max-height: none;
+    overflow: visible;
+  }
+
+  .side-panel .full {
+    position: static;
+    box-shadow: none;
   }
 }
 

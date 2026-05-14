@@ -163,13 +163,8 @@ const els = {
   mockSubject: $("mockSubject"),
   mockProgress: $("mockProgress"),
   mockQuestionGrid: $("mockQuestionGrid"),
-  mockQuestionNumber: $("mockQuestionNumber"),
-  mockDifficulty: $("mockDifficulty"),
+  mockQuestionList: $("mockQuestionList"),
   mockQuestionType: $("mockQuestionType"),
-  mockQuestionText: $("mockQuestionText"),
-  mockChoices: $("mockChoices"),
-  mockPrevBtn: $("mockPrevBtn"),
-  mockNextBtn: $("mockNextBtn"),
   gradeMockBtn: $("gradeMockBtn"),
   resultScore: $("resultScore"),
   resultVerdict: $("resultVerdict"),
@@ -437,32 +432,65 @@ function moveSingle(index) {
 function renderMock() {
   const subject = currentSubject();
   const questions = currentQuestions();
-  const question = questions[state.index];
-  const answered = state.mockAnswers[state.index];
 
   els.mockSubject.textContent = subject.name;
   els.mockProgress.textContent = `${Object.keys(state.mockAnswers).length} / ${questions.length}`;
-  els.mockQuestionNumber.textContent = `Q${state.index + 1}`;
-  els.mockDifficulty.textContent = question.difficulty;
-  if (els.mockQuestionType) els.mockQuestionType.textContent = getQuestionType(question, state.index);
-  els.mockQuestionText.textContent = question.text;
-  els.mockPrevBtn.disabled = state.index === 0;
-  els.mockNextBtn.disabled = state.index === questions.length - 1;
-  renderChoices(els.mockChoices, question, null, (choiceNumber) => {
-    state.mockAnswers[state.index] = choiceNumber;
-    state.selected = choiceNumber;
-    saveState();
-    renderTopStats();
-    renderMock();
-  }, answered);
-  renderQuestionGrid(els.mockQuestionGrid, questions, state.mockAnswers, state.index, moveMock);
+  if (!els.mockQuestionList) return;
+
+  els.mockQuestionList.innerHTML = "";
+  questions.forEach((question, index) => {
+    const panel = document.createElement("article");
+    const head = document.createElement("div");
+    const number = document.createElement("span");
+    const tags = document.createElement("div");
+    const difficulty = document.createElement("span");
+    const type = document.createElement("span");
+    const text = document.createElement("p");
+    const choices = document.createElement("ol");
+
+    panel.className = "question-panel mock-question-panel";
+    panel.id = `mock-question-${index + 1}`;
+    head.className = "question-head";
+    number.className = "question-number";
+    number.textContent = `Q${index + 1}`;
+    tags.className = "question-tags";
+    difficulty.className = "pill";
+    difficulty.textContent = question.difficulty;
+    type.className = "pill type-pill";
+    type.textContent = getQuestionType(question, index);
+    text.className = "question-text";
+    text.textContent = question.text;
+    choices.className = "choices";
+
+    tags.append(difficulty, type);
+    head.append(number, tags);
+    panel.append(head, text, choices);
+    renderChoices(choices, question, null, (choiceNumber) => {
+      state.mockAnswers[index] = choiceNumber;
+      state.selected = choiceNumber;
+      state.index = index;
+      saveState();
+      renderTopStats();
+      renderMockProgress();
+    }, state.mockAnswers[index]);
+    els.mockQuestionList.appendChild(panel);
+  });
+
+  renderMockProgress();
 }
 
 function moveMock(index) {
   state.index = Math.max(0, Math.min(index, currentQuestions().length - 1));
   state.selected = state.mockAnswers[state.index] || null;
   saveState();
-  renderMock();
+  document.getElementById(`mock-question-${state.index + 1}`)?.scrollIntoView({ behavior: "smooth", block: "start" });
+  renderMockProgress();
+}
+
+function renderMockProgress() {
+  const questions = currentQuestions();
+  if (els.mockProgress) els.mockProgress.textContent = `${Object.keys(state.mockAnswers).length} / ${questions.length}`;
+  renderQuestionGrid(els.mockQuestionGrid, questions, state.mockAnswers, state.index, moveMock);
 }
 
 function gradeMock() {
@@ -839,7 +867,11 @@ function renderChoices(target, question, checkedAnswer, onSelect, selectedOnly =
     num.textContent = choiceNumber;
     text.textContent = choice;
     button.append(num, text);
-    button.addEventListener("click", () => onSelect(choiceNumber));
+    button.addEventListener("click", () => {
+      onSelect(choiceNumber);
+      target.querySelectorAll(".choice-btn").forEach((item) => item.classList.remove("selected"));
+      button.classList.add("selected");
+    });
     li.appendChild(button);
     target.appendChild(li);
   });
@@ -1062,8 +1094,6 @@ function initPage() {
   bindOptional(els.singleWrongBtn, "click", () => addWrongNote(state.index));
   bindOptional(els.singlePrevBtn, "click", () => moveSingle(state.index - 1));
   bindOptional(els.singleNextBtn, "click", () => moveSingle(state.index + 1));
-  bindOptional(els.mockPrevBtn, "click", () => moveMock(state.index - 1));
-  bindOptional(els.mockNextBtn, "click", () => moveMock(state.index + 1));
   bindOptional(els.gradeMockBtn, "click", gradeMock);
   bindOptional(els.generateBtn, "click", runHarness);
 
