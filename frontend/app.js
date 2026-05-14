@@ -81,6 +81,7 @@ const PAGE_URLS = {
   mock: "mock.html",
   result: "result.html",
   analysis: "analysis.html",
+  wrongPractice: "wrong-practice.html",
   wrong: "wrong.html",
   harness: "harness.html"
 };
@@ -100,7 +101,9 @@ const defaultState = {
   wrongNotes: new Map(),
   lastResult: null,
   attemptHistory: [],
-  recommendationAnswer: null
+  recommendationAnswer: null,
+  reviewQuestion: null,
+  reviewAnswer: null
 };
 
 function loadState() {
@@ -114,7 +117,9 @@ function loadState() {
       wrongNotes: new Map(saved.wrongNotes || []),
       lastResult: saved.lastResult || null,
       attemptHistory: saved.attemptHistory || [],
-      recommendationAnswer: saved.recommendationAnswer || null
+      recommendationAnswer: saved.recommendationAnswer || null,
+      reviewQuestion: saved.reviewQuestion || null,
+      reviewAnswer: saved.reviewAnswer || null
     };
   } catch {
     return { ...defaultState, wrongNotes: new Map() };
@@ -183,6 +188,14 @@ const els = {
   analysisText: $("analysisText"),
   skillMetrics: $("skillMetrics"),
   recommendationCard: $("recommendationCard"),
+  reviewSubject: $("reviewSubject"),
+  reviewQuestionNumber: $("reviewQuestionNumber"),
+  reviewDifficulty: $("reviewDifficulty"),
+  reviewQuestionType: $("reviewQuestionType"),
+  reviewQuestionText: $("reviewQuestionText"),
+  reviewChoices: $("reviewChoices"),
+  reviewSubmitBtn: $("reviewSubmitBtn"),
+  reviewFeedback: $("reviewFeedback"),
   wrongList: $("wrongList"),
   wrongTopCount: $("wrongTopCount"),
   todayCount: $("todayCount"),
@@ -278,7 +291,10 @@ function selectProfile(name) {
   if (els.profileSearch) els.profileSearch.value = name;
   if (els.profileSelect) els.profileSelect.value = name;
   if (els.profileOptions) els.profileOptions.classList.remove("open");
-  if (els.profileSearch) els.profileSearch.setAttribute("aria-expanded", "false");
+  if (els.profileSearch) {
+    els.profileSearch.setAttribute("aria-expanded", "false");
+    els.profileSearch.blur();
+  }
   saveState();
 }
 
@@ -998,13 +1014,61 @@ function renderWrongNotes() {
       state.subjectId = note.subjectId;
       state.index = note.index;
       state.selected = null;
-      state.mode = "mock";
+      state.mode = "wrong-practice";
+      state.reviewAnswer = null;
+      state.reviewQuestion = note;
       saveState();
-      if (els.mockSubject) renderMock();
-      showScreen("mock");
+      showScreen("wrongPractice");
     });
     els.wrongList.appendChild(item);
   });
+}
+
+function renderWrongPractice() {
+  if (!els.reviewQuestionText || !els.reviewChoices || !els.reviewFeedback) return;
+
+  const note = state.reviewQuestion;
+  if (!note) {
+    els.reviewSubject.textContent = "오답 문제";
+    els.reviewQuestionText.textContent = "선택된 오답 문제가 없습니다. 오답노트에서 다시 풀 문제를 선택하세요.";
+    els.reviewChoices.innerHTML = "";
+    els.reviewSubmitBtn.disabled = true;
+    return;
+  }
+
+  const question = note.question;
+  els.reviewSubject.textContent = note.subjectName;
+  els.reviewQuestionNumber.textContent = `Q${note.index + 1}`;
+  els.reviewDifficulty.textContent = question.difficulty;
+  els.reviewQuestionType.textContent = getQuestionType(question, note.index);
+  els.reviewQuestionText.textContent = question.text;
+  els.reviewFeedback.className = "feedback-panel review-feedback";
+  els.reviewFeedback.style.display = "none";
+  els.reviewSubmitBtn.disabled = false;
+  renderChoices(els.reviewChoices, question, null, (choiceNumber) => {
+    state.reviewAnswer = choiceNumber;
+    saveState();
+  }, state.reviewAnswer);
+}
+
+function submitWrongPractice() {
+  const note = state.reviewQuestion;
+  if (!note || !state.reviewAnswer) {
+    showToast("먼저 답안을 선택하세요.");
+    return;
+  }
+
+  const question = note.question;
+  const correct = state.reviewAnswer === question.answer;
+  els.reviewFeedback.style.display = "grid";
+  els.reviewFeedback.className = `feedback-panel review-feedback ${correct ? "correct" : "wrong"}`;
+  els.reviewFeedback.innerHTML = `
+    <div>
+      <span class="result-badge ${correct ? "correct" : "wrong"}">${correct ? "정답" : "오답"}</span>
+      <h3>${correct ? "다시 풀어서 맞혔습니다." : `선택 ${state.reviewAnswer}번 · 정답 ${question.answer}번`}</h3>
+    </div>
+    <p>${question.explanation}</p>
+  `;
 }
 
 function renderTopStats() {
@@ -1095,6 +1159,7 @@ function initPage() {
   bindOptional(els.singlePrevBtn, "click", () => moveSingle(state.index - 1));
   bindOptional(els.singleNextBtn, "click", () => moveSingle(state.index + 1));
   bindOptional(els.gradeMockBtn, "click", gradeMock);
+  bindOptional(els.reviewSubmitBtn, "click", submitWrongPractice);
   bindOptional(els.generateBtn, "click", runHarness);
 
   if (!profiles.includes(state.profileName)) state.profileName = profiles[0];
@@ -1109,6 +1174,7 @@ function initPage() {
   }
   if (page === "analysis") renderAnalysisPage();
   if (page === "wrong") renderWrongNotes();
+  if (page === "wrong-practice") renderWrongPractice();
 
   renderProfileButton();
   renderTopStats();

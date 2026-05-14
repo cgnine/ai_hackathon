@@ -327,8 +327,7 @@ button:disabled {
   box-shadow: var(--shadow);
 }
 
-.select-options.open,
-.search-select:focus-within .select-options {
+.select-options.open {
   display: grid;
   gap: 4px;
 }
