@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>모의고사 | KB 개발자 역량평가 CBT</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body data-page="mock">
+  <header class="topbar">
+    <a class="brand" href="index.html" id="homeLink" aria-label="KB 개발자 역량평가 CBT">
+      <span class="brand-mark">KB</span>
+      <span>
+        <strong>KB 개발자 역량평가</strong>
+        <small>개발자 역량평가 CBT</small>
+      </span>
+    </a>
+    <nav class="main-nav" aria-label="주요 메뉴">
+      <a class="nav-btn active" href="index.html" data-screen="profile">시험응시</a>
+      <a class="nav-btn" href="wrong.html" data-screen="wrong">오답노트</a>
+      <a class="nav-btn" href="harness.html" data-screen="harness">PDF 생성</a>
+    </nav>
+    <div class="top-stats" aria-label="학습 통계">
+      <span>Today <strong id="todayCount">0</strong></span>
+      <span>Wrong <strong id="wrongTopCount">0</strong></span>
+    </div>
+  </header>
+
+  <main class="page-shell">
+    <div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+    <section class="screen active" id="mockScreen">
+      <div class="exam-layout">
+        <aside class="side-panel">
+          <a class="back-btn inline-link" href="subjects.html" data-screen="subjects">과목 다시 선택</a>
+          <div class="side-summary">
+            <span class="label">과목</span>
+            <strong id="mockSubject">-</strong>
+          </div>
+          <div class="side-summary">
+            <span class="label">답안 완료</span>
+            <strong id="mockProgress">0 / 0</strong>
+          </div>
+          <div class="question-grid" id="mockQuestionGrid"></div>
+          <button class="primary-btn full" id="gradeMockBtn">채점하기</button>
+        </aside>
+
+        <section class="work-area">
+          <div class="exam-toolbar">
+            <div>
+              <p class="eyebrow">Mock Exam</p>
+              <h2>모의고사로 풀기</h2>
+            </div>
+            <div class="toolbar-actions">
+              <button class="ghost-btn" id="mockPrevBtn">이전</button>
+              <button class="ghost-btn" id="mockNextBtn">다음</button>
+            </div>
+          </div>
+
+          <article class="question-panel">
+            <div class="question-head">
+              <span class="question-number" id="mockQuestionNumber">Q1</span>
+              <div class="question-tags">
+                <span class="pill" id="mockDifficulty">중</span>
+                <span class="pill type-pill" id="mockQuestionType">이론형</span>
+              </div>
+            </div>
+            <p class="question-text" id="mockQuestionText"></p>
+            <ol class="choices" id="mockChoices"></ol>
+          </article>
+        </section>
+      </div>
+    </section>
+  </main>
+
+  <script src="app.js"></script>
+</body>
+</html>

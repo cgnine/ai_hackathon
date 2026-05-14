@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>PDF 문제 생성 | KB 개발자 역량평가 CBT</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body data-page="harness">
+  <header class="topbar">
+    <a class="brand" href="index.html" id="homeLink" aria-label="KB 개발자 역량평가 CBT">
+      <span class="brand-mark">KB</span>
+      <span>
+        <strong>KB 개발자 역량평가</strong>
+        <small>개발자 역량평가 CBT</small>
+      </span>
+    </a>
+    <nav class="main-nav" aria-label="주요 메뉴">
+      <a class="nav-btn" href="index.html" data-screen="subjects">시험응시</a>
+      <a class="nav-btn" href="wrong.html" data-screen="wrong">오답노트</a>
+      <a class="nav-btn active" href="harness.html" data-screen="harness">PDF 생성</a>
+    </nav>
+    <div class="top-stats" aria-label="학습 통계">
+      <span>Today <strong id="todayCount">0</strong></span>
+      <span>Wrong <strong id="wrongTopCount">0</strong></span>
+    </div>
+  </header>
+
+  <main class="page-shell">
+    <div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+    <section class="screen active" id="harnessScreen">
+      <div class="harness-panel">
+        <div>
+          <p class="eyebrow">Harness Pipeline</p>
+          <h1>PDF 기반 문제 생성</h1>
+          <p>Practice Books의 PDF를 추출하고 Bedrock 생성, 규칙 검증, LLM-as-Judge 평가를 실행합니다.</p>
+        </div>
+        <button class="primary-btn" id="generateBtn">PDF 문제 생성 및 Harness 실행</button>
+        <div class="loading" id="loading">
+          <span class="spinner"></span>
+          문제를 생성하고 검증하는 중입니다.
+        </div>
+        <div class="api-result" id="apiResult"></div>
+      </div>
+    </section>
+  </main>
+
+  <script src="app.js"></script>
+</body>
+</html>

@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>오답노트 | KB 개발자 역량평가 CBT</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body data-page="wrong">
+  <header class="topbar">
+    <a class="brand" href="index.html" id="homeLink" aria-label="KB 개발자 역량평가 CBT">
+      <span class="brand-mark">KB</span>
+      <span>
+        <strong>KB 개발자 역량평가</strong>
+        <small>개발자 역량평가 CBT</small>
+      </span>
+    </a>
+    <nav class="main-nav" aria-label="주요 메뉴">
+      <a class="nav-btn" href="index.html" data-screen="subjects">시험응시</a>
+      <a class="nav-btn active" href="wrong.html" data-screen="wrong">오답노트</a>
+      <a class="nav-btn" href="harness.html" data-screen="harness">PDF 생성</a>
+    </nav>
+    <div class="top-stats" aria-label="학습 통계">
+      <span>Today <strong id="todayCount">0</strong></span>
+      <span>Wrong <strong id="wrongTopCount">0</strong></span>
+    </div>
+  </header>
+
+  <main class="page-shell">
+    <div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+    <section class="screen active" id="wrongScreen">
+      <div class="screen-head compact">
+        <p class="eyebrow">Review</p>
+        <h1>오답노트</h1>
+        <p>저장하거나 틀린 문제를 다시 확인합니다.</p>
+      </div>
+      <div class="wrong-list" id="wrongList"></div>
+    </section>
+  </main>
+
+  <script src="app.js"></script>
+</body>
+</html>

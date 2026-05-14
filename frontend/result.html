@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>채점 결과 | KB 개발자 역량평가 CBT</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body data-page="result">
+  <header class="topbar">
+    <a class="brand" href="index.html" id="homeLink" aria-label="KB 개발자 역량평가 CBT">
+      <span class="brand-mark">KB</span>
+      <span>
+        <strong>KB 개발자 역량평가</strong>
+        <small>개발자 역량평가 CBT</small>
+      </span>
+    </a>
+    <nav class="main-nav" aria-label="주요 메뉴">
+      <a class="nav-btn active" href="index.html" data-screen="profile">시험응시</a>
+      <a class="nav-btn" href="wrong.html" data-screen="wrong">오답노트</a>
+      <a class="nav-btn" href="harness.html" data-screen="harness">PDF 생성</a>
+    </nav>
+    <div class="top-stats" aria-label="학습 통계">
+      <span>Today <strong id="todayCount">0</strong></span>
+      <span>Wrong <strong id="wrongTopCount">0</strong></span>
+    </div>
+  </header>
+
+  <main class="page-shell">
+    <div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+    <section class="screen active" id="resultScreen">
+      <a class="back-btn inline-link" href="subjects.html" data-screen="subjects">과목 다시 선택</a>
+      <div class="result-hero">
+        <p class="eyebrow">Result</p>
+        <div class="score-row">
+          <h1 id="resultScore">0점</h1>
+          <span class="verdict-badge" id="resultVerdict">불합격</span>
+        </div>
+        <p id="resultSummary">채점 결과가 표시됩니다.</p>
+        <p class="result-commentary" id="resultCommentary">총평이 표시됩니다.</p>
+      </div>
+      <div class="result-list" id="resultList"></div>
+    </section>
+  </main>
+
+  <section class="chat-widget" id="resultChatWidget" aria-label="결과 상담 채팅">
+    <button class="chat-fab" id="chatToggleBtn" type="button" aria-expanded="false" aria-controls="chatPanel">💬</button>
+    <div class="chat-panel" id="chatPanel" aria-live="polite">
+      <div class="chat-head">
+        <div>
+          <strong>결과 상담</strong>
+          <span>점수와 오답을 바탕으로 바로 답변합니다.</span>
+        </div>
+        <button type="button" id="chatCloseBtn" aria-label="채팅 닫기">×</button>
+      </div>
+      <div class="chat-messages" id="chatMessages"></div>
+      <form class="chat-form" id="chatForm">
+        <input id="chatInput" type="text" autocomplete="off" placeholder="예: 왜 불합격이야? 뭘 공부해야 해?" />
+        <button type="submit">전송</button>
+      </form>
+    </div>
+  </section>
+
+  <script src="app.js"></script>
+</body>
+</html>
