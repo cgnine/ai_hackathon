@@ -6,7 +6,8 @@ load_dotenv()
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from backend.routers import generate
+from backend.routers import generate, quiz
+from backend.services.db import check_connection
 
 app = FastAPI(title="Developer Competency Agent", version="0.1.0")
 
@@ -18,8 +19,10 @@ app.add_middleware(
 )
 
 app.include_router(generate.router)
+app.include_router(quiz.router)
 
 
 @app.get("/health")
 async def health():
-    return {"status": "ok"}
+    db_ok = check_connection()
+    return {"status": "ok", "db": "ok" if db_ok else "unavailable"}

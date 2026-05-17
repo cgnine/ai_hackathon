@@ -9,12 +9,13 @@ from typing import Optional
 from pydantic import ValidationError
 
 from backend.models.schemas import (
+    ChunkInfo,
     GenerateRequest,
     GenerateResponse,
     QuestionOutput,
     RuleValidationResult,
 )
-from backend.services import bedrock_client, llm_judge, pdf_extractor, question_parser
+from backend.services import bedrock_client, chunk_repository, llm_judge, pdf_extractor, question_parser
 from backend.services import rule_validator
 
 LOGS_DIR = Path(__file__).parent.parent / "logs"
@@ -67,16 +68,45 @@ def run(request: GenerateRequest) -> GenerateResponse:
 
     recovery_used = False
     retry_count = 0
+    used_chunk: Optional[chunk_repository.ChunkRow] = None
 
-    # 1. 입력 통제: PDF 추출
+    # 1. 입력 통제: DB 청크 또는 PDF 추출
     try:
-        source_text = pdf_extractor.extract_text(
-            request.pdf_filename, request.page_start, request.page_end
-        )
-        step("pdf_extract", {"status": "ok", "chars": len(source_text)})
+        if request.chunk_id is not None:
+            chunk = chunk_repository.get_chunk_by_id(request.chunk_id)
+            if chunk is None:
+                raise ValueError(f"chunk_id={request.chunk_id} 가 DB에 없습니다.")
+            used_chunk = chunk
+            source_text = chunk.chunk_content
+            step("db_chunk_load", {"status": "ok", "chunk_id": chunk.id, "chars": len(source_text)})
+        elif request.chapter_no is not None:
+            chunk = chunk_repository.get_least_used_chunk(
+                chapter_no=request.chapter_no,
+                section_no=request.section_no,
+            )
+            if chunk is None:
+                raise ValueError(f"chapter_no={request.chapter_no} 에 해당하는 청크가 없습니다.")
+            used_chunk = chunk
+            source_text = chunk.chunk_content
+            step("db_chunk_load", {"status": "ok", "chunk_id": chunk.id, "chars": len(source_text)})
+        elif request.pdf_filename is not None:
+            source_text = pdf_extractor.extract_text(
+                request.pdf_filename, request.page_start, request.page_end
+            )
+            step("pdf_extract", {"status": "ok", "chars": len(source_text)})
+        else:
+            # 기본값: DB 전체에서 question_count 최소 청크 자동 선택
+            chunk = chunk_repository.get_least_used_chunk()
+            if chunk is None:
+                raise ValueError("DB에 청크가 없습니다. 먼저 ai_course_chunks를 적재하세요.")
+            used_chunk = chunk
+            source_text = chunk.chunk_content
+            step("db_chunk_load", {"status": "ok", "chunk_id": chunk.id, "chars": len(source_text)})
     except Exception as e:
-        step("pdf_extract", {"status": "error", "error": str(e)})
-        return _fail(run_id, log, f"PDF 추출 실패: {e}")
+        is_db = request.chunk_id is not None or request.chapter_no is not None or request.pdf_filename is None
+        step_name = "db_chunk_load" if is_db else "pdf_extract"
+        step(step_name, {"status": "error", "error": str(e)})
+        return _fail(run_id, log, f"소스 로드 실패: {e}")
 
     # 2. 문제 생성 (최대 2회: 1차 + Recovery 1회)
     question: Optional[QuestionOutput] = None
@@ -137,12 +167,37 @@ def run(request: GenerateRequest) -> GenerateResponse:
     log["retry_count"] = retry_count
     log_ref = _save_log(run_id, log)
 
+    # PASS 시 DB 청크 사용 횟수 증가
+    if final_status == "PASS" and used_chunk is not None:
+        try:
+            chunk_repository.increment_question_count(used_chunk.id)
+        except Exception:
+            pass  # 통계 실패가 메인 응답을 막아서는 안 됨
+
+    chunk_info = None
+    if used_chunk is not None:
+        chunk_info = ChunkInfo(
+            id=used_chunk.id,
+            chapter_no=used_chunk.chapter_no,
+            chapter_title=used_chunk.chapter_title,
+            section_no=used_chunk.section_no,
+            section_title=used_chunk.section_title,
+            chunk_no=used_chunk.chunk_no,
+            chunk_title=used_chunk.chunk_title,
+            page_start=used_chunk.page_start,
+            page_end=used_chunk.page_end,
+            tags=used_chunk.tags,
+            question_count=used_chunk.question_count,
+            last_question_at=used_chunk.last_question_at,
+        )
+
     resp_kwargs: dict = dict(
         run_id=run_id,
         final_status=final_status,
         recovery_used=recovery_used,
         retry_count=retry_count,
         log_ref=log_ref,
+        chunk_info=chunk_info,
         rule_validation_result=rule_result,
         judge_result=judge_result,
     )
@@ -166,6 +221,7 @@ def _fail(
     error: str,
     recovery_used: bool = False,
     retry_count: int = 0,
+    chunk_info: Optional[ChunkInfo] = None,
 ) -> GenerateResponse:
     log["final_status"] = "FAIL"
     log["error"] = error
@@ -176,6 +232,7 @@ def _fail(
         recovery_used=recovery_used,
         retry_count=retry_count,
         log_ref=log_ref,
+        chunk_info=chunk_info,
         error=error,
     )
 
