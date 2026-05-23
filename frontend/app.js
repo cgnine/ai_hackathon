@@ -1,4 +1,6 @@
-﻿const API_BASE = "";
+﻿const API_BASE = "http://localhost:8000";
+
+const DEMO_ATTEMPT_ID = "demo-attempt";
 
 function makeQuestions(rows) {
   return rows.map(([difficulty, text, choices, answer, explanation]) => ({
@@ -103,7 +105,10 @@ const defaultState = {
   attemptHistory: [],
   recommendationAnswer: null,
   reviewQuestion: null,
-  reviewAnswer: null
+  reviewAnswer: null,
+  wrongSubjectId: null,
+  wrongOpenDateKey: null,
+  wrongReviewSet: null
 };
 
 function loadState() {
@@ -119,7 +124,10 @@ function loadState() {
       attemptHistory: saved.attemptHistory || [],
       recommendationAnswer: saved.recommendationAnswer || null,
       reviewQuestion: saved.reviewQuestion || null,
-      reviewAnswer: saved.reviewAnswer || null
+      reviewAnswer: saved.reviewAnswer || null,
+      wrongSubjectId: saved.wrongSubjectId || null,
+      wrongOpenDateKey: saved.wrongOpenDateKey || null,
+      wrongReviewSet: saved.wrongReviewSet || null
     };
   } catch {
     return { ...defaultState, wrongNotes: new Map() };
@@ -127,6 +135,19 @@ function loadState() {
 }
 
 const state = loadState();
+let latestApiResult = null;
+const SAMPLE_WRONG_ATTEMPT_ID = "sample-wrong-ai-engineering";
+const SAMPLE_WRONG_COUNT = 3;
+const SAMPLE_WRONG_DATES = [
+  "2026-05-16",
+  "2026-05-18",
+  "2026-05-22"
+];
+const SAMPLE_WRONG_ROUND_TIMES = [
+  "10:15:00",
+  "14:20:00",
+  "18:05:00"
+];
 
 function saveState() {
   localStorage.setItem(STATE_KEY, JSON.stringify({
@@ -176,6 +197,20 @@ const els = {
   resultSummary: $("resultSummary"),
   resultCommentary: $("resultCommentary"),
   resultList: $("resultList"),
+  resultDiagnosis: $("resultDiagnosis"),
+  diagnosisProgramTitle: $("diagnosisProgramTitle"),
+  diagnosisSubject: $("diagnosisSubject"),
+  diagnosisLevelName: $("diagnosisLevelName"),
+  diagnosisLevel: $("diagnosisLevel"),
+  diagnosisScore: $("diagnosisScore"),
+  diagnosisName: $("diagnosisName"),
+  diagnosisDate: $("diagnosisDate"),
+  diagnosisCourse: $("diagnosisCourse"),
+  diagnosisChart: $("diagnosisChart"),
+  diagnosisBars: $("diagnosisBars"),
+  diagnosisSummary: $("diagnosisSummary"),
+  toggleAllExplanationsBtn: $("toggleAllExplanationsBtn"),
+  saveWrongAllBtn: $("saveWrongAllBtn"),
   chatToggleBtn: $("chatToggleBtn"),
   chatCloseBtn: $("chatCloseBtn"),
   chatPanel: $("chatPanel"),
@@ -196,7 +231,19 @@ const els = {
   reviewChoices: $("reviewChoices"),
   reviewSubmitBtn: $("reviewSubmitBtn"),
   reviewFeedback: $("reviewFeedback"),
+  reviewQuestionPanel: $("reviewQuestionPanel"),
+  reviewCompletePanel: $("reviewCompletePanel"),
+  reviewCompleteSummary: $("reviewCompleteSummary"),
+  reviewBackBtn: $("reviewBackBtn"),
+  reviewRestartBtn: $("reviewRestartBtn"),
+  reviewProgress: $("reviewProgress"),
+  reviewPrevBtn: $("reviewPrevBtn"),
+  reviewNextBtn: $("reviewNextBtn"),
   wrongList: $("wrongList"),
+  wrongSubjectGrid: $("wrongSubjectGrid"),
+  wrongRoundSection: $("wrongRoundSection"),
+  wrongRoundList: $("wrongRoundList"),
+  selectedWrongSubjectTitle: $("selectedWrongSubjectTitle"),
   wrongTopCount: $("wrongTopCount"),
   todayCount: $("todayCount"),
   homeLink: $("homeLink"),
@@ -225,6 +272,10 @@ function getQuestionType(question, index) {
 
 function showScreen(name) {
   state.screen = name;
+  if (name === "wrong") {
+    state.wrongSubjectId = null;
+    state.wrongOpenDateKey = null;
+  }
   saveState();
   const targetScreen = $(`${name}Screen`);
   if (!targetScreen && PAGE_URLS[name]) {
@@ -513,37 +564,46 @@ function gradeMock() {
   const questions = currentQuestions();
   let correctCount = 0;
   const resultRows = [];
+  const subject = currentSubject();
+  const subjectAttemptCount = (state.attemptHistory || []).filter((attempt) => attempt.subjectId === state.subjectId).length;
+  const attemptId = `${Date.now()}-${state.subjectId}`;
+  const roundTitle = `${subjectAttemptCount + 1}회차`;
+  const createdAt = new Date().toISOString();
   if (els.resultList) els.resultList.innerHTML = "";
 
   questions.forEach((question, index) => {
     const selected = state.mockAnswers[index];
     const correct = question.type === "coding" ? evaluateCodingAnswer(question, selected) : selected === question.answer;
     if (correct) correctCount += 1;
-    if (!correct) addWrongNote(index, false);
     resultRows.push({ index, selected, correct });
 
-    appendResultItem(question, index, selected, correct);
+    appendResultItem(question, index, selected, correct, { attemptId, roundTitle, createdAt });
   });
 
   const score = Math.round((correctCount / questions.length) * 100);
   state.lastResult = {
+    attemptId,
     profileName: state.profileName,
     subjectId: state.subjectId,
+    subjectName: subject.name,
+    roundTitle,
     correctCount,
     total: questions.length,
     score,
-    rows: resultRows
+    rows: resultRows,
+    createdAt
   };
   state.attemptHistory.push({
-    id: `${Date.now()}-${state.subjectId}`,
+    id: attemptId,
     profileName: state.profileName,
     subjectId: state.subjectId,
-    subjectName: currentSubject().name,
+    subjectName: subject.name,
+    roundTitle,
     score,
     correctCount,
     total: questions.length,
     rows: resultRows,
-    createdAt: new Date().toISOString()
+    createdAt
   });
   saveState();
   renderResultPage();
@@ -551,7 +611,7 @@ function gradeMock() {
   showScreen("result");
 }
 
-function appendResultItem(question, index, selected, correct) {
+function appendResultItem(question, index, selected, correct, meta = {}) {
   if (!els.resultList) return;
 
   const item = document.createElement("article");
@@ -559,9 +619,16 @@ function appendResultItem(question, index, selected, correct) {
   const status = document.createElement("span");
   const body = document.createElement("div");
   const title = document.createElement("div");
-  const sub = document.createElement("div");
   const result = document.createElement("strong");
-  const explanation = document.createElement("div");
+  const explanation = createResultDetail({
+    choices: question.choices,
+    selected,
+    answer: question.answer,
+    explanation: question.explanation,
+    sampleSolution: question.sampleSolution,
+    saved: state.wrongNotes.has(meta.attemptId ? `${meta.attemptId}-${currentSubject().id}-${index}` : `${currentSubject().id}-${index}`),
+    onSave: () => addWrongNote(index, true, meta)
+  });
 
   item.className = "result-item";
   toggle.type = "button";
@@ -570,32 +637,577 @@ function appendResultItem(question, index, selected, correct) {
   status.className = `status-dot ${correct ? "" : "wrong"}`;
   status.textContent = correct ? "O" : "X";
   title.className = "item-title";
-  title.textContent = `Q${index + 1}. ${question.text}`;
-  sub.className = "item-sub";
-  sub.textContent = question.type === "coding"
-    ? `${question.difficulty} · ${getQuestionType(question, index)} · 제출 ${selected ? "완료" : "없음"}`
-    : `${question.difficulty} · ${getQuestionType(question, index)} · 선택 ${selected || "-"}번 · 정답 ${question.answer}번`;
+  title.textContent = `${index + 1}. ${question.text}`;
   result.textContent = correct ? "정답" : "오답";
-  explanation.className = "result-explanation";
-  explanation.textContent = question.type === "coding"
-    ? `${question.explanation}\n\n모범답안\n${question.sampleSolution}`
-    : question.explanation;
-  body.append(title, sub);
+  body.append(title);
   toggle.append(status, body, result);
   toggle.addEventListener("click", () => {
-    const isOpen = item.classList.toggle("open");
-    toggle.setAttribute("aria-expanded", String(isOpen));
+    toggleResultItem(item, toggle, explanation);
   });
   item.append(toggle, explanation);
   els.resultList.appendChild(item);
+}
+
+function toggleResultItem(item, toggle, detail) {
+  const isOpen = item.classList.toggle("open");
+  toggle.setAttribute("aria-expanded", String(isOpen));
+  if (isOpen) {
+    detail.style.maxHeight = "none";
+  } else {
+    detail.style.maxHeight = "0px";
+  }
+  updateToggleAllExplanationsButton();
+}
+
+function setResultItemOpen(item, isOpen) {
+  const toggle = item.querySelector(".result-toggle");
+  const detail = item.querySelector(".result-explanation");
+  if (!toggle || !detail) return;
+  item.classList.toggle("open", isOpen);
+  toggle.setAttribute("aria-expanded", String(isOpen));
+  detail.style.maxHeight = isOpen ? "none" : "0px";
+}
+
+function toggleAllResultExplanations() {
+  if (!els.resultList) return;
+  const items = Array.from(els.resultList.querySelectorAll(".result-item"));
+  if (items.length === 0) return;
+  const shouldOpen = items.some((item) => !item.classList.contains("open"));
+  items.forEach((item) => setResultItemOpen(item, shouldOpen));
+  updateToggleAllExplanationsButton();
+}
+
+function updateToggleAllExplanationsButton() {
+  if (!els.toggleAllExplanationsBtn || !els.resultList) return;
+  const items = Array.from(els.resultList.querySelectorAll(".result-item"));
+  const hasItems = items.length > 0;
+  const allOpen = hasItems && items.every((item) => item.classList.contains("open"));
+  els.toggleAllExplanationsBtn.style.display = hasItems ? "inline-flex" : "none";
+  els.toggleAllExplanationsBtn.disabled = !hasItems;
+  els.toggleAllExplanationsBtn.textContent = allOpen ? "해설 모두 접기" : "해설 모두 펼치기";
+}
+
+function createResultDetail({
+  choices = [],
+  selected,
+  answer,
+  explanation,
+  sampleSolution,
+  saved = false,
+  onSave = null
+}) {
+  const detail = document.createElement("div");
+  const hasChoices = Array.isArray(choices) && choices.length > 0;
+  detail.className = "result-explanation";
+
+  const answerSection = document.createElement("div");
+  const answerSummary = document.createElement("p");
+
+  answerSection.className = "result-detail-section result-answer-section";
+  answerSummary.className = "result-answer-summary";
+  answerSummary.append(
+    createAnswerLabel("선택한 답:"),
+    document.createTextNode(` ${formatAnswerNumber(selected)}  `),
+    createAnswerLabel("정답:"),
+    document.createTextNode(` ${formatAnswerNumber(answer)}`)
+  );
+  answerSection.appendChild(answerSummary);
+
+  if (hasChoices) {
+    const choiceSection = document.createElement("div");
+    const choiceTitle = document.createElement("strong");
+    const choiceList = document.createElement("ol");
+
+    choiceSection.className = "result-detail-section";
+    choiceTitle.className = "result-detail-title";
+    choiceTitle.textContent = "보기";
+    choiceList.className = "result-choice-list";
+
+    choices.forEach((choice, choiceIndex) => {
+      const choiceNumber = choiceIndex + 1;
+      const row = document.createElement("li");
+      const num = document.createElement("span");
+      const text = document.createElement("span");
+
+      row.className = "result-choice";
+      if (choiceNumber === answer) row.classList.add("correct");
+      if (choiceNumber === selected && choiceNumber !== answer) row.classList.add("selected-wrong");
+      num.className = "choice-num";
+      num.textContent = choiceNumber;
+      text.textContent = choice;
+      row.append(num, text);
+      choiceList.appendChild(row);
+    });
+
+    choiceSection.append(choiceTitle, choiceList);
+    detail.appendChild(choiceSection);
+  }
+
+  detail.appendChild(answerSection);
+
+  const explanationSection = document.createElement("div");
+  const explanationTitle = document.createElement("strong");
+  const explanationText = document.createElement("span");
+
+  explanationSection.className = "result-detail-section result-explanation-line";
+  explanationTitle.className = "result-detail-title";
+  explanationTitle.textContent = "해설";
+  explanationText.textContent = sampleSolution
+    ? `${explanation}\n\n모범답안\n${sampleSolution}`
+    : explanation;
+
+  explanationSection.append(explanationTitle, explanationText);
+  detail.appendChild(explanationSection);
+
+  if (onSave) {
+    const action = document.createElement("div");
+    const button = document.createElement("button");
+    action.className = "result-detail-actions";
+    button.type = "button";
+    button.className = "secondary-btn result-save-btn";
+    button.textContent = saved ? "오답노트 저장됨" : "오답노트 저장";
+    button.disabled = saved;
+    button.addEventListener("click", () => {
+      onSave();
+      renderSaveWrongAllButton(latestApiResult || state.lastResult);
+      button.textContent = "오답노트 저장됨";
+      button.disabled = true;
+    });
+    action.appendChild(button);
+    detail.appendChild(action);
+  }
+
+  return detail;
+}
+
+function createAnswerLabel(text) {
+  const label = document.createElement("span");
+  label.className = "answer-label";
+  label.textContent = text;
+  return label;
+}
+
+function formatAnswerNumber(value) {
+  return value ? `${value}번` : "-";
+}
+
+function appendApiResultItem(item, index, resultMeta) {
+  if (!els.resultList) return;
+
+  const row = document.createElement("article");
+  const toggle = document.createElement("button");
+  const status = document.createElement("span");
+  const body = document.createElement("div");
+  const title = document.createElement("div");
+  const result = document.createElement("strong");
+  const explanation = createResultDetail({
+    choices: item.choices,
+    selected: item.selected,
+    answer: item.answer,
+    explanation: item.explanation,
+    saved: state.wrongNotes.has(apiWrongNoteKey(resultMeta, item, index)),
+    onSave: () => saveApiResultItemToWrongNote(resultMeta, item, index)
+  });
+
+  row.className = "result-item";
+  toggle.type = "button";
+  toggle.className = "result-toggle";
+  toggle.setAttribute("aria-expanded", "false");
+  status.className = `status-dot ${item.correct ? "" : "wrong"}`;
+  status.textContent = item.correct ? "O" : "X";
+  title.className = "item-title";
+  title.textContent = `${index + 1}. ${item.questionText}`;
+  result.textContent = item.correct ? "정답" : "오답";
+  body.append(title);
+  toggle.append(status, body, result);
+  toggle.addEventListener("click", () => {
+    toggleResultItem(row, toggle, explanation);
+  });
+  row.append(toggle, explanation);
+  els.resultList.appendChild(row);
+}
+
+function renderApiResultPage(result) {
+  if (!els.resultList || !els.resultScore || !els.resultSummary) return;
+
+  const passed = result.score > 60;
+  latestApiResult = result;
+  els.resultList.innerHTML = "";
+  els.resultScore.textContent = `${result.score}점`;
+  if (els.resultVerdict) {
+    els.resultVerdict.textContent = passed ? "합격" : "불합격";
+    els.resultVerdict.className = `verdict-badge ${passed ? "pass" : "fail"}`;
+  }
+  els.resultSummary.textContent = `${result.subjectName} ${result.total}문항 중 ${result.correctCount}문항을 맞혔습니다. ${passed ? "합격 기준을 통과했습니다." : "합격 기준인 60점을 넘지 못했습니다."}`;
+  if (els.resultCommentary) els.resultCommentary.textContent = buildResultCommentary(result.score);
+  renderDiagnosis(normalizeDiagnosis(result.diagnosis, {
+    profileName: result.profileName,
+    subjectName: result.subjectName,
+    score: result.score,
+    createdAt: result.createdAt
+  }));
+  renderSaveWrongAllButton(result);
+  result.items.forEach((item, index) => appendApiResultItem(item, index, result));
+  updateToggleAllExplanationsButton();
+}
+
+function apiWrongNoteKey(result, item, index) {
+  const attemptId = result?.attemptId || "api-result";
+  const questionId = item.questionId || `q-${index + 1}`;
+  return `${attemptId}-${questionId}`;
+}
+
+function toWrongNoteQuestion(item) {
+  return {
+    text: item.questionText,
+    choices: item.choices || [],
+    answer: item.answer,
+    explanation: item.explanation,
+    difficulty: item.difficulty,
+    questionType: item.questionType
+  };
+}
+
+function saveApiResultItemToWrongNote(result, item, index, notify = true) {
+  const key = apiWrongNoteKey(result, item, index);
+  const alreadySaved = state.wrongNotes.has(key);
+  state.wrongNotes.set(key, {
+    profileName: result.profileName || state.profileName,
+    subjectId: result.subjectId,
+    subjectName: result.subjectName,
+    attemptId: result.attemptId || "api-result",
+    roundTitle: result.roundTitle || "PDF 생성 결과",
+    createdAt: result.createdAt || new Date().toISOString(),
+    index,
+    question: toWrongNoteQuestion(item)
+  });
+  saveState();
+  renderTopStats();
+  renderSaveWrongAllButton(result);
+  if (notify) {
+    showToast(alreadySaved ? "이미 오답노트에 저장된 문제입니다." : "오답노트에 저장되었습니다.");
+  }
+}
+
+function renderSaveWrongAllButton(result = latestApiResult) {
+  if (!els.saveWrongAllBtn) return;
+  const rows = getResultSaveRows(result);
+  const unsavedCount = rows.filter((row) => !state.wrongNotes.has(row.key)).length;
+  els.saveWrongAllBtn.style.display = rows.length ? "inline-flex" : "none";
+  els.saveWrongAllBtn.disabled = unsavedCount === 0;
+  els.saveWrongAllBtn.textContent = unsavedCount === 0
+    ? "오답노트 모두저장됨"
+    : "오답노트 모두저장";
+}
+
+function getResultSaveRows(result = latestApiResult || state.lastResult) {
+  if (!result) return [];
+
+  if (Array.isArray(result.items)) {
+    return result.items
+      .map((item, index) => ({
+        correct: item.correct,
+        key: apiWrongNoteKey(result, item, index),
+        save: (notify = false) => saveApiResultItemToWrongNote(result, item, index, notify)
+      }));
+  }
+
+  if (Array.isArray(result.rows)) {
+    const subject = subjects.find((item) => item.id === result.subjectId) || currentSubject();
+    const attemptId = result.attemptId || "manual";
+    return result.rows
+      .map((row) => ({
+        correct: row.correct,
+        key: `${attemptId}-${subject.id}-${row.index}`,
+        save: (notify = false) => addWrongNote(row.index, notify, {
+          attemptId,
+          roundTitle: result.roundTitle || "모의고사 결과",
+          createdAt: result.createdAt || new Date().toISOString()
+        })
+      }));
+  }
+
+  return [];
+}
+
+function saveAllWrongApiResultItems() {
+  const result = latestApiResult || state.lastResult;
+  const rows = getResultSaveRows(result);
+  let savedCount = 0;
+  rows.forEach((row) => {
+    if (state.wrongNotes.has(row.key)) return;
+    row.save(false);
+    savedCount += 1;
+  });
+  renderSaveWrongAllButton(result);
+  if (latestApiResult) {
+    renderApiResultPage(latestApiResult);
+  } else {
+    renderResultPage();
+  }
+  showToast(savedCount ? `문제 ${savedCount}개를 오답노트에 저장했습니다.` : "저장할 새 문제가 없습니다.");
+}
+
+function renderDiagnosis(diagnosis) {
+  if (!els.resultDiagnosis || !els.diagnosisChart || !els.diagnosisBars || !els.diagnosisSummary) return;
+
+  const axes = diagnosis?.axes || [];
+  if (axes.length === 0) {
+    els.resultDiagnosis.style.display = "none";
+    return;
+  }
+
+  els.resultDiagnosis.style.display = "grid";
+  const level = getScoreLevel(diagnosis.score || 0);
+  if (els.diagnosisProgramTitle) els.diagnosisProgramTitle.textContent = `${new Date().getFullYear()} KB디지털역량평가 모의고사`;
+  if (els.diagnosisSubject) els.diagnosisSubject.textContent = diagnosis.subjectName || "응시 과목";
+  if (els.diagnosisLevelName) els.diagnosisLevelName.textContent = level.name;
+  if (els.diagnosisLevel) els.diagnosisLevel.textContent = `Level ${level.level}`;
+  if (els.diagnosisScore) els.diagnosisScore.textContent = `${diagnosis.score || 0} / 100점`;
+  if (els.diagnosisName) els.diagnosisName.textContent = diagnosis.profileName || "응시자";
+  if (els.diagnosisDate) els.diagnosisDate.textContent = formatFullDate(diagnosis.createdAt || new Date().toISOString());
+  if (els.diagnosisCourse) els.diagnosisCourse.textContent = diagnosis.subjectName || "-";
+  els.diagnosisSummary.textContent = diagnosis.summary || "영역별 점수를 기준으로 강점과 약점을 확인하세요.";
+  renderDiagnosisRadar(getSampleRadarAxes());
+  renderDiagnosisBars(axes);
+}
+
+function getSampleRadarAxes() {
+  return [
+    { name: "기초 이해", score: 63 },
+    { name: "클라우드 분석", score: 63 },
+    { name: "문제 해결", score: 42 },
+    { name: "보안 적용", score: 35 },
+    { name: "CI/CD Pipeline", score: 26 },
+  ];
+}
+
+function renderDiagnosisRadar(axes) {
+  const center = 120;
+  const maxRadius = 82;
+  const count = axes.length;
+  const axisPoints = axes.map((axis, index) => {
+    const angle = (-90 + index * (360 / count)) * Math.PI / 180;
+    const outerX = center + Math.cos(angle) * maxRadius;
+    const outerY = center + Math.sin(angle) * maxRadius;
+    const scoreRadius = maxRadius * (axis.score / 100);
+    const scoreX = center + Math.cos(angle) * scoreRadius;
+    const scoreY = center + Math.sin(angle) * scoreRadius;
+    const labelX = center + Math.cos(angle) * (maxRadius + 24);
+    const labelY = center + Math.sin(angle) * (maxRadius + 24);
+    return { axis, outerX, outerY, scoreX, scoreY, labelX, labelY };
+  });
+
+  const grid = [1, 0.66, 0.33].map((scale) => {
+    const points = axisPoints.map((_, index) => {
+      const angle = (-90 + index * (360 / count)) * Math.PI / 180;
+      const radius = maxRadius * scale;
+      return `${center + Math.cos(angle) * radius},${center + Math.sin(angle) * radius}`;
+    }).join(" ");
+    return `<polygon points="${points}" class="diagnosis-radar-grid" />`;
+  }).join("");
+
+  const axesMarkup = axisPoints.map((point) => `
+    <line x1="${center}" y1="${center}" x2="${point.outerX}" y2="${point.outerY}" class="diagnosis-radar-axis" />
+    <text x="${point.labelX}" y="${point.labelY}" class="diagnosis-radar-label">${point.axis.name}</text>
+  `).join("");
+
+  const scoreMarkup = axisPoints.map((point) => `
+    <text x="${point.scoreX}" y="${point.scoreY - 5}" class="diagnosis-radar-value">${point.axis.score}</text>
+  `).join("");
+
+  const scorePoints = axisPoints.map((point) => `${point.scoreX},${point.scoreY}`).join(" ");
+
+  els.diagnosisChart.innerHTML = `
+    <svg viewBox="0 0 240 240" role="img" aria-label="출제 영역 진단 레이더 차트">
+      ${grid}
+      ${axesMarkup}
+      <polygon points="${scorePoints}" class="diagnosis-radar-score" />
+      ${scoreMarkup}
+    </svg>
+  `;
+}
+
+function renderDiagnosisBars(axes) {
+  els.diagnosisBars.innerHTML = "";
+  axes.forEach((axis) => {
+    const criteria = getAxisCriteria(axis.name);
+    const row = document.createElement("div");
+    row.className = "diagnosis-bar";
+    row.innerHTML = `
+      <div class="diagnosis-bar-head">
+        <strong>${axis.name}</strong>
+        <span>* ${criteria.text}</span>
+      </div>
+      <div class="report-score-track" style="grid-template-columns:${criteria.basic}fr ${criteria.middle}fr ${criteria.high}fr">
+        <span class="range basic">기초</span>
+        <span class="range middle">중급</span>
+        <span class="range high">상급</span>
+        <i class="score-bubble" style="left:${axis.score}%">${axis.score}</i>
+      </div>
+      <div class="score-ticks">
+        <span>0</span>
+        <span style="left:${criteria.first}%">${criteria.first}</span>
+        <span style="left:${criteria.second}%">${criteria.second}</span>
+        <span>100</span>
+      </div>
+      <p>${axis.comment || buildAxisComment(axis)}</p>
+    `;
+    els.diagnosisBars.appendChild(row);
+  });
+}
+
+function getAxisCriteria(name) {
+  if (name.includes("실무")) {
+    return {
+      first: 30,
+      second: 70,
+      basic: 30,
+      middle: 40,
+      high: 30,
+      text: "기준: ~30%, 중급: ~70%, 상급: 70% 이상"
+    };
+  }
+
+  return {
+    first: 70,
+    second: 85,
+    basic: 70,
+    middle: 15,
+    high: 15,
+    text: "기준: ~70%, 중급: ~85%, 상급: 85% 이상"
+  };
+}
+
+function normalizeDiagnosis(diagnosis, meta = {}) {
+  const sourceAxes = diagnosis?.axes || [];
+  if (sourceAxes.length === 0) {
+    return {
+      ...meta,
+      axes: [],
+      summary: diagnosis?.summary || ""
+    };
+  }
+
+  const theorySource = sourceAxes.filter((axis) => axis.name.includes("이론"));
+  const practicalSource = sourceAxes.filter((axis) => !axis.name.includes("이론"));
+  const theory = mergeAxes("이론형 문항 종합 이해도", theorySource.length ? theorySource : sourceAxes);
+  const practical = mergeAxes("실무형 문항 종합 이해도", practicalSource.length ? practicalSource : sourceAxes);
+
+  return {
+    ...meta,
+    score: meta.score ?? Math.round(sourceAxes.reduce((sum, axis) => sum + axis.score, 0) / sourceAxes.length),
+    axes: [
+      { ...theory, comment: buildAxisComment(theory) },
+      { ...practical, comment: buildAxisComment(practical) }
+    ],
+    summary: diagnosis?.summary || buildDiagnosisSummary([theory, practical])
+  };
+}
+
+function buildLocalDiagnosis(result, questions, subject) {
+  const buckets = [
+    { name: "이론형 문항 종합 이해도", rows: [] },
+    { name: "실무형 문항 종합 이해도", rows: [] }
+  ];
+
+  result.rows.forEach((row) => {
+    const question = questions[row.index];
+    const type = getQuestionType(question, row.index);
+    const bucket = type === "이론형" ? buckets[0] : buckets[1];
+    bucket.rows.push(row);
+  });
+
+  const axes = buckets.map((bucket) => {
+    const total = bucket.rows.length;
+    const correct = bucket.rows.filter((row) => row.correct).length;
+    const score = total ? Math.round((correct / total) * 100) : 0;
+    return {
+      name: bucket.name,
+      score,
+      correct,
+      total,
+      comment: buildAxisComment({ name: bucket.name, score, correct, total })
+    };
+  });
+
+  return {
+    profileName: result.profileName || state.profileName,
+    subjectName: subject.name,
+    score: result.score,
+    createdAt: result.createdAt || new Date().toISOString(),
+    axes,
+    summary: buildDiagnosisSummary(axes)
+  };
+}
+
+function mergeAxes(name, axes) {
+  const total = axes.reduce((sum, axis) => sum + (axis.total || 0), 0);
+  const correct = axes.reduce((sum, axis) => sum + (axis.correct || 0), 0);
+  return {
+    name,
+    total,
+    correct,
+    score: total ? Math.round((correct / total) * 100) : 0
+  };
+}
+
+function getScoreLevel(score) {
+  if (score >= 80) return { level: 5, name: "Expert" };
+  if (score >= 70) return { level: 4, name: "Proficient" };
+  if (score >= 60) return { level: 3, name: "Utilizer 2" };
+  if (score >= 50) return { level: 2, name: "Utilizer 1" };
+  if (score >= 30) return { level: 1, name: "Finder" };
+  return { level: 0, name: "Beginner" };
+}
+
+function buildAxisComment(axis) {
+  const domain = axis.name.includes("이론") ? "개념과 용어 이해" : "상황 판단과 적용";
+  if (axis.total === 0) return `${domain} 문항 데이터가 없어 추가 응시 후 진단이 가능합니다.`;
+  if (axis.score >= 80) return `${domain} 역량이 안정적입니다. 오답 문항의 세부 조건만 점검하면 고득점 유지가 가능합니다.`;
+  if (axis.score >= 60) return `${domain}의 기본기는 갖추었습니다. 틀린 선택지의 근거를 비교하며 보완하면 좋습니다.`;
+  return `${domain}에서 보완이 필요합니다. 해설을 기준으로 핵심 개념과 실제 적용 흐름을 다시 정리하세요.`;
+}
+
+function buildDiagnosisSummary(axes) {
+  const strongest = axes.reduce((best, axis) => axis.score > best.score ? axis : best, axes[0]);
+  const weakest = axes.reduce((low, axis) => axis.score < low.score ? axis : low, axes[0]);
+  return `${strongest.name}는 ${strongest.score}점으로 상대적으로 강점입니다. ${weakest.name}는 ${weakest.score}점으로 우선 복습이 필요합니다. 오답 해설에서 틀린 선택지의 판단 근거를 다시 확인하세요.`;
+}
+
+async function loadBackendResultPage() {
+  if (!els.resultList || !els.resultScore || !els.resultSummary) return;
+
+  const params = new URLSearchParams(window.location.search);
+  const attemptId = params.get("attemptId") || DEMO_ATTEMPT_ID;
+
+  els.resultScore.textContent = "...";
+  els.resultSummary.textContent = "백엔드에서 채점 결과를 불러오는 중입니다.";
+  if (els.resultCommentary) els.resultCommentary.textContent = "";
+  if (els.saveWrongAllBtn) els.saveWrongAllBtn.style.display = "none";
+  els.resultList.innerHTML = "";
+
+  try {
+    const response = await fetch(`${API_BASE}/results/${attemptId}`);
+    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+    const result = await response.json();
+    renderApiResultPage(result);
+  } catch (error) {
+    renderResultPage();
+    showToast(`백엔드 결과를 불러오지 못해 로컬 결과를 표시합니다. (${error.message})`);
+  }
 }
 
 function renderResultPage() {
   if (!els.resultList || !els.resultScore || !els.resultSummary) return;
 
   const result = state.lastResult;
+  latestApiResult = null;
   els.resultList.innerHTML = "";
   if (!result) {
+    renderSaveWrongAllButton(null);
+    updateToggleAllExplanationsButton();
+    if (els.resultDiagnosis) els.resultDiagnosis.style.display = "none";
     els.resultScore.textContent = "0점";
     if (els.resultVerdict) {
       els.resultVerdict.textContent = "불합격";
@@ -616,9 +1228,17 @@ function renderResultPage() {
   }
   els.resultSummary.textContent = `${subject.name} ${result.total}문항 중 ${result.correctCount}문항을 맞혔습니다. ${passed ? "합격 기준을 통과했습니다." : "합격 기준인 60점을 넘지 못했습니다."}`;
   if (els.resultCommentary) els.resultCommentary.textContent = buildResultCommentary(result.score);
+  renderDiagnosis(buildLocalDiagnosis(result, questions, subject));
+  renderSaveWrongAllButton(result);
+  const meta = {
+    attemptId: result.attemptId || "manual",
+    roundTitle: result.roundTitle || "모의고사 결과",
+    createdAt: result.createdAt || new Date().toISOString()
+  };
   result.rows.forEach((row) => {
-    appendResultItem(questions[row.index], row.index, row.selected, row.correct);
+    appendResultItem(questions[row.index], row.index, row.selected, row.correct, meta);
   });
+  updateToggleAllExplanationsButton();
 }
 
 function buildResultCommentary(score) {
@@ -940,15 +1560,18 @@ function renderQuestionGrid(target, questions, answers, activeIndex, onMove) {
   });
 }
 
-function addWrongNote(index, notify = true) {
+function addWrongNote(index, notify = true, meta = {}) {
   const subject = currentSubject();
-  const key = `${subject.id}-${index}`;
+  const key = meta.attemptId ? `${meta.attemptId}-${subject.id}-${index}` : `${subject.id}-${index}`;
   const question = currentQuestions()[index];
   const alreadySaved = state.wrongNotes.has(key);
   state.wrongNotes.set(key, {
     profileName: state.profileName,
     subjectId: subject.id,
     subjectName: subject.name,
+    attemptId: meta.attemptId || "manual",
+    roundTitle: meta.roundTitle || "직접 저장",
+    createdAt: meta.createdAt || new Date().toISOString(),
     index,
     question
   });
@@ -971,104 +1594,637 @@ function showToast(message) {
   }, 1800);
 }
 
+function ensureSampleWrongNotes() {
+  const subject = subjects[0];
+  let changed = false;
+  Array.from(state.wrongNotes.entries()).forEach(([key, note]) => {
+    const isSample = note?.attemptId === SAMPLE_WRONG_ATTEMPT_ID || key.startsWith(SAMPLE_WRONG_ATTEMPT_ID);
+    const isCurrentProfile = !note?.profileName || note.profileName === state.profileName;
+    if (isSample && isCurrentProfile) {
+      state.wrongNotes.delete(key);
+      changed = true;
+    }
+  });
+
+  buildSampleWrongNotes().forEach((note, sampleIndex) => {
+    const key = `${note.attemptId}-${state.profileName}-${subject.id}-${sampleIndex}`;
+    state.wrongNotes.set(key, note);
+    changed = true;
+  });
+  if (changed) {
+    state.wrongSubjectId = null;
+    saveState();
+  }
+}
+
+function buildSampleWrongNotes() {
+  const subject = subjects[0];
+  const notes = [];
+  SAMPLE_WRONG_DATES.forEach((date, dateIndex) => {
+    SAMPLE_WRONG_ROUND_TIMES.forEach((time, roundIndex) => {
+      const attemptId = `${SAMPLE_WRONG_ATTEMPT_ID}-${dateIndex + 1}-${roundIndex + 1}`;
+      subject.questions.slice(0, SAMPLE_WRONG_COUNT).forEach((question, questionIndex) => {
+        const index = (roundIndex + questionIndex) % subject.questions.length;
+        notes.push({
+          profileName: state.profileName,
+          subjectId: subject.id,
+          subjectName: subject.name,
+          attemptId,
+          roundTitle: `${roundIndex + 1}회차`,
+          createdAt: `${date}T${time}+09:00`,
+          index,
+          question: subject.questions[index] || question
+        });
+      });
+    });
+  });
+  return notes;
+}
+
 function renderWrongNotes() {
-  els.wrongList.innerHTML = "";
-  if (state.wrongNotes.size === 0) {
-    const empty = document.createElement("article");
-    const status = document.createElement("span");
-    const body = document.createElement("div");
-    const title = document.createElement("div");
-    const sub = document.createElement("div");
-    empty.className = "wrong-item";
-    status.className = "status-dot";
-    status.textContent = "-";
-    title.className = "item-title";
-    title.textContent = "저장된 오답이 없습니다.";
-    sub.className = "item-sub";
-    sub.textContent = "문제를 틀리거나 오답노트에 저장하면 여기에 표시됩니다.";
-    body.append(title, sub);
-    empty.append(status, body);
-    els.wrongList.appendChild(empty);
+  if (!els.wrongList && !els.wrongSubjectGrid) return;
+
+  const notes = currentProfileWrongNotes();
+  const groups = groupWrongNotes(notes);
+  const groupBySubject = new Map(groups.map((group) => [group.subjectId, group]));
+  const selectedSubject = state.wrongSubjectId
+    ? subjects.find((subject) => subject.id === state.wrongSubjectId)
+    : null;
+  const selectedGroup = selectedSubject
+    ? groupBySubject.get(selectedSubject.id) || {
+      subjectId: selectedSubject.id,
+      subjectName: selectedSubject.name,
+      total: 0,
+      rounds: []
+    }
+    : null;
+
+  if (state.wrongSubjectId && !selectedSubject) {
+    state.wrongSubjectId = null;
+    state.wrongOpenDateKey = null;
+    saveState();
+  }
+  if (els.wrongList) els.wrongList.innerHTML = "";
+  if (els.wrongSubjectGrid) els.wrongSubjectGrid.innerHTML = "";
+  if (els.wrongRoundList) els.wrongRoundList.innerHTML = "";
+  if (els.wrongRoundSection) els.wrongRoundSection.style.display = selectedGroup ? "grid" : "none";
+
+  if (notes.length === 0) {
+    renderWrongEmpty();
     return;
   }
 
-  state.wrongNotes.forEach((note) => {
-    const item = document.createElement("button");
-    const status = document.createElement("span");
-    const body = document.createElement("div");
-    const title = document.createElement("div");
-    const sub = document.createElement("div");
-    const action = document.createElement("strong");
-    item.type = "button";
-    item.className = "wrong-item";
-    status.className = "status-dot wrong";
-    status.textContent = "!";
-    title.className = "item-title";
-    title.textContent = `${note.subjectName} Q${note.index + 1}`;
-    sub.className = "item-sub";
-    sub.textContent = note.question.text;
-    action.textContent = "다시풀기";
-    body.append(title, sub);
-    item.append(status, body, action);
-    item.addEventListener("click", () => {
-      state.subjectId = note.subjectId;
-      state.index = note.index;
-      state.selected = null;
-      state.mode = "wrong-practice";
-      state.reviewAnswer = null;
-      state.reviewQuestion = note;
+  subjects.forEach((subject) => {
+    const group = groupBySubject.get(subject.id) || {
+      subjectId: subject.id,
+      subjectName: subject.name,
+      total: 0,
+      rounds: []
+    };
+    const card = document.createElement("button");
+    card.type = "button";
+    card.className = "subject-card wrong-subject-card";
+    if (selectedGroup && group.subjectId === selectedGroup.subjectId) card.classList.add("active");
+    card.innerHTML = `
+      <span class="subject-meta">${group.total}문항</span>
+      <strong>${group.subjectName}</strong>
+      <small>${group.rounds.length ? `${group.rounds.length}개 회차의 오답 세트가 있습니다.` : "아직 저장된 오답 세트가 없습니다."}</small>
+    `;
+    card.addEventListener("click", () => {
+      state.wrongSubjectId = group.subjectId;
+      state.wrongOpenDateKey = null;
       saveState();
-      showScreen("wrongPractice");
+      renderWrongNotes();
+      focusWrongRoundSection();
     });
-    els.wrongList.appendChild(item);
+    els.wrongSubjectGrid?.appendChild(card);
   });
+
+  if (!selectedGroup) {
+    if (els.selectedWrongSubjectTitle) {
+      els.selectedWrongSubjectTitle.textContent = "날짜별 오답 세트";
+    }
+    return;
+  }
+
+  if (els.selectedWrongSubjectTitle) {
+    els.selectedWrongSubjectTitle.textContent = `${selectedGroup.subjectName} 오답 세트`;
+  }
+
+  if (selectedGroup.rounds.length === 0) {
+    renderWrongRoundPlaceholder(`${selectedGroup.subjectName}에 저장된 오답 세트가 없습니다.`);
+    return;
+  }
+
+  groupRoundsByDate(selectedGroup.rounds).forEach((dateGroup) => {
+    const section = document.createElement("section");
+    const head = document.createElement("button");
+    const title = document.createElement("span");
+    const count = document.createElement("span");
+    const list = document.createElement("div");
+    const isOpen = state.wrongOpenDateKey === dateGroup.key;
+
+    section.className = `wrong-date-group ${isOpen ? "open" : ""}`;
+    head.type = "button";
+    head.className = "wrong-date-head";
+    head.setAttribute("aria-expanded", String(isOpen));
+    title.textContent = dateGroup.label;
+    count.textContent = `${dateGroup.rounds.length}개 세트`;
+    list.className = "wrong-date-sets";
+    list.dataset.dateKey = dateGroup.key;
+    list.tabIndex = -1;
+    list.hidden = !isOpen;
+    head.addEventListener("click", () => {
+      const willOpen = !isOpen;
+      state.wrongOpenDateKey = isOpen ? null : dateGroup.key;
+      saveState();
+      renderWrongNotes();
+      if (willOpen) focusWrongDateSets(dateGroup.key);
+    });
+    head.append(title, count);
+    section.append(head, list);
+
+    dateGroup.rounds.forEach((roundGroup) => {
+      list.appendChild(createWrongSetCard(selectedGroup, roundGroup));
+    });
+
+    els.wrongRoundList?.appendChild(section);
+  });
+}
+
+function focusWrongRoundSection() {
+  if (!els.wrongRoundSection) return;
+  requestAnimationFrame(() => {
+    els.wrongRoundSection.focus({ preventScroll: true });
+    els.wrongRoundSection.scrollIntoView({ behavior: "smooth", block: "start" });
+  });
+}
+
+function focusWrongDateSets(dateKey) {
+  requestAnimationFrame(() => {
+    const target = document.querySelector(`.wrong-date-sets[data-date-key="${dateKey}"]`);
+    if (!target || target.hidden) return;
+    const firstRound = target.querySelector(".wrong-set-card");
+    if (firstRound) {
+      firstRound.focus({ preventScroll: true });
+      firstRound.scrollIntoView({ behavior: "smooth", block: "center" });
+      return;
+    }
+    target.focus({ preventScroll: true });
+    target.scrollIntoView({ behavior: "smooth", block: "center" });
+  });
+}
+
+function createWrongSetCard(selectedGroup, roundGroup) {
+  const button = document.createElement("button");
+  const titleWrap = document.createElement("div");
+  const title = document.createElement("span");
+  const time = document.createElement("small");
+  const actions = document.createElement("div");
+  const startAction = document.createElement("strong");
+  const deleteAction = document.createElement("button");
+
+  button.type = "button";
+  button.className = "wrong-set-card";
+  titleWrap.className = "wrong-set-title";
+  title.textContent = roundGroup.roundTitle;
+  time.textContent = `${formatTime(roundGroup.latestAt)} · ${roundGroup.notes.length}문항`;
+  titleWrap.append(title, time);
+  actions.className = "wrong-set-actions";
+  startAction.textContent = "풀기";
+  deleteAction.type = "button";
+  deleteAction.className = "wrong-delete-btn";
+  deleteAction.textContent = "삭제";
+  deleteAction.addEventListener("click", (event) => {
+    event.stopPropagation();
+    deleteWrongReviewSet(selectedGroup, roundGroup);
+  });
+  actions.append(startAction, deleteAction);
+  button.append(titleWrap, actions);
+  button.addEventListener("click", () => startWrongReviewSet(selectedGroup, roundGroup));
+  return button;
+}
+
+function groupRoundsByDate(rounds) {
+  const dateMap = new Map();
+  rounds.forEach((roundGroup) => {
+    const dateKey = formatDateKey(roundGroup.latestAt);
+    if (!dateMap.has(dateKey)) {
+      dateMap.set(dateKey, {
+        key: dateKey,
+        label: formatDotDate(roundGroup.latestAt),
+        latestAt: roundGroup.latestAt,
+        rounds: []
+      });
+    }
+    const dateGroup = dateMap.get(dateKey);
+    dateGroup.rounds.push(roundGroup);
+    if (new Date(roundGroup.latestAt || 0) > new Date(dateGroup.latestAt || 0)) {
+      dateGroup.latestAt = roundGroup.latestAt;
+    }
+  });
+
+  return Array.from(dateMap.values())
+    .map((dateGroup) => ({
+      ...dateGroup,
+      rounds: dateGroup.rounds.sort((a, b) => {
+        const roundCompare = getRoundOrder(a.roundTitle) - getRoundOrder(b.roundTitle);
+        if (roundCompare !== 0) return roundCompare;
+        return new Date(a.latestAt || 0) - new Date(b.latestAt || 0);
+      })
+    }))
+    .sort((a, b) => new Date(b.latestAt || 0) - new Date(a.latestAt || 0));
+}
+
+function getRoundOrder(roundTitle = "") {
+  const match = String(roundTitle).match(/(\d+)\s*회차/);
+  return match ? Number(match[1]) : Number.MAX_SAFE_INTEGER;
+}
+
+function deleteWrongReviewSet(subjectGroup, roundGroup) {
+  const message = `${subjectGroup.subjectName} ${roundGroup.roundTitle} 오답 세트 ${roundGroup.notes.length}개 문항을 삭제할까요?`;
+  if (!window.confirm(message)) return;
+
+  const keysToDelete = [];
+  state.wrongNotes.forEach((note, key) => {
+    const sameProfile = !note.profileName || note.profileName === state.profileName;
+    const sameSubject = (note.subjectId || note.subjectName) === subjectGroup.subjectId;
+    const sameRound = (note.attemptId || note.roundTitle || "manual") === roundGroup.roundKey;
+    if (sameProfile && sameSubject && sameRound) keysToDelete.push(key);
+  });
+  keysToDelete.forEach((key) => state.wrongNotes.delete(key));
+
+  if (state.wrongReviewSet?.roundKey === roundGroup.roundKey) {
+    state.wrongReviewSet = null;
+    state.reviewQuestion = null;
+    state.reviewAnswer = null;
+  }
+  saveState();
+  renderTopStats();
+  renderWrongNotes();
+  showToast(`${keysToDelete.length}개 문항을 삭제했습니다.`);
+}
+
+function renderWrongRoundPlaceholder(message) {
+  if (!els.wrongRoundList) return;
+  const empty = document.createElement("article");
+  empty.className = "wrong-item";
+  empty.innerHTML = `
+      <span class="status-dot">-</span>
+      <div>
+        <div class="item-title">${message}</div>
+      </div>
+  `;
+  els.wrongRoundList.appendChild(empty);
+}
+
+function groupWrongNotes(notes) {
+  const subjectMap = new Map();
+  notes.forEach((note) => {
+    const subjectKey = note.subjectId || note.subjectName || "unknown";
+    if (!subjectMap.has(subjectKey)) {
+      subjectMap.set(subjectKey, {
+        subjectId: subjectKey,
+        subjectName: note.subjectName || "미분류 과목",
+        total: 0,
+        roundMap: new Map()
+      });
+    }
+
+    const subjectGroup = subjectMap.get(subjectKey);
+    const roundKey = note.attemptId || note.roundTitle || "manual";
+    if (!subjectGroup.roundMap.has(roundKey)) {
+      subjectGroup.roundMap.set(roundKey, {
+        roundKey,
+        roundTitle: note.roundTitle || "직접 저장",
+        latestAt: note.createdAt || null,
+        notes: []
+      });
+    }
+
+    const roundGroup = subjectGroup.roundMap.get(roundKey);
+    subjectGroup.total += 1;
+    roundGroup.notes.push(note);
+    if (new Date(note.createdAt || 0) > new Date(roundGroup.latestAt || 0)) {
+      roundGroup.latestAt = note.createdAt;
+    }
+  });
+
+  return Array.from(subjectMap.values()).map((subjectGroup) => ({
+    subjectId: subjectGroup.subjectId,
+    subjectName: subjectGroup.subjectName,
+    total: subjectGroup.total,
+    rounds: Array.from(subjectGroup.roundMap.values()).sort((a, b) => new Date(b.latestAt || 0) - new Date(a.latestAt || 0))
+  }));
+}
+
+function currentProfileWrongNotes() {
+  return Array.from(state.wrongNotes.values())
+    .filter((note) => !note.profileName || note.profileName === state.profileName)
+    .sort((a, b) => {
+      const subjectCompare = (a.subjectName || "").localeCompare(b.subjectName || "", "ko");
+      if (subjectCompare !== 0) return subjectCompare;
+      return new Date(b.createdAt || 0) - new Date(a.createdAt || 0);
+    });
+}
+
+function renderWrongEmpty() {
+  const empty = document.createElement("article");
+  empty.className = "wrong-item";
+  empty.innerHTML = `
+    <span class="status-dot">-</span>
+    <div>
+      <div class="item-title">저장된 오답이 없습니다.</div>
+      <div class="item-sub">문제를 틀리거나 오답노트에 저장하면 과목별 복습 세트가 만들어집니다.</div>
+    </div>
+  `;
+  els.wrongList?.appendChild(empty);
+  els.wrongRoundList?.appendChild(empty.cloneNode(true));
+}
+
+function startWrongReviewSet(subjectGroup, roundGroup) {
+  const isSampleSet = roundGroup.roundKey === SAMPLE_WRONG_ATTEMPT_ID;
+  const notes = (isSampleSet && roundGroup.notes.length < SAMPLE_WRONG_COUNT
+    ? buildSampleWrongNotes()
+    : roundGroup.notes
+  ).slice().sort((a, b) => a.index - b.index);
+  state.wrongReviewSet = {
+    subjectId: subjectGroup.subjectId,
+    subjectName: subjectGroup.subjectName,
+    roundKey: roundGroup.roundKey,
+    roundTitle: roundGroup.roundTitle,
+    latestAt: roundGroup.latestAt,
+    notes,
+    currentIndex: 0,
+    answers: {},
+    checked: {}
+  };
+  state.reviewQuestion = notes[0] || null;
+  state.reviewAnswer = null;
+  saveState();
+  showScreen("wrongPractice");
+}
+
+function activeWrongReviewSet() {
+  const set = state.wrongReviewSet;
+  if (!set || !Array.isArray(set.notes) || set.notes.length === 0) return null;
+  set.currentIndex = Math.max(0, Math.min(set.currentIndex || 0, set.notes.length));
+  set.answers = set.answers || {};
+  set.checked = set.checked || {};
+  return set;
+}
+
+function syncWrongReviewQuestion() {
+  const set = activeWrongReviewSet();
+  if (!set) return null;
+  const note = set.notes[set.currentIndex];
+  state.reviewQuestion = note || null;
+  state.reviewAnswer = set.answers[set.currentIndex] ?? null;
+  return { set, note };
+}
+
+function selectWrongReviewAnswer(answer, set) {
+  state.reviewAnswer = answer;
+  if (set) {
+    set.answers[set.currentIndex] = answer;
+    delete set.checked[set.currentIndex];
+  }
+  if (els.reviewFeedback) {
+    els.reviewFeedback.style.display = "none";
+    els.reviewFeedback.className = "feedback-panel review-feedback";
+  }
+  if (els.reviewNextBtn) els.reviewNextBtn.disabled = !set;
+  els.reviewChoices?.querySelectorAll(".choice-btn").forEach((button) => {
+    button.classList.remove("correct", "wrong");
+  });
+  saveState();
+}
+
+function createWrongNoteItem(note) {
+  const item = document.createElement("button");
+  const status = document.createElement("span");
+  const body = document.createElement("div");
+  const title = document.createElement("div");
+  const sub = document.createElement("div");
+  const action = document.createElement("strong");
+
+  item.type = "button";
+  item.className = "wrong-item";
+  status.className = "status-dot wrong";
+  status.textContent = "!";
+  title.className = "item-title";
+  title.textContent = `Q${note.index + 1} · ${note.question.difficulty || "난이도 미정"}`;
+  sub.className = "item-sub";
+  sub.textContent = note.question.text;
+  action.textContent = "다시풀기";
+  body.append(title, sub);
+  item.append(status, body, action);
+  item.addEventListener("click", () => {
+    state.subjectId = note.subjectId;
+    state.index = note.index;
+    state.selected = null;
+    state.mode = "wrong-practice";
+    state.reviewAnswer = null;
+    state.reviewQuestion = note;
+    state.wrongReviewSet = null;
+    saveState();
+    showScreen("wrongPractice");
+  });
+
+  return item;
+}
+
+function formatShortDate(value) {
+  if (!value) return "날짜 없음";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "날짜 없음";
+  return date.toLocaleDateString("ko-KR", { month: "2-digit", day: "2-digit" });
+}
+
+function formatFullDate(value) {
+  if (!value) return "날짜 없음";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "날짜 없음";
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}/${month}/${day}`;
+}
+
+function formatDotDate(value) {
+  if (!value) return "날짜 없음";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "날짜 없음";
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}.${month}.${day}`;
+}
+
+function formatTime(value) {
+  if (!value) return "시각 없음";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "시각 없음";
+  const hour = String(date.getHours()).padStart(2, "0");
+  const minute = String(date.getMinutes()).padStart(2, "0");
+  return `${hour}:${minute}`;
+}
+
+function formatDateKey(value) {
+  if (!value) return "unknown";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "unknown";
+  return date.toISOString().slice(0, 10);
 }
 
 function renderWrongPractice() {
   if (!els.reviewQuestionText || !els.reviewChoices || !els.reviewFeedback) return;
 
-  const note = state.reviewQuestion;
+  const reviewState = syncWrongReviewQuestion();
+  const set = reviewState?.set || null;
+  if (set && set.currentIndex >= set.notes.length) {
+    renderWrongReviewComplete(set);
+    return;
+  }
+
+  if (els.reviewQuestionPanel) els.reviewQuestionPanel.hidden = false;
+  if (els.reviewFeedback) els.reviewFeedback.hidden = false;
+  if (els.reviewCompletePanel) els.reviewCompletePanel.hidden = true;
+
+  const note = reviewState?.note || state.reviewQuestion;
   if (!note) {
     els.reviewSubject.textContent = "오답 문제";
     els.reviewQuestionText.textContent = "선택된 오답 문제가 없습니다. 오답노트에서 다시 풀 문제를 선택하세요.";
     els.reviewChoices.innerHTML = "";
     els.reviewSubmitBtn.disabled = true;
+    if (els.reviewPrevBtn) els.reviewPrevBtn.disabled = true;
+    if (els.reviewNextBtn) els.reviewNextBtn.disabled = true;
+    if (els.reviewProgress) els.reviewProgress.textContent = "오답노트에서 복습할 세트를 선택하세요.";
     return;
   }
 
   const question = note.question;
+  const checkedAnswer = set?.checked?.[set.currentIndex] || null;
   els.reviewSubject.textContent = note.subjectName;
-  els.reviewQuestionNumber.textContent = `Q${note.index + 1}`;
-  els.reviewDifficulty.textContent = question.difficulty;
-  els.reviewQuestionType.textContent = getQuestionType(question, note.index);
-  els.reviewQuestionText.textContent = question.text;
+  if (els.reviewQuestionNumber) els.reviewQuestionNumber.textContent = `${note.index + 1}`;
+  if (els.reviewDifficulty) els.reviewDifficulty.textContent = question.difficulty;
+  if (els.reviewQuestionType) els.reviewQuestionType.textContent = getQuestionType(question, note.index);
+  els.reviewQuestionText.textContent = `${note.index + 1}. ${question.text}`;
   els.reviewFeedback.className = "feedback-panel review-feedback";
   els.reviewFeedback.style.display = "none";
   els.reviewSubmitBtn.disabled = false;
-  renderChoices(els.reviewChoices, question, null, (choiceNumber) => {
-    state.reviewAnswer = choiceNumber;
-    saveState();
+  if (els.reviewProgress) {
+    els.reviewProgress.textContent = set
+      ? `${set.roundTitle} · ${set.currentIndex + 1} / ${set.notes.length}`
+      : "선택한 오답 문제 1개";
+  }
+  if (els.reviewPrevBtn) {
+    els.reviewPrevBtn.disabled = !set || set.currentIndex === 0;
+    els.reviewPrevBtn.style.display = "";
+    els.reviewPrevBtn.style.visibility = !set || set.currentIndex === 0 ? "hidden" : "visible";
+  }
+  if (els.reviewNextBtn) {
+    els.reviewNextBtn.disabled = !set;
+    els.reviewNextBtn.textContent = set && set.currentIndex === set.notes.length - 1 ? "완료" : "다음";
+  }
+  renderChoices(els.reviewChoices, question, checkedAnswer, (choiceNumber) => {
+    selectWrongReviewAnswer(choiceNumber, set);
   }, state.reviewAnswer);
+
+  if (checkedAnswer) renderWrongPracticeFeedback(note, checkedAnswer);
 }
 
 function submitWrongPractice() {
   const note = state.reviewQuestion;
-  if (!note || !state.reviewAnswer) {
+  const hasAnswer = typeof state.reviewAnswer === "string"
+    ? state.reviewAnswer.trim().length > 0
+    : Boolean(state.reviewAnswer);
+  if (!note || !hasAnswer) {
     showToast("먼저 답안을 선택하세요.");
     return;
   }
 
   const question = note.question;
-  const correct = state.reviewAnswer === question.answer;
+  const correct = question.type === "coding"
+    ? evaluateCodingAnswer(question, state.reviewAnswer)
+    : state.reviewAnswer === question.answer;
+  const checkedAnswer = {
+    selected: state.reviewAnswer,
+    correct
+  };
+  const set = activeWrongReviewSet();
+  if (set) {
+    set.answers[set.currentIndex] = state.reviewAnswer;
+    set.checked[set.currentIndex] = checkedAnswer;
+  }
+  saveState();
+  renderChoices(els.reviewChoices, question, checkedAnswer, (choiceNumber) => {
+    selectWrongReviewAnswer(choiceNumber, set);
+  }, state.reviewAnswer);
+  renderWrongPracticeFeedback(note, checkedAnswer);
+  if (els.reviewNextBtn && set) els.reviewNextBtn.disabled = false;
+}
+
+function renderWrongPracticeFeedback(note, checkedAnswer) {
+  const question = note.question;
+  const selectedText = question.type === "coding"
+    ? "코드 답안"
+    : `선택 ${checkedAnswer.selected}번 · 정답 ${question.answer}번`;
   els.reviewFeedback.style.display = "grid";
-  els.reviewFeedback.className = `feedback-panel review-feedback ${correct ? "correct" : "wrong"}`;
+  els.reviewFeedback.className = `feedback-panel review-feedback ${checkedAnswer.correct ? "correct" : "wrong"}`;
   els.reviewFeedback.innerHTML = `
     <div>
-      <span class="result-badge ${correct ? "correct" : "wrong"}">${correct ? "정답" : "오답"}</span>
-      <h3>${correct ? "다시 풀어서 맞혔습니다." : `선택 ${state.reviewAnswer}번 · 정답 ${question.answer}번`}</h3>
+      <span class="result-badge ${checkedAnswer.correct ? "correct" : "wrong"}">${checkedAnswer.correct ? "정답" : "오답"}</span>
+      <h3>${checkedAnswer.correct ? "다시 풀어서 맞혔습니다." : selectedText}</h3>
     </div>
     <p>${question.explanation}</p>
   `;
+}
+
+function moveWrongReview(delta) {
+  const set = activeWrongReviewSet();
+  if (!set) return;
+  const nextIndex = set.currentIndex + delta;
+  if (nextIndex >= set.notes.length) {
+    set.currentIndex = set.notes.length;
+    state.reviewQuestion = null;
+    state.reviewAnswer = null;
+    saveState();
+    renderWrongReviewComplete(set);
+    return;
+  }
+  set.currentIndex = Math.max(0, nextIndex);
+  state.reviewQuestion = set.notes[set.currentIndex] || null;
+  state.reviewAnswer = set.answers[set.currentIndex] ?? null;
+  saveState();
+  renderWrongPractice();
+}
+
+function renderWrongReviewComplete(set) {
+  const correctCount = Object.values(set.checked || {}).filter((answer) => answer?.correct).length;
+  if (els.reviewSubject) els.reviewSubject.textContent = "오답 리뷰 완료";
+  if (els.reviewProgress) els.reviewProgress.textContent = `${set.roundTitle} · 복습 완료`;
+  if (els.reviewQuestionPanel) els.reviewQuestionPanel.hidden = true;
+  if (els.reviewFeedback) {
+    els.reviewFeedback.hidden = true;
+    els.reviewFeedback.style.display = "none";
+  }
+  if (els.reviewCompleteSummary) {
+    els.reviewCompleteSummary.textContent = `총 ${set.notes.length}문항 중 ${correctCount}문항을 다시 맞혔습니다.`;
+  }
+  if (els.reviewCompletePanel) els.reviewCompletePanel.hidden = false;
+}
+
+function restartWrongReview() {
+  const set = activeWrongReviewSet();
+  if (!set) return;
+  set.currentIndex = 0;
+  set.answers = {};
+  set.checked = {};
+  state.reviewQuestion = set.notes[0] || null;
+  state.reviewAnswer = null;
+  saveState();
+  renderWrongPractice();
 }
 
 function renderTopStats() {
@@ -1103,10 +2259,12 @@ async function runHarness() {
 function renderApiResult(data) {
   const status = data.final_status || "UNKNOWN";
   const question = data.question || "문제 생성 결과가 없습니다.";
+  const scenario = data.scenario ? `\n\n상황:\n${data.scenario}` : "";
+  const error = data.error ? `\n\n오류:\n${data.error}` : "";
   const log = data.log_ref || "-";
   const retry = data.retry_count ?? 0;
   els.apiResult.style.display = "block";
-  els.apiResult.textContent = `${status} · ${question} · retry: ${retry}회 · log: ${log}`;
+  els.apiResult.textContent = `${status} · ${question}${scenario}${error}\n\nretry: ${retry}회 · log: ${log}`;
 }
 
 function bindScreenLinks() {
@@ -1160,20 +2318,32 @@ function initPage() {
   bindOptional(els.singleNextBtn, "click", () => moveSingle(state.index + 1));
   bindOptional(els.gradeMockBtn, "click", gradeMock);
   bindOptional(els.reviewSubmitBtn, "click", submitWrongPractice);
+  bindOptional(els.reviewPrevBtn, "click", () => moveWrongReview(-1));
+  bindOptional(els.reviewNextBtn, "click", () => moveWrongReview(1));
+  bindOptional(els.reviewBackBtn, "click", () => showScreen("wrong"));
+  bindOptional(els.reviewRestartBtn, "click", restartWrongReview);
   bindOptional(els.generateBtn, "click", runHarness);
+  bindOptional(els.toggleAllExplanationsBtn, "click", toggleAllResultExplanations);
+  bindOptional(els.saveWrongAllBtn, "click", saveAllWrongApiResultItems);
 
   if (!profiles.includes(state.profileName)) state.profileName = profiles[0];
   if (!state.questionCount) state.questionCount = 20;
   if (!state.subjectId) state.subjectId = subjects[0].id;
+  ensureSampleWrongNotes();
   if (page === "profile") initProfilePage();
   if (page === "subjects") renderSubjects();
   if (page === "mock") renderMock();
   if (page === "result") {
-    renderResultPage();
+    loadBackendResultPage();
     initResultChat();
   }
   if (page === "analysis") renderAnalysisPage();
-  if (page === "wrong") renderWrongNotes();
+  if (page === "wrong") {
+    state.wrongSubjectId = null;
+    state.wrongOpenDateKey = null;
+    saveState();
+    renderWrongNotes();
+  }
   if (page === "wrong-practice") renderWrongPractice();
 
   renderProfileButton();
@@ -1181,5 +2351,3 @@ function initPage() {
 }
 
 initPage();
-
-

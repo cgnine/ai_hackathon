@@ -40,23 +40,109 @@
         <p id="resultSummary">채점 결과가 표시됩니다.</p>
         <p class="result-commentary" id="resultCommentary">총평이 표시됩니다.</p>
       </div>
-      <div class="result-list" id="resultList"></div>
+
+      <section class="diagnosis-report" id="resultDiagnosis" aria-labelledby="diagnosisTitle">
+        <div class="report-top">
+          <article class="report-card">
+            <p id="diagnosisProgramTitle">KB디지털역량평가 모의고사</p>
+            <p id="diagnosisSubject">Cloud Developer (Pro)</p>
+            <h2>응시 결과</h2>
+            <div class="level-seal">
+              <span id="diagnosisLevelName">Beginner</span>
+              <strong id="diagnosisLevel">Level 0</strong>
+              <em id="diagnosisScore">0 / 100점</em>
+            </div>
+          </article>
+
+          <div class="report-info">
+            <table class="candidate-table" aria-label="응시자 정보">
+              <tbody>
+                <tr>
+                  <th scope="row">이름</th>
+                  <td id="diagnosisName">-</td>
+                </tr>
+                <tr>
+                  <th scope="row">검사일</th>
+                  <td id="diagnosisDate">-</td>
+                </tr>
+                <tr>
+                  <th scope="row">과목명</th>
+                  <td id="diagnosisCourse">-</td>
+                </tr>
+              </tbody>
+            </table>
+
+            <div class="level-table-wrap">
+              <h3 id="diagnosisTitle">점수 구간에 따른 Level 및 역량 정의</h3>
+              <table class="level-table">
+                <thead>
+                  <tr>
+                    <th>점수 구간</th>
+                    <th>Level</th>
+                    <th>명칭</th>
+                    <th>정의</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr><td>80 ~ 100점</td><td>5</td><td>Expert(전문가)</td><td>과목의 이론 및 심화 내용을 설명할 수 있고, 이를 자유자재로 활용하여 해석하고 적용할 수 있는 수준</td></tr>
+                  <tr><td>70 ~ 79점</td><td>4</td><td>Proficient(숙련자)</td><td>과목의 이론 및 심화 내용에 대해 이해하고 이를 조합 및 응용하여 현업 및 실무에 적용할 수 있는 수준</td></tr>
+                  <tr><td>60 ~ 69점</td><td>3</td><td>Utilizer 2(이용자)</td><td>과목의 이론 및 내용을 설명할 수 있고, 이를 응용하여 실무에 일부 적용 가능한 수준</td></tr>
+                  <tr><td>50 ~ 59점</td><td>2</td><td>Utilizer 1(이용자)</td><td>과목의 이론 및 내용을 이해하고, 이를 사용하여 실무에 일부 적용 가능한 수준</td></tr>
+                  <tr><td>30 ~ 49점</td><td>1</td><td>Finder(습득자)</td><td>과목의 이론 및 내용을 전반적으로 이해하는 수준</td></tr>
+                  <tr><td>30점 미만</td><td>0</td><td>Beginner(초심자)</td><td>과목에 대한 충분한 학습이 필요한 수준</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+        <div class="report-section">
+          <h2>점수 및 코멘트</h2>
+          <div class="understanding-bars" id="diagnosisBars"></div>
+        </div>
+
+        <div class="report-bottom">
+          <article class="report-section">
+            <h2>역량별 점수</h2>
+            <div class="diagnosis-chart" id="diagnosisChart"></div>
+            <p class="chart-footnote">* 세부 결과에 제시된 점수들은 각 역량별 점수를 100점 만점으로 환산한 결과입니다.</p>
+          </article>
+          <article class="report-section">
+            <h2>코멘트</h2>
+            <p class="diagnosis-summary" id="diagnosisSummary">영역별 진단 결과가 표시됩니다.</p>
+          </article>
+        </div>
+      </section>
+
+      <section class="wrong-review-section" aria-labelledby="wrongReviewTitle">
+        <div class="wrong-review-head">
+          <div>
+            <p class="eyebrow">Wrong Note</p>
+            <h2 id="wrongReviewTitle">오답 해설</h2>
+          </div>
+          <div class="wrong-review-actions">
+            <button class="secondary-btn" id="toggleAllExplanationsBtn" type="button">해설 모두 펼치기</button>
+            <button class="secondary-btn" id="saveWrongAllBtn" type="button">오답노트 모두저장</button>
+          </div>
+        </div>
+        <div class="result-list" id="resultList"></div>
+      </section>
     </section>
   </main>
 
   <section class="chat-widget" id="resultChatWidget" aria-label="결과 상담 채팅">
-    <button class="chat-fab" id="chatToggleBtn" type="button" aria-expanded="false" aria-controls="chatPanel">💬</button>
+    <button class="chat-fab" id="chatToggleBtn" type="button" aria-expanded="false" aria-controls="chatPanel">?</button>
     <div class="chat-panel" id="chatPanel" aria-live="polite">
       <div class="chat-head">
         <div>
           <strong>결과 상담</strong>
-          <span>점수와 오답을 바탕으로 바로 답변합니다.</span>
+          <span>점수와 오답을 바탕으로 바로 답합니다.</span>
         </div>
-        <button type="button" id="chatCloseBtn" aria-label="채팅 닫기">×</button>
+        <button type="button" id="chatCloseBtn" aria-label="채팅 닫기">x</button>
       </div>
       <div class="chat-messages" id="chatMessages"></div>
       <form class="chat-form" id="chatForm">
-        <input id="chatInput" type="text" autocomplete="off" placeholder="예: 왜 불합격이야? 뭘 공부해야 해?" />
+        <input id="chatInput" type="text" autocomplete="off" placeholder="왜 불합격인지, 뭘 공부해야 하는지 물어보세요." />
         <button type="submit">전송</button>
       </form>
     </div>

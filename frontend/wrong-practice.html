@@ -34,25 +34,30 @@
       <div class="screen-head compact">
         <p class="eyebrow">Wrong Review</p>
         <h1 id="reviewSubject">오답 다시 풀기</h1>
-        <p>선택한 오답 문제 하나만 다시 풀고 해설을 확인합니다.</p>
+        <p id="reviewProgress">오답노트에서 복습할 세트를 선택하세요.</p>
       </div>
 
-      <article class="question-panel review-question-panel">
-        <div class="question-head">
-          <span class="question-number" id="reviewQuestionNumber">Q1</span>
-          <div class="question-tags">
-            <span class="pill" id="reviewDifficulty">중</span>
-            <span class="pill type-pill" id="reviewQuestionType">이론형</span>
-          </div>
-        </div>
+      <article class="question-panel review-question-panel" id="reviewQuestionPanel">
         <p class="question-text" id="reviewQuestionText"></p>
         <ol class="choices" id="reviewChoices"></ol>
-        <div class="answer-actions">
-          <button class="primary-btn" id="reviewSubmitBtn">정답 확인</button>
+        <div class="answer-actions review-actions">
+          <button class="secondary-btn" id="reviewPrevBtn" type="button">이전</button>
+          <button class="primary-btn" id="reviewSubmitBtn" type="button">정답 확인</button>
+          <button class="secondary-btn" id="reviewNextBtn" type="button">다음</button>
         </div>
       </article>
 
       <section class="feedback-panel review-feedback" id="reviewFeedback" aria-live="polite"></section>
+
+      <article class="review-complete-panel" id="reviewCompletePanel" hidden>
+        <p class="eyebrow">Complete</p>
+        <h2>오답 리뷰 완료</h2>
+        <p id="reviewCompleteSummary">총 0문항 중 0문항을 다시 맞혔습니다.</p>
+        <div class="complete-actions">
+          <button class="secondary-btn" id="reviewBackBtn" type="button">오답노트로 돌아가기</button>
+          <button class="primary-btn" id="reviewRestartBtn" type="button">다시 풀기</button>
+        </div>
+      </article>
     </section>
   </main>
 
