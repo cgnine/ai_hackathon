@@ -23,52 +23,7 @@ function makeCodingQuestions(rows) {
   }));
 }
 
-const subjects = [
-  {
-    id: "ai-engineering",
-    name: "AI Engineering",
-    desc: "LLM, RAG, 프롬프트, 평가, MLOps, 안전성",
-    questions: makeQuestions([
-      ["중", "RAG 시스템에서 검색 단계의 주된 목적은 무엇인가요?", ["모델 파라미터를 수정한다", "관련 근거 문서를 제공한다", "GPU 온도를 제어한다", "CSS를 최적화한다"], 2, "RAG는 검색된 근거를 생성 입력에 포함해 최신성과 정확도를 높입니다."],
-      ["중", "LLM 출력을 JSON 스키마로 검증해야 하는 이유는 무엇인가요?", ["속도만 높이기 위해", "구조화된 출력과 후처리 안정성을 확보하기 위해", "프롬프트를 제거하기 위해", "로그를 없애기 위해"], 2, "스키마 검증은 불완전한 모델 응답이 시스템에 그대로 들어가는 것을 막습니다."],
-      ["상", "LLM-as-Judge 운영에서 중요한 원칙은 무엇인가요?", ["항상 정답으로 처리한다", "평가 기준과 샘플을 고정하고 결과를 모니터링한다", "규칙 검증을 모두 제거한다", "점수만 저장한다"], 2, "Judge도 모델이므로 명확한 기준, 샘플 검증, 로그 추적과 함께 사용해야 합니다."],
-      ["중", "Bedrock 호출 실패 시 적절한 복구 전략은 무엇인가요?", ["무한 재시도한다", "제한된 횟수만 재시도하고 실패 로그를 남긴다", "성공으로 처리한다", "검증을 건너뛴다"], 2, "무한 재시도는 비용과 장애를 키우므로 제한된 복구와 명확한 실패 처리가 필요합니다."]
-    ])
-  },
-  {
-    id: "cloud-developer",
-    name: "Cloud for Developer",
-    desc: "개발자를 위한 클라우드 배포, API, 컨테이너, 운영",
-    questions: makeQuestions([
-      ["중", "Docker 이미지를 사용하는 주된 이유는 무엇인가요?", ["실행 환경을 일관되게 배포하기 위해", "코드를 자동 작성하기 위해", "DB 정규화를 생략하기 위해", "모니터 밝기를 높이기 위해"], 1, "컨테이너 이미지는 애플리케이션과 의존성을 묶어 환경 차이를 줄입니다."],
-      ["하", "REST API에서 404 상태 코드는 일반적으로 무엇을 의미하나요?", ["리소스를 찾을 수 없음", "요청 성공", "서버 내부 오류", "인증 필요"], 1, "404는 요청한 리소스가 존재하지 않거나 찾을 수 없음을 뜻합니다."],
-      ["중", "API 호출에서 idempotency가 중요한 이유는 무엇인가요?", ["재시도 시 중복 처리를 줄이기 위해", "응답을 느리게 하기 위해", "모든 요청을 실패시키기 위해", "프론트 색상을 바꾸기 위해"], 1, "멱등성은 같은 요청이 여러 번 수행되어도 결과가 중복 생성되지 않게 합니다."],
-      ["상", "운영 로그에 correlation id를 남기는 이유는 무엇인가요?", ["같은 요청 흐름을 여러 로그에서 추적하기 위해", "CSS 선택자를 줄이기 위해", "이미지 해상도를 높이기 위해", "DB 정규화를 자동화하기 위해"], 1, "상관 ID는 분산된 로그 사이에서 하나의 요청 경로를 추적하게 해줍니다."]
-    ])
-  },
-  {
-    id: "cloud-architecture",
-    name: "Cloud for Architecture",
-    desc: "아키텍처 설계, 가용성, 네트워크, 보안, 비용",
-    questions: makeQuestions([
-      ["중", "고가용성 설계의 핵심 목표는 무엇인가요?", ["장애 시에도 서비스를 지속한다", "서버 수를 항상 1대로 유지한다", "로그를 제거한다", "사용자 입력을 금지한다"], 1, "중요 구성요소 장애에도 서비스가 계속 동작하도록 설계하는 것이 핵심입니다."],
-      ["중", "VPC의 주된 역할은 무엇인가요?", ["격리된 가상 네트워크 제공", "코드 자동 생성", "데이터 모델 학습", "PDF 추출"], 1, "VPC는 클라우드 리소스를 논리적으로 격리된 네트워크 안에 배치합니다."],
-      ["중", "RPO는 무엇을 나타내나요?", ["허용 가능한 데이터 손실 시간", "복구 서버 수", "요청 처리 속도", "암호 길이"], 1, "RPO는 장애 시점에서 어느 정도 과거 데이터 손실까지 허용하는지 나타냅니다."],
-      ["상", "SPOF를 줄이는 방법으로 적절한 것은 무엇인가요?", ["중요 구성 요소를 이중화한다", "모든 트래픽을 한 서버에 고정한다", "백업을 제거한다", "모니터링을 중지한다"], 1, "이중화와 분산 배치는 하나의 구성 요소 장애가 전체 장애가 되는 것을 줄입니다."]
-    ])
-  },
-  {
-    id: "software-engineering",
-    name: "소프트웨어공학",
-    desc: "요구사항, 설계, 테스트, 형상관리, 유지보수",
-    questions: makeQuestions([
-      ["중", "소프트웨어 개발 생명주기(SDLC)의 주요 목적은 무엇인가요?", ["개발 과정을 체계적으로 관리하기 위해", "코드를 무조건 짧게 만들기 위해", "테스트를 생략하기 위해", "사용자 요구를 숨기기 위해"], 1, "SDLC는 요구사항 분석부터 설계, 구현, 테스트, 배포, 유지보수까지 개발 과정을 체계적으로 관리합니다."],
-      ["중", "요구사항 분석 단계에서 가장 중요한 활동은 무엇인가요?", ["사용자와 이해관계자의 필요를 명확히 파악한다", "서버 사양만 먼저 결정한다", "코드를 바로 배포한다", "테스트 결과를 삭제한다"], 1, "요구사항이 명확해야 설계와 구현이 실제 문제 해결 방향에 맞게 진행됩니다."],
-      ["상", "응집도는 높고 결합도는 낮게 설계하는 이유는 무엇인가요?", ["변경과 유지보수를 쉽게 하기 위해", "모든 기능을 한 파일에 넣기 위해", "테스트를 어렵게 만들기 위해", "문서 작성을 금지하기 위해"], 1, "높은 응집도와 낮은 결합도는 모듈의 책임을 명확히 하고 변경 영향 범위를 줄입니다."],
-      ["중", "회귀 테스트의 목적은 무엇인가요?", ["변경 후 기존 기능이 깨지지 않았는지 확인한다", "새 기능만 수동으로 설명한다", "빌드 시간을 무조건 늘린다", "요구사항을 삭제한다"], 1, "회귀 테스트는 수정이나 추가 작업 이후 기존 기능의 정상 동작을 확인합니다."]
-    ])
-  }
-];
+let subjects = [];
 
 const profiles = [
   "김우찬",
@@ -95,6 +50,7 @@ const defaultState = {
   profileName: "",
   questionCount: 20,
   subjectId: null,
+  activeQuestions: [],
   mode: null,
   index: 0,
   selected: null,
@@ -117,6 +73,7 @@ function loadState() {
     return {
       ...defaultState,
       ...saved,
+      activeQuestions: saved.activeQuestions || [],
       singleAnswers: saved.singleAnswers || {},
       mockAnswers: saved.mockAnswers || {},
       wrongNotes: new Map(saved.wrongNotes || []),
@@ -264,9 +221,77 @@ function currentSubject() {
 
 function currentQuestions() {
   const count = Number(state.questionCount) || 20;
-  const source = currentSubject().questions;
+  const usingApiQuestions = Array.isArray(state.activeQuestions) && state.activeQuestions.length > 0;
+  const source = usingApiQuestions ? state.activeQuestions : [];
   if (source.length >= count) return source.slice(0, count);
-  return Array.from({ length: count }, (_, index) => source[index % source.length]);
+  return source.slice();
+}
+
+function normalizeApiQuestion(item) {
+  return {
+    id: item.question_id,
+    subjectCode: item.subject_code,
+    difficulty: item.major_unit || "문제",
+    text: item.question_text_extra
+      ? `${item.question_text}\n\n${item.question_text_extra}`
+      : item.question_text,
+    choices: item.choices || [],
+    answer: Number(item.answer_number),
+    explanation: item.explanation,
+    questionType: item.question_type || item.minor_unit || "객관식"
+  };
+}
+
+async function loadSubjectQuestions(subject, count) {
+  if (!subject?.subjectCode) {
+    state.activeQuestions = [];
+    saveState();
+    return;
+  }
+
+  const response = await fetch(`${API_BASE}/quiz/list`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      subject_code: subject.subjectCode,
+      count
+    })
+  });
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    throw new Error(errorText || `HTTP ${response.status}`);
+  }
+
+  const data = await response.json();
+  state.activeQuestions = (data.items || []).map(normalizeApiQuestion);
+  saveState();
+}
+
+function buildSubjectFromApi(item) {
+  return {
+    id: String(item.subject_code).toLowerCase(),
+    name: item.subject_name || item.subject_code,
+    subjectCode: item.subject_code,
+    desc: item.subject_description || `등록된 문제 ${item.question_count}문항`,
+    questionCount: item.question_count,
+    questions: []
+  };
+}
+
+async function loadAvailableSubjects() {
+  const response = await fetch(`${API_BASE}/quiz/subjects`);
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    throw new Error(errorText || `HTTP ${response.status}`);
+  }
+
+  const data = await response.json();
+  const items = Array.isArray(data.items) ? data.items.map(buildSubjectFromApi) : [];
+  if (items.length > 0) {
+    subjects = items;
+  }
 }
 
 function getQuestionType(question, index) {
@@ -369,6 +394,7 @@ function startPractice() {
 
   state.profileName = selectedName;
   state.subjectId = null;
+  state.activeQuestions = [];
   state.index = 0;
   state.selected = null;
   state.singleAnswers = {};
@@ -386,13 +412,22 @@ function renderSubjects() {
   if (els.profileSummary) {
     els.profileSummary.textContent = `${state.profileName || "응시자"} · 문제 수 선택`;
   }
+  if (subjects.length === 0) {
+    const empty = document.createElement("article");
+    empty.className = "subject-card";
+    empty.innerHTML = `
+      <strong>과목 없음</strong>
+      <small>subject_tb 에 등록된 과목을 불러오지 못했습니다.</small>
+    `;
+    els.subjectGrid.appendChild(empty);
+    return;
+  }
   subjects.forEach((subject) => {
     const card = document.createElement("button");
     card.type = "button";
     card.className = "subject-card";
-    const availableCount = Number(state.questionCount) || 20;
+    const availableCount = Math.min(Number(state.questionCount) || 20, subject.questionCount || Number(state.questionCount) || 20);
     card.innerHTML = `
-      <span class="subject-meta">${availableCount}문항</span>
       <strong>${subject.name}</strong>
       <small>${subject.desc}</small>
     `;
@@ -401,11 +436,12 @@ function renderSubjects() {
   });
 }
 
-function selectSubject(subjectId) {
+async function selectSubject(subjectId) {
   const parsedCount = Number.parseInt(els.questionCountInput?.value || state.questionCount || "20", 10);
   state.questionCount = Number.isFinite(parsedCount) ? Math.max(1, Math.min(parsedCount, 100)) : 20;
   if (els.questionCountInput) els.questionCountInput.value = state.questionCount;
   state.subjectId = subjectId;
+  state.activeQuestions = [];
   state.index = 0;
   state.selected = null;
   state.singleAnswers = {};
@@ -414,6 +450,23 @@ function selectSubject(subjectId) {
   if (els.selectedSubjectEyebrow) els.selectedSubjectEyebrow.textContent = "Selected Subject";
   if (els.selectedSubjectTitle) els.selectedSubjectTitle.textContent = subject.name;
   saveState();
+
+  try {
+    await loadSubjectQuestions(subject, state.questionCount);
+    if (state.activeQuestions.length === 0) {
+      showToast(`${subject.name} 과목의 DB 문제가 없습니다.`);
+      return;
+    }
+    if (subject.subjectCode && state.activeQuestions.length < state.questionCount) {
+      showToast(`${subject.name} 문제는 ${state.activeQuestions.length}문항까지 불러왔습니다.`);
+    }
+  } catch (error) {
+    state.activeQuestions = [];
+    saveState();
+    showToast(`DB 문제를 불러오지 못했습니다. (${error.message})`);
+    return;
+  }
+
   startMock();
 }
 
@@ -510,6 +563,14 @@ function renderMock() {
   if (!els.mockQuestionList) return;
 
   els.mockQuestionList.innerHTML = "";
+  if (questions.length === 0) {
+    const empty = document.createElement("article");
+    empty.className = "question-panel mock-question-panel";
+    empty.textContent = "표시할 DB 문제가 없습니다. 백엔드와 DB 데이터를 확인하세요.";
+    els.mockQuestionList.appendChild(empty);
+    renderMockProgress();
+    return;
+  }
   questions.forEach((question, index) => {
     const panel = document.createElement("article");
     const head = document.createElement("div");
@@ -567,6 +628,10 @@ function renderMockProgress() {
 
 function gradeMock() {
   const questions = currentQuestions();
+  if (questions.length === 0) {
+    showToast("채점할 DB 문제가 없습니다.");
+    return;
+  }
   let correctCount = 0;
   const resultRows = [];
   const subject = currentSubject();
@@ -1422,9 +1487,11 @@ function buildChatAnswer(question) {
 }
 
 function getQuestionsForSubject(subject, count) {
-  const source = subject.questions;
+  const source = subject.id === state.subjectId && Array.isArray(state.activeQuestions) && state.activeQuestions.length
+    ? state.activeQuestions
+    : [];
   if (source.length >= count) return source.slice(0, count);
-  return Array.from({ length: count }, (_, index) => source[index % source.length]);
+  return source.slice();
 }
 
 function currentProfileAttempts() {
@@ -1836,7 +1903,6 @@ function renderWrongNotes() {
     card.className = "subject-card wrong-subject-card";
     if (selectedGroup && group.subjectId === selectedGroup.subjectId) card.classList.add("active");
     card.innerHTML = `
-      <span class="subject-meta">${total}문항</span>
       <strong>${group.subjectName}</strong>
       <small>${roundCount ? `${roundCount}개 회차의 오답 세트가 있습니다.` : "아직 저장된 오답 세트가 없습니다."}</small>
     `;
@@ -2449,7 +2515,7 @@ function bindOptional(element, eventName, handler) {
   if (element) element.addEventListener(eventName, handler);
 }
 
-function initPage() {
+async function initPage() {
   const page = document.body.dataset.page || "subjects";
 
   bindScreenLinks();
@@ -2497,7 +2563,14 @@ function initPage() {
 
   if (!profiles.includes(state.profileName)) state.profileName = profiles[0];
   if (!state.questionCount) state.questionCount = 20;
-  if (!state.subjectId) state.subjectId = subjects[0].id;
+  try {
+    await loadAvailableSubjects();
+  } catch (error) {
+    showToast(`DB 과목 목록을 불러오지 못했습니다. (${error.message})`);
+  }
+  if (!state.subjectId || !subjects.some((subject) => subject.id === state.subjectId)) {
+    state.subjectId = subjects[0]?.id || null;
+  }
   ensureSampleWrongNotes();
   if (page === "profile") initProfilePage();
   if (page === "subjects") renderSubjects();

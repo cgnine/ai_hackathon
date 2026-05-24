@@ -106,6 +106,51 @@ class QuizResponse(BaseModel):
     tags: Optional[List[str]] = None
 
 
+class QuestionCategoryItem(BaseModel):
+    question_text: str
+    option_1: str
+    option_2: str
+    option_3: str
+    option_4: str
+    difficulty: str
+
+
+class SubjectQuizListRequest(BaseModel):
+    subject_code: str
+    count: int = Field(default=20, ge=1, le=100)
+
+
+class SubjectListItem(BaseModel):
+    subject_code: str
+    subject_name: str
+    subject_description: Optional[str] = None
+    question_count: int = Field(ge=0)
+
+
+class SubjectListResponse(BaseModel):
+    items: List[SubjectListItem]
+
+
+class SubjectQuizItem(BaseModel):
+    question_id: str
+    subject_code: str
+    major_unit: Optional[str] = None
+    minor_unit: Optional[str] = None
+    question_type: Optional[str] = None
+    question_text: str
+    question_text_extra: Optional[str] = None
+    choices: List[str]
+    answer_number: int = Field(ge=1, le=5)
+    explanation: str
+
+
+class SubjectQuizListResponse(BaseModel):
+    subject_code: str
+    requested_count: int
+    returned_count: int
+    items: List[SubjectQuizItem]
+
+
 class SolveRequest(BaseModel):
     question_id: int
     user_id: str

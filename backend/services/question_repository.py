@@ -46,6 +46,45 @@ class QuestionRow:
         return [self.option_1, self.option_2, self.option_3, self.option_4]
 
 
+@dataclass
+class SubjectQuestionRow:
+    question_id: str
+    subject_code: str
+    major_unit: Optional[str]
+    minor_unit: Optional[str]
+    question_type: Optional[str]
+    question_content: str
+    question_content2: Optional[str]
+    option_1: Optional[str]
+    option_2: Optional[str]
+    option_3: Optional[str]
+    option_4: Optional[str]
+    option_5: Optional[str]
+    answer_number: int
+    explanation: str
+
+    @property
+    def options(self) -> list[str]:
+        return [
+            option for option in [
+                self.option_1,
+                self.option_2,
+                self.option_3,
+                self.option_4,
+                self.option_5,
+            ]
+            if option
+        ]
+
+
+@dataclass
+class AvailableSubjectRow:
+    subject_code: str
+    subject_name: str
+    subject_description: Optional[str]
+    question_count: int
+
+
 def _row_to_question(row: tuple) -> QuestionRow:
     return QuestionRow(
         id=row[0],
@@ -70,6 +109,25 @@ def _row_to_question(row: tuple) -> QuestionRow:
     )
 
 
+def _row_to_subject_question(row: tuple) -> SubjectQuestionRow:
+    return SubjectQuestionRow(
+        question_id=row[0],
+        subject_code=row[1],
+        major_unit=row[2],
+        minor_unit=row[3],
+        question_type=row[4],
+        question_content=row[5],
+        question_content2=row[6],
+        option_1=row[7],
+        option_2=row[8],
+        option_3=row[9],
+        option_4=row[10],
+        option_5=row[11],
+        answer_number=int(row[12]),
+        explanation=row[13],
+    )
+
+
 def get_question_by_id(question_id: int) -> Optional[QuestionRow]:
     sql = f"SELECT {_Q_COLS} FROM {_Q} WHERE id = %s AND is_active = TRUE"
     with get_conn() as conn:
@@ -77,6 +135,66 @@ def get_question_by_id(question_id: int) -> Optional[QuestionRow]:
             cur.execute(sql, (question_id,))
             row = cur.fetchone()
     return _row_to_question(row) if row else None
+
+
+def get_questions_by_category(category: str) -> list[QuestionRow]:
+    sql = f"""
+        SELECT {_Q_COLS} FROM {_Q}
+        WHERE category = %s AND is_active = TRUE
+        ORDER BY id ASC
+    """
+    with get_conn() as conn:
+        with conn.cursor() as cur:
+            cur.execute(sql, (category,))
+            rows = cur.fetchall()
+    return [_row_to_question(row) for row in rows]
+
+
+def get_questions_by_subject_code(subject_code: str, count: int) -> list[SubjectQuestionRow]:
+    sql = """
+        SELECT
+            question_id, subject_code, major_unit, minor_unit, question_type,
+            question_content, question_content2,
+            option_1, option_2, option_3, option_4, option_5,
+            answer_number, explanation
+        FROM question_tb
+        WHERE subject_code = %s
+        ORDER BY RANDOM()
+        LIMIT %s
+    """
+    with get_conn() as conn:
+        with conn.cursor() as cur:
+            cur.execute(sql, (subject_code, count))
+            rows = cur.fetchall()
+    return [_row_to_subject_question(row) for row in rows]
+
+
+def get_available_subjects() -> list[AvailableSubjectRow]:
+    sql = """
+        SELECT
+            s.subject_code,
+            s.subject_name,
+            s.subject_description,
+            COUNT(q.question_id) AS question_count
+        FROM subject_tb s
+        LEFT JOIN question_tb q
+            ON q.subject_code = s.subject_code
+        GROUP BY s.subject_code, s.subject_name, s.subject_description
+        ORDER BY s.subject_code ASC
+    """
+    with get_conn() as conn:
+        with conn.cursor() as cur:
+            cur.execute(sql)
+            rows = cur.fetchall()
+    return [
+        AvailableSubjectRow(
+            subject_code=row[0],
+            subject_name=row[1],
+            subject_description=row[2],
+            question_count=int(row[3]),
+        )
+        for row in rows
+    ]
 
 
 def get_random_active_question(
