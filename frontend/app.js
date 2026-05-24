@@ -1,6 +1,6 @@
 ﻿const API_BASE = "http://localhost:8000";
 
-const DEMO_ATTEMPT_ID = "demo-attempt";
+const DEMO_ATTEMPT_ID = "123456789";
 
 function makeQuestions(rows) {
   return rows.map(([difficulty, text, choices, answer, explanation]) => ({
@@ -136,6 +136,9 @@ function loadState() {
 
 const state = loadState();
 let latestApiResult = null;
+let backendWrongNotes = null;
+let backendWrongSubjects = null;
+let backendWrongNotesLoading = false;
 const SAMPLE_WRONG_ATTEMPT_ID = "sample-wrong-ai-engineering";
 const SAMPLE_WRONG_COUNT = 3;
 const SAMPLE_WRONG_DATES = [
@@ -194,10 +197,12 @@ const els = {
   gradeMockBtn: $("gradeMockBtn"),
   resultScore: $("resultScore"),
   resultVerdict: $("resultVerdict"),
+  resultHero: $("resultHero"),
   resultSummary: $("resultSummary"),
   resultCommentary: $("resultCommentary"),
   resultList: $("resultList"),
   resultDiagnosis: $("resultDiagnosis"),
+  wrongReviewSection: $("wrongReviewSection"),
   diagnosisProgramTitle: $("diagnosisProgramTitle"),
   diagnosisSubject: $("diagnosisSubject"),
   diagnosisLevelName: $("diagnosisLevelName"),
@@ -284,7 +289,7 @@ function showScreen(name) {
   }
   els.screens.forEach((screen) => screen.classList.toggle("active", screen.id === `${name}Screen`));
   els.navBtns.forEach((button) => button.classList.toggle("active", button.dataset.screen === name));
-  if (name === "wrong") renderWrongNotes();
+  if (name === "wrong") loadBackendWrongNotes();
   window.scrollTo({ top: 0, behavior: "smooth" });
 }
 
@@ -650,22 +655,30 @@ function appendResultItem(question, index, selected, correct, meta = {}) {
 
 function toggleResultItem(item, toggle, detail) {
   const isOpen = item.classList.toggle("open");
+  const title = item.querySelector(".item-title");
   toggle.setAttribute("aria-expanded", String(isOpen));
   if (isOpen) {
     detail.style.maxHeight = "none";
   } else {
     detail.style.maxHeight = "0px";
   }
+  if (title?.dataset.previewText && title.dataset.fullText) {
+    title.textContent = isOpen ? title.dataset.fullText : title.dataset.previewText;
+  }
   updateToggleAllExplanationsButton();
 }
 
 function setResultItemOpen(item, isOpen) {
   const toggle = item.querySelector(".result-toggle");
+  const title = item.querySelector(".item-title");
   const detail = item.querySelector(".result-explanation");
   if (!toggle || !detail) return;
   item.classList.toggle("open", isOpen);
   toggle.setAttribute("aria-expanded", String(isOpen));
   detail.style.maxHeight = isOpen ? "none" : "0px";
+  if (title?.dataset.previewText && title.dataset.fullText) {
+    title.textContent = isOpen ? title.dataset.fullText : title.dataset.previewText;
+  }
 }
 
 function toggleAllResultExplanations() {
@@ -767,11 +780,16 @@ function createResultDetail({
     button.className = "secondary-btn result-save-btn";
     button.textContent = saved ? "오답노트 저장됨" : "오답노트 저장";
     button.disabled = saved;
-    button.addEventListener("click", () => {
-      onSave();
-      renderSaveWrongAllButton(latestApiResult || state.lastResult);
-      button.textContent = "오답노트 저장됨";
+    button.addEventListener("click", async () => {
       button.disabled = true;
+      try {
+        await onSave();
+        renderSaveWrongAllButton(latestApiResult || state.lastResult);
+        button.textContent = "오답노트 저장됨";
+      } catch (error) {
+        button.disabled = false;
+        showToast(`오답노트 저장에 실패했습니다. (${error.message})`);
+      }
     });
     action.appendChild(button);
     detail.appendChild(action);
@@ -791,6 +809,16 @@ function formatAnswerNumber(value) {
   return value ? `${value}번` : "-";
 }
 
+function previewQuestionText(text, index) {
+  const normalized = String(text || "").replace(/\s+/g, " ").trim();
+  const firstSentence = normalized.match(/.*?[.?!。？！]|.+?(?=\s|$)/)?.[0]?.trim() || normalized;
+  return `${index + 1}. ${firstSentence}`;
+}
+
+function fullQuestionText(text, index) {
+  return `${index + 1}. ${String(text || "").trim()}`;
+}
+
 function appendApiResultItem(item, index, resultMeta) {
   if (!els.resultList) return;
 
@@ -805,8 +833,8 @@ function appendApiResultItem(item, index, resultMeta) {
     selected: item.selected,
     answer: item.answer,
     explanation: item.explanation,
-    saved: state.wrongNotes.has(apiWrongNoteKey(resultMeta, item, index)),
-    onSave: () => saveApiResultItemToWrongNote(resultMeta, item, index)
+    saved: state.wrongNotes.has(apiWrongNoteKey(resultMeta, item, index)) || item.wrongNoteSaved,
+    onSave: item.correct ? null : () => saveApiResultItemToWrongNote(resultMeta, item, index)
   });
 
   row.className = "result-item";
@@ -816,7 +844,9 @@ function appendApiResultItem(item, index, resultMeta) {
   status.className = `status-dot ${item.correct ? "" : "wrong"}`;
   status.textContent = item.correct ? "O" : "X";
   title.className = "item-title";
-  title.textContent = `${index + 1}. ${item.questionText}`;
+  title.dataset.previewText = previewQuestionText(item.questionText, index);
+  title.dataset.fullText = fullQuestionText(item.questionText, index);
+  title.textContent = title.dataset.previewText;
   result.textContent = item.correct ? "정답" : "오답";
   body.append(title);
   toggle.append(status, body, result);
@@ -833,13 +863,19 @@ function renderApiResultPage(result) {
   const passed = result.score > 60;
   latestApiResult = result;
   els.resultList.innerHTML = "";
+  renderResultHeroAction(false);
+  if (els.wrongReviewSection) els.wrongReviewSection.style.display = "";
+  if (els.toggleAllExplanationsBtn) els.toggleAllExplanationsBtn.style.display = "inline-flex";
   els.resultScore.textContent = `${result.score}점`;
   if (els.resultVerdict) {
     els.resultVerdict.textContent = passed ? "합격" : "불합격";
     els.resultVerdict.className = `verdict-badge ${passed ? "pass" : "fail"}`;
   }
   els.resultSummary.textContent = `${result.subjectName} ${result.total}문항 중 ${result.correctCount}문항을 맞혔습니다. ${passed ? "합격 기준을 통과했습니다." : "합격 기준인 60점을 넘지 못했습니다."}`;
-  if (els.resultCommentary) els.resultCommentary.textContent = buildResultCommentary(result.score);
+  if (els.resultCommentary) {
+    els.resultCommentary.style.display = "";
+    els.resultCommentary.textContent = buildResultCommentary(result.score);
+  }
   renderDiagnosis(normalizeDiagnosis(result.diagnosis, {
     profileName: result.profileName,
     subjectName: result.subjectName,
@@ -868,9 +904,22 @@ function toWrongNoteQuestion(item) {
   };
 }
 
-function saveApiResultItemToWrongNote(result, item, index, notify = true) {
+async function updateWrongNoteSavedOnServer(result, questionIds) {
+  if (!result?.attemptId || !Array.isArray(questionIds) || questionIds.length === 0) return;
+
+  const response = await fetch(`${API_BASE}/results/${result.attemptId}/wrong-note`, {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ question_ids: questionIds })
+  });
+  if (!response.ok) throw new Error(`HTTP ${response.status}`);
+}
+
+async function saveApiResultItemToWrongNote(result, item, index, notify = true, syncServer = true) {
   const key = apiWrongNoteKey(result, item, index);
   const alreadySaved = state.wrongNotes.has(key);
+  if (syncServer) await updateWrongNoteSavedOnServer(result, [item.questionId]);
+  item.wrongNoteSaved = true;
   state.wrongNotes.set(key, {
     profileName: result.profileName || state.profileName,
     subjectId: result.subjectId,
@@ -892,7 +941,7 @@ function saveApiResultItemToWrongNote(result, item, index, notify = true) {
 function renderSaveWrongAllButton(result = latestApiResult) {
   if (!els.saveWrongAllBtn) return;
   const rows = getResultSaveRows(result);
-  const unsavedCount = rows.filter((row) => !state.wrongNotes.has(row.key)).length;
+  const unsavedCount = rows.filter((row) => !row.saved).length;
   els.saveWrongAllBtn.style.display = rows.length ? "inline-flex" : "none";
   els.saveWrongAllBtn.disabled = unsavedCount === 0;
   els.saveWrongAllBtn.textContent = unsavedCount === 0
@@ -908,8 +957,11 @@ function getResultSaveRows(result = latestApiResult || state.lastResult) {
       .map((item, index) => ({
         correct: item.correct,
         key: apiWrongNoteKey(result, item, index),
-        save: (notify = false) => saveApiResultItemToWrongNote(result, item, index, notify)
-      }));
+        questionId: item.questionId,
+        saved: state.wrongNotes.has(apiWrongNoteKey(result, item, index)) || item.wrongNoteSaved,
+        save: (notify = false, syncServer = true) => saveApiResultItemToWrongNote(result, item, index, notify, syncServer)
+      }))
+      .filter((row) => !row.correct);
   }
 
   if (Array.isArray(result.rows)) {
@@ -930,15 +982,23 @@ function getResultSaveRows(result = latestApiResult || state.lastResult) {
   return [];
 }
 
-function saveAllWrongApiResultItems() {
+async function saveAllWrongApiResultItems() {
   const result = latestApiResult || state.lastResult;
   const rows = getResultSaveRows(result);
   let savedCount = 0;
-  rows.forEach((row) => {
-    if (state.wrongNotes.has(row.key)) return;
-    row.save(false);
+  const unsavedRows = rows.filter((row) => !row.saved);
+  if (latestApiResult && unsavedRows.length > 0) {
+    try {
+      await updateWrongNoteSavedOnServer(result, unsavedRows.map((row) => row.questionId));
+    } catch (error) {
+      showToast(`오답노트 모두저장에 실패했습니다. (${error.message})`);
+      return;
+    }
+  }
+  for (const row of unsavedRows) {
+    await row.save(false, !latestApiResult);
     savedCount += 1;
-  });
+  }
   renderSaveWrongAllButton(result);
   if (latestApiResult) {
     renderApiResultPage(latestApiResult);
@@ -968,18 +1028,8 @@ function renderDiagnosis(diagnosis) {
   if (els.diagnosisDate) els.diagnosisDate.textContent = formatFullDate(diagnosis.createdAt || new Date().toISOString());
   if (els.diagnosisCourse) els.diagnosisCourse.textContent = diagnosis.subjectName || "-";
   els.diagnosisSummary.textContent = diagnosis.summary || "영역별 점수를 기준으로 강점과 약점을 확인하세요.";
-  renderDiagnosisRadar(getSampleRadarAxes());
+  renderDiagnosisRadar(diagnosis.radarAxes?.length ? diagnosis.radarAxes : axes);
   renderDiagnosisBars(axes);
-}
-
-function getSampleRadarAxes() {
-  return [
-    { name: "기초 이해", score: 63 },
-    { name: "클라우드 분석", score: 63 },
-    { name: "문제 해결", score: 42 },
-    { name: "보안 적용", score: 35 },
-    { name: "CI/CD Pipeline", score: 26 },
-  ];
 }
 
 function renderDiagnosisRadar(axes) {
@@ -1091,12 +1141,13 @@ function normalizeDiagnosis(diagnosis, meta = {}) {
 
   const theorySource = sourceAxes.filter((axis) => axis.name.includes("이론"));
   const practicalSource = sourceAxes.filter((axis) => !axis.name.includes("이론"));
-  const theory = mergeAxes("이론형 문항 종합 이해도", theorySource.length ? theorySource : sourceAxes);
-  const practical = mergeAxes("실무형 문항 종합 이해도", practicalSource.length ? practicalSource : sourceAxes);
+  const theory = mergeAxes("이론형 문항 종합 이해도", theorySource);
+  const practical = mergeAxes("실무형 문항 종합 이해도", practicalSource);
 
   return {
     ...meta,
     score: meta.score ?? Math.round(sourceAxes.reduce((sum, axis) => sum + axis.score, 0) / sourceAxes.length),
+    radarAxes: diagnosis?.radarAxes || [],
     axes: [
       { ...theory, comment: buildAxisComment(theory) },
       { ...practical, comment: buildAxisComment(practical) }
@@ -1189,13 +1240,50 @@ async function loadBackendResultPage() {
 
   try {
     const response = await fetch(`${API_BASE}/results/${attemptId}`);
+    if (response.status === 404) {
+      renderResultEmptyState();
+      return;
+    }
     if (!response.ok) throw new Error(`HTTP ${response.status}`);
     const result = await response.json();
     renderApiResultPage(result);
   } catch (error) {
-    renderResultPage();
-    showToast(`백엔드 결과를 불러오지 못해 로컬 결과를 표시합니다. (${error.message})`);
+    renderResultEmptyState({
+      title: "결과를 불러오지 못했습니다",
+      summary: "일시적인 연결 문제로 응시 결과를 확인하지 못했습니다.",
+      detail: "잠시 후 다시 시도하거나 시험응시 화면에서 새 응시를 시작하세요."
+    });
   }
+}
+
+function renderResultEmptyState({
+  title = "표시할 응시 결과가 없습니다",
+  summary = "",
+  detail = ""
+} = {}) {
+  latestApiResult = null;
+  els.resultList.innerHTML = "";
+  els.resultScore.textContent = "-";
+  if (els.resultVerdict) {
+    els.resultVerdict.textContent = "결과 없음";
+    els.resultVerdict.className = "verdict-badge neutral";
+  }
+  els.resultSummary.textContent = title;
+  if (els.resultCommentary) {
+    els.resultCommentary.textContent = "";
+    els.resultCommentary.style.display = "none";
+  }
+  if (els.resultDiagnosis) els.resultDiagnosis.style.display = "none";
+  if (els.wrongReviewSection) els.wrongReviewSection.style.display = "none";
+  if (els.saveWrongAllBtn) els.saveWrongAllBtn.style.display = "none";
+  if (els.toggleAllExplanationsBtn) els.toggleAllExplanationsBtn.style.display = "none";
+  renderResultHeroAction(true);
+  updateToggleAllExplanationsButton();
+}
+
+function renderResultHeroAction(show) {
+  if (!els.resultHero) return;
+  els.resultHero.querySelector(".result-hero-actions")?.remove();
 }
 
 function renderResultPage() {
@@ -1204,30 +1292,42 @@ function renderResultPage() {
   const result = state.lastResult;
   latestApiResult = null;
   els.resultList.innerHTML = "";
+  renderResultHeroAction(false);
   if (!result) {
     renderSaveWrongAllButton(null);
     updateToggleAllExplanationsButton();
     if (els.resultDiagnosis) els.resultDiagnosis.style.display = "none";
+    if (els.wrongReviewSection) els.wrongReviewSection.style.display = "none";
+    if (els.toggleAllExplanationsBtn) els.toggleAllExplanationsBtn.style.display = "none";
     els.resultScore.textContent = "0점";
     if (els.resultVerdict) {
       els.resultVerdict.textContent = "불합격";
       els.resultVerdict.className = "verdict-badge fail";
     }
     els.resultSummary.textContent = "아직 채점 결과가 없습니다.";
-    if (els.resultCommentary) els.resultCommentary.textContent = "모의고사를 완료하면 점수에 맞춘 총평이 표시됩니다.";
+    if (els.resultCommentary) {
+      els.resultCommentary.style.display = "none";
+      els.resultCommentary.textContent = "";
+    }
     return;
   }
 
   const subject = subjects.find((item) => item.id === result.subjectId) || currentSubject();
   const questions = getQuestionsForSubject(subject, result.total);
   const passed = result.score > 60;
+  renderResultHeroAction(false);
+  if (els.wrongReviewSection) els.wrongReviewSection.style.display = "";
+  if (els.toggleAllExplanationsBtn) els.toggleAllExplanationsBtn.style.display = "inline-flex";
   els.resultScore.textContent = `${result.score}점`;
   if (els.resultVerdict) {
     els.resultVerdict.textContent = passed ? "합격" : "불합격";
     els.resultVerdict.className = `verdict-badge ${passed ? "pass" : "fail"}`;
   }
   els.resultSummary.textContent = `${subject.name} ${result.total}문항 중 ${result.correctCount}문항을 맞혔습니다. ${passed ? "합격 기준을 통과했습니다." : "합격 기준인 60점을 넘지 못했습니다."}`;
-  if (els.resultCommentary) els.resultCommentary.textContent = buildResultCommentary(result.score);
+  if (els.resultCommentary) {
+    els.resultCommentary.style.display = "";
+    els.resultCommentary.textContent = buildResultCommentary(result.score);
+  }
   renderDiagnosis(buildLocalDiagnosis(result, questions, subject));
   renderSaveWrongAllButton(result);
   const meta = {
@@ -1606,6 +1706,15 @@ function ensureSampleWrongNotes() {
     }
   });
 
+  const shouldSeedSamples = new URLSearchParams(window.location.search).get("sampleWrong") === "1";
+  if (!shouldSeedSamples) {
+    if (changed) {
+      state.wrongSubjectId = null;
+      saveState();
+    }
+    return;
+  }
+
   buildSampleWrongNotes().forEach((note, sampleIndex) => {
     const key = `${note.attemptId}-${state.profileName}-${subject.id}-${sampleIndex}`;
     state.wrongNotes.set(key, note);
@@ -1641,14 +1750,49 @@ function buildSampleWrongNotes() {
   return notes;
 }
 
+async function loadBackendWrongNotes() {
+  backendWrongNotesLoading = true;
+  backendWrongNotes = null;
+
+  try {
+    const response = await fetch(`${API_BASE}/results/wrong-notes/saved`);
+    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+    const data = await response.json();
+    backendWrongNotes = Array.isArray(data.items) ? data.items : [];
+    backendWrongSubjects = Array.isArray(data.subjects) ? data.subjects : [];
+  } catch (error) {
+    backendWrongNotes = [];
+    backendWrongSubjects = [];
+    showToast(`DB 오답노트를 불러오지 못했습니다. (${error.message})`);
+  } finally {
+    backendWrongNotesLoading = false;
+    renderTopStats();
+    renderWrongNotes();
+  }
+}
+
 function renderWrongNotes() {
   if (!els.wrongList && !els.wrongSubjectGrid) return;
 
   const notes = currentProfileWrongNotes();
   const groups = groupWrongNotes(notes);
   const groupBySubject = new Map(groups.map((group) => [group.subjectId, group]));
+  const useBackendNotes = Array.isArray(backendWrongNotes);
+  const subjectOptions = useBackendNotes
+    ? (backendWrongSubjects || groups.map((group) => ({
+      subjectId: group.subjectId,
+      subjectName: group.subjectName,
+      total: group.total,
+      rounds: group.rounds
+    }))).map((subject) => ({
+      id: subject.subjectId,
+      name: subject.subjectName,
+      total: subject.wrongCount ?? subject.total ?? 0,
+      roundCount: subject.roundCount ?? subject.rounds?.length ?? 0
+    }))
+    : subjects;
   const selectedSubject = state.wrongSubjectId
-    ? subjects.find((subject) => subject.id === state.wrongSubjectId)
+    ? subjectOptions.find((subject) => subject.id === state.wrongSubjectId)
     : null;
   const selectedGroup = selectedSubject
     ? groupBySubject.get(selectedSubject.id) || {
@@ -1667,28 +1811,34 @@ function renderWrongNotes() {
   if (els.wrongList) els.wrongList.innerHTML = "";
   if (els.wrongSubjectGrid) els.wrongSubjectGrid.innerHTML = "";
   if (els.wrongRoundList) els.wrongRoundList.innerHTML = "";
-  if (els.wrongRoundSection) els.wrongRoundSection.style.display = selectedGroup ? "grid" : "none";
+  if (els.wrongRoundSection) {
+    els.wrongRoundSection.hidden = !selectedGroup;
+    els.wrongRoundSection.setAttribute("aria-hidden", String(!selectedGroup));
+    els.wrongRoundSection.style.display = selectedGroup ? "grid" : "none";
+  }
 
   if (notes.length === 0) {
     renderWrongEmpty();
     return;
   }
 
-  subjects.forEach((subject) => {
+  subjectOptions.forEach((subject) => {
     const group = groupBySubject.get(subject.id) || {
       subjectId: subject.id,
       subjectName: subject.name,
-      total: 0,
+      total: subject.total || 0,
       rounds: []
     };
+    const total = subject.total ?? group.total;
+    const roundCount = subject.roundCount ?? group.rounds.length;
     const card = document.createElement("button");
     card.type = "button";
     card.className = "subject-card wrong-subject-card";
     if (selectedGroup && group.subjectId === selectedGroup.subjectId) card.classList.add("active");
     card.innerHTML = `
-      <span class="subject-meta">${group.total}문항</span>
+      <span class="subject-meta">${total}문항</span>
       <strong>${group.subjectName}</strong>
-      <small>${group.rounds.length ? `${group.rounds.length}개 회차의 오답 세트가 있습니다.` : "아직 저장된 오답 세트가 없습니다."}</small>
+      <small>${roundCount ? `${roundCount}개 회차의 오답 세트가 있습니다.` : "아직 저장된 오답 세트가 없습니다."}</small>
     `;
     card.addEventListener("click", () => {
       state.wrongSubjectId = group.subjectId;
@@ -1783,6 +1933,7 @@ function createWrongSetCard(selectedGroup, roundGroup) {
   const actions = document.createElement("div");
   const startAction = document.createElement("strong");
   const deleteAction = document.createElement("button");
+  const isDbSet = roundGroup.notes.some((note) => note.source === "db");
 
   button.type = "button";
   button.className = "wrong-set-card";
@@ -1792,14 +1943,17 @@ function createWrongSetCard(selectedGroup, roundGroup) {
   titleWrap.append(title, time);
   actions.className = "wrong-set-actions";
   startAction.textContent = "풀기";
-  deleteAction.type = "button";
-  deleteAction.className = "wrong-delete-btn";
-  deleteAction.textContent = "삭제";
-  deleteAction.addEventListener("click", (event) => {
-    event.stopPropagation();
-    deleteWrongReviewSet(selectedGroup, roundGroup);
-  });
-  actions.append(startAction, deleteAction);
+  actions.append(startAction);
+  if (!isDbSet) {
+    deleteAction.type = "button";
+    deleteAction.className = "wrong-delete-btn";
+    deleteAction.textContent = "삭제";
+    deleteAction.addEventListener("click", (event) => {
+      event.stopPropagation();
+      deleteWrongReviewSet(selectedGroup, roundGroup);
+    });
+    actions.append(deleteAction);
+  }
   button.append(titleWrap, actions);
   button.addEventListener("click", () => startWrongReviewSet(selectedGroup, roundGroup));
   return button;
@@ -1919,6 +2073,14 @@ function groupWrongNotes(notes) {
 }
 
 function currentProfileWrongNotes() {
+  if (Array.isArray(backendWrongNotes)) {
+    return backendWrongNotes.slice().sort((a, b) => {
+      const subjectCompare = (a.subjectName || "").localeCompare(b.subjectName || "", "ko");
+      if (subjectCompare !== 0) return subjectCompare;
+      return new Date(b.createdAt || 0) - new Date(a.createdAt || 0);
+    });
+  }
+
   return Array.from(state.wrongNotes.values())
     .filter((note) => !note.profileName || note.profileName === state.profileName)
     .sort((a, b) => {
@@ -1928,18 +2090,24 @@ function currentProfileWrongNotes() {
     });
 }
 
-function renderWrongEmpty() {
+function renderWrongEmptyMessage(title, subtitle) {
   const empty = document.createElement("article");
-  empty.className = "wrong-item";
+  empty.className = "empty-state wrong-empty-state";
   empty.innerHTML = `
-    <span class="status-dot">-</span>
     <div>
-      <div class="item-title">저장된 오답이 없습니다.</div>
-      <div class="item-sub">문제를 틀리거나 오답노트에 저장하면 과목별 복습 세트가 만들어집니다.</div>
+      <h3>${title}</h3>
+      ${subtitle ? `<p>${subtitle}</p>` : ""}
     </div>
   `;
   els.wrongList?.appendChild(empty);
   els.wrongRoundList?.appendChild(empty.cloneNode(true));
+}
+
+function renderWrongEmpty() {
+  renderWrongEmptyMessage(
+    "복습할 오답이 없습니다",
+    ""
+  );
 }
 
 function startWrongReviewSet(subjectGroup, roundGroup) {
@@ -2229,8 +2397,9 @@ function restartWrongReview() {
 
 function renderTopStats() {
   const totalSolved = Object.keys(state.mockAnswers).length;
+  const wrongCount = Array.isArray(backendWrongNotes) ? backendWrongNotes.length : state.wrongNotes.size;
   if (els.todayCount) els.todayCount.textContent = totalSolved;
-  if (els.wrongTopCount) els.wrongTopCount.textContent = state.wrongNotes.size;
+  if (els.wrongTopCount) els.wrongTopCount.textContent = wrongCount;
 }
 
 async function runHarness() {
@@ -2342,7 +2511,7 @@ function initPage() {
     state.wrongSubjectId = null;
     state.wrongOpenDateKey = null;
     saveState();
-    renderWrongNotes();
+    loadBackendWrongNotes();
   }
   if (page === "wrong-practice") renderWrongPractice();
 
