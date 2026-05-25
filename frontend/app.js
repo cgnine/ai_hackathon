@@ -155,6 +155,9 @@ const els = {
   resultScore: $("resultScore"),
   resultVerdict: $("resultVerdict"),
   resultHero: $("resultHero"),
+  resultLoading: $("resultLoading"),
+  resultLoadingBar: $("resultLoadingBar"),
+  resultContent: $("resultContent"),
   resultSummary: $("resultSummary"),
   resultCommentary: $("resultCommentary"),
   resultList: $("resultList"),
@@ -194,6 +197,8 @@ const els = {
   reviewSubmitBtn: $("reviewSubmitBtn"),
   reviewFeedback: $("reviewFeedback"),
   reviewQuestionPanel: $("reviewQuestionPanel"),
+  wrongReviewLoading: $("wrongReviewLoading"),
+  wrongReviewLoadingBar: $("wrongReviewLoadingBar"),
   reviewCompletePanel: $("reviewCompletePanel"),
   reviewCompleteSummary: $("reviewCompleteSummary"),
   reviewBackBtn: $("reviewBackBtn"),
@@ -724,6 +729,7 @@ function toggleResultItem(item, toggle, detail) {
   toggle.setAttribute("aria-expanded", String(isOpen));
   if (isOpen) {
     detail.style.maxHeight = "none";
+    focusResultItem(item);
   } else {
     detail.style.maxHeight = "0px";
   }
@@ -731,6 +737,15 @@ function toggleResultItem(item, toggle, detail) {
     title.textContent = isOpen ? title.dataset.fullText : title.dataset.previewText;
   }
   updateToggleAllExplanationsButton();
+}
+
+function focusResultItem(item) {
+  if (!item) return;
+  if (!item.hasAttribute("tabindex")) item.setAttribute("tabindex", "-1");
+  requestAnimationFrame(() => {
+    item.focus({ preventScroll: true });
+    item.scrollIntoView({ behavior: "smooth", block: "center" });
+  });
 }
 
 function setResultItemOpen(item, isOpen) {
@@ -899,7 +914,7 @@ function appendApiResultItem(item, index, resultMeta) {
     answer: item.answer,
     explanation: item.explanation,
     saved: state.wrongNotes.has(apiWrongNoteKey(resultMeta, item, index)) || item.wrongNoteSaved,
-    onSave: item.correct ? null : () => saveApiResultItemToWrongNote(resultMeta, item, index)
+    onSave: () => saveApiResultItemToWrongNote(resultMeta, item, index)
   });
 
   row.className = "result-item";
@@ -927,6 +942,7 @@ function renderApiResultPage(result) {
 
   const passed = result.score > 60;
   latestApiResult = result;
+  showResultContent();
   els.resultList.innerHTML = "";
   renderResultHeroAction(false);
   if (els.wrongReviewSection) els.wrongReviewSection.style.display = "";
@@ -1026,7 +1042,7 @@ function getResultSaveRows(result = latestApiResult || state.lastResult) {
         saved: state.wrongNotes.has(apiWrongNoteKey(result, item, index)) || item.wrongNoteSaved,
         save: (notify = false, syncServer = true) => saveApiResultItemToWrongNote(result, item, index, notify, syncServer)
       }))
-      .filter((row) => !row.correct);
+      .filter((row) => row.questionId);
   }
 
   if (Array.isArray(result.rows)) {
@@ -1036,6 +1052,7 @@ function getResultSaveRows(result = latestApiResult || state.lastResult) {
       .map((row) => ({
         correct: row.correct,
         key: `${attemptId}-${subject.id}-${row.index}`,
+        saved: state.wrongNotes.has(`${attemptId}-${subject.id}-${row.index}`),
         save: (notify = false) => addWrongNote(row.index, notify, {
           attemptId,
           roundTitle: result.roundTitle || "모의고사 결과",
@@ -1098,8 +1115,9 @@ function renderDiagnosis(diagnosis) {
 }
 
 function renderDiagnosisRadar(axes) {
-  const center = 120;
-  const maxRadius = 82;
+  const center = 140;
+  const maxRadius = 76;
+  const labelRadius = 118;
   const count = axes.length;
   const axisPoints = axes.map((axis, index) => {
     const angle = (-90 + index * (360 / count)) * Math.PI / 180;
@@ -1108,8 +1126,8 @@ function renderDiagnosisRadar(axes) {
     const scoreRadius = maxRadius * (axis.score / 100);
     const scoreX = center + Math.cos(angle) * scoreRadius;
     const scoreY = center + Math.sin(angle) * scoreRadius;
-    const labelX = center + Math.cos(angle) * (maxRadius + 24);
-    const labelY = center + Math.sin(angle) * (maxRadius + 24);
+    const labelX = center + Math.cos(angle) * labelRadius;
+    const labelY = center + Math.sin(angle) * labelRadius;
     return { axis, outerX, outerY, scoreX, scoreY, labelX, labelY };
   });
 
@@ -1124,23 +1142,51 @@ function renderDiagnosisRadar(axes) {
 
   const axesMarkup = axisPoints.map((point) => `
     <line x1="${center}" y1="${center}" x2="${point.outerX}" y2="${point.outerY}" class="diagnosis-radar-axis" />
-    <text x="${point.labelX}" y="${point.labelY}" class="diagnosis-radar-label">${point.axis.name}</text>
+    ${renderRadarLabel(point)}
   `).join("");
 
   const scoreMarkup = axisPoints.map((point) => `
-    <text x="${point.scoreX}" y="${point.scoreY - 5}" class="diagnosis-radar-value">${point.axis.score}</text>
+    <text x="${point.scoreX}" y="${point.scoreY + 3}" class="diagnosis-radar-value">${point.axis.score}</text>
   `).join("");
 
   const scorePoints = axisPoints.map((point) => `${point.scoreX},${point.scoreY}`).join(" ");
 
   els.diagnosisChart.innerHTML = `
-    <svg viewBox="0 0 240 240" role="img" aria-label="출제 영역 진단 레이더 차트">
+    <svg viewBox="0 0 280 280" role="img" aria-label="출제 영역 진단 레이더 차트">
       ${grid}
       ${axesMarkup}
       <polygon points="${scorePoints}" class="diagnosis-radar-score" />
       ${scoreMarkup}
     </svg>
   `;
+}
+
+function simplifyRadarLabel(name) {
+  return String(name || "-")
+    .replace(/^Chapter\s*\d+\.\s*/i, "")
+    .replace(/^챕터\s*\d+\.\s*/i, "")
+    .trim();
+}
+
+function splitRadarLabel(name) {
+  const label = simplifyRadarLabel(name);
+  if (label.length <= 7) return [label];
+  const words = label.split(/\s+/);
+  if (words.length >= 2) {
+    const middle = Math.ceil(words.length / 2);
+    return [words.slice(0, middle).join(" "), words.slice(middle).join(" ")];
+  }
+  return [label.slice(0, 7), label.slice(7)];
+}
+
+function renderRadarLabel(point) {
+  const lines = splitRadarLabel(point.axis.name);
+  const lineHeight = 10;
+  const startY = point.labelY - ((lines.length - 1) * lineHeight) / 2;
+  const tspans = lines.map((line, index) => (
+    `<tspan x="${point.labelX}" y="${startY + index * lineHeight}">${line}</tspan>`
+  )).join("");
+  return `<text class="diagnosis-radar-label">${tspans}</text>`;
 }
 
 function renderDiagnosisBars(axes) {
@@ -1291,20 +1337,64 @@ function buildDiagnosisSummary(axes) {
   return `${strongest.name}는 ${strongest.score}점으로 상대적으로 강점입니다. ${weakest.name}는 ${weakest.score}점으로 우선 복습이 필요합니다. 오답 해설에서 틀린 선택지의 판단 근거를 다시 확인하세요.`;
 }
 
+let resultLoadingTimer = null;
+let resultLoadingDoneTimer = null;
+let resultLoadingProgress = 0;
+
+function startResultLoading() {
+  resultLoadingProgress = 0;
+  if (els.resultContent) els.resultContent.style.visibility = "hidden";
+  if (els.resultHero) els.resultHero.style.visibility = "hidden";
+  if (els.resultLoading) els.resultLoading.style.display = "grid";
+  if (els.resultLoadingBar) els.resultLoadingBar.style.width = "0%";
+  clearInterval(resultLoadingTimer);
+  clearTimeout(resultLoadingDoneTimer);
+  resultLoadingTimer = setInterval(() => {
+    const ceiling = resultLoadingProgress < 35 ? 35 : resultLoadingProgress < 72 ? 72 : 88;
+    const step = resultLoadingProgress < 35 ? 7 : resultLoadingProgress < 72 ? 3 : 1;
+    resultLoadingProgress = Math.min(ceiling, resultLoadingProgress + step);
+    if (els.resultLoadingBar) els.resultLoadingBar.style.width = `${resultLoadingProgress}%`;
+  }, 220);
+}
+
+function showResultContent() {
+  clearInterval(resultLoadingTimer);
+  clearTimeout(resultLoadingDoneTimer);
+  resultLoadingTimer = null;
+  if (els.resultLoadingBar) els.resultLoadingBar.style.width = "100%";
+  resultLoadingDoneTimer = window.setTimeout(() => {
+    if (els.resultLoading) els.resultLoading.style.display = "none";
+    if (els.resultContent) els.resultContent.style.visibility = "visible";
+    if (els.resultHero) els.resultHero.style.visibility = "visible";
+  }, 180);
+}
+
 async function loadBackendResultPage() {
   if (!els.resultList || !els.resultScore || !els.resultSummary) return;
 
   const params = new URLSearchParams(window.location.search);
-  const attemptId = params.get("attemptId") || DEMO_ATTEMPT_ID;
+  const attemptId = params.get("attemptId");
 
-  els.resultScore.textContent = "...";
-  els.resultSummary.textContent = "백엔드에서 채점 결과를 불러오는 중입니다.";
+  startResultLoading();
+  els.resultScore.textContent = "-";
+  if (els.resultVerdict) {
+    els.resultVerdict.textContent = "결과 없음";
+    els.resultVerdict.className = "verdict-badge neutral";
+  }
+  els.resultSummary.textContent = "표시할 응시 결과가 없습니다.";
   if (els.resultCommentary) els.resultCommentary.textContent = "";
+  if (els.resultCommentary) els.resultCommentary.style.display = "none";
+  if (els.resultDiagnosis) els.resultDiagnosis.style.display = "none";
+  if (els.wrongReviewSection) els.wrongReviewSection.style.display = "none";
+  if (els.toggleAllExplanationsBtn) els.toggleAllExplanationsBtn.style.display = "none";
   if (els.saveWrongAllBtn) els.saveWrongAllBtn.style.display = "none";
   els.resultList.innerHTML = "";
 
   try {
-    const response = await fetch(`${API_BASE}/results/${attemptId}`);
+    const url = attemptId
+      ? `${API_BASE}/results/${attemptId}`
+      : `${API_BASE}/results/latest?profile_name=${encodeURIComponent(state.profileName || profiles[0])}`;
+    const response = await fetch(url);
     if (response.status === 404) {
       renderResultEmptyState();
       return;
@@ -1322,11 +1412,12 @@ async function loadBackendResultPage() {
 }
 
 function renderResultEmptyState({
-  title = "표시할 응시 결과가 없습니다",
+  title = "표시할 응시 결과가 없습니다.",
   summary = "",
   detail = ""
 } = {}) {
   latestApiResult = null;
+  showResultContent();
   els.resultList.innerHTML = "";
   els.resultScore.textContent = "-";
   if (els.resultVerdict) {
@@ -1356,6 +1447,7 @@ function renderResultPage() {
 
   const result = state.lastResult;
   latestApiResult = null;
+  showResultContent();
   els.resultList.innerHTML = "";
   renderResultHeroAction(false);
   if (!result) {
@@ -1364,10 +1456,10 @@ function renderResultPage() {
     if (els.resultDiagnosis) els.resultDiagnosis.style.display = "none";
     if (els.wrongReviewSection) els.wrongReviewSection.style.display = "none";
     if (els.toggleAllExplanationsBtn) els.toggleAllExplanationsBtn.style.display = "none";
-    els.resultScore.textContent = "0점";
+    els.resultScore.textContent = "-";
     if (els.resultVerdict) {
-      els.resultVerdict.textContent = "불합격";
-      els.resultVerdict.className = "verdict-badge fail";
+      els.resultVerdict.textContent = "결과 없음";
+      els.resultVerdict.className = "verdict-badge neutral";
     }
     els.resultSummary.textContent = "아직 채점 결과가 없습니다.";
     if (els.resultCommentary) {
@@ -1853,7 +1945,9 @@ function renderWrongNotes() {
       rounds: group.rounds
     }))).map((subject) => ({
       id: subject.subjectId,
-      name: subject.subjectName,
+      code: subject.subjectCode || subject.subjectId,
+      name: subject.subjectName || subject.subjectId,
+      desc: subject.subjectDescription || subject.subjectName || subject.subjectId,
       total: subject.wrongCount ?? subject.total ?? 0,
       roundCount: subject.roundCount ?? subject.rounds?.length ?? 0
     }))
@@ -1903,8 +1997,9 @@ function renderWrongNotes() {
     card.className = "subject-card wrong-subject-card";
     if (selectedGroup && group.subjectId === selectedGroup.subjectId) card.classList.add("active");
     card.innerHTML = `
-      <strong>${group.subjectName}</strong>
-      <small>${roundCount ? `${roundCount}개 회차의 오답 세트가 있습니다.` : "아직 저장된 오답 세트가 없습니다."}</small>
+      <strong>${subject.code || subject.subjectCode || group.subjectId}</strong>
+      <small>${subject.desc || group.subjectName}</small>
+      <small class="item-sub">${roundCount ? `${roundCount}개 회차의 저장 세트가 있습니다.` : "아직 저장된 세트가 없습니다."}</small>
     `;
     card.addEventListener("click", () => {
       state.wrongSubjectId = group.subjectId;
@@ -1999,7 +2094,6 @@ function createWrongSetCard(selectedGroup, roundGroup) {
   const actions = document.createElement("div");
   const startAction = document.createElement("strong");
   const deleteAction = document.createElement("button");
-  const isDbSet = roundGroup.notes.some((note) => note.source === "db");
 
   button.type = "button";
   button.className = "wrong-set-card";
@@ -2010,16 +2104,14 @@ function createWrongSetCard(selectedGroup, roundGroup) {
   actions.className = "wrong-set-actions";
   startAction.textContent = "풀기";
   actions.append(startAction);
-  if (!isDbSet) {
-    deleteAction.type = "button";
-    deleteAction.className = "wrong-delete-btn";
-    deleteAction.textContent = "삭제";
-    deleteAction.addEventListener("click", (event) => {
-      event.stopPropagation();
-      deleteWrongReviewSet(selectedGroup, roundGroup);
-    });
-    actions.append(deleteAction);
-  }
+  deleteAction.type = "button";
+  deleteAction.className = "wrong-delete-btn";
+  deleteAction.textContent = "삭제";
+  deleteAction.addEventListener("click", (event) => {
+    event.stopPropagation();
+    deleteWrongReviewSet(selectedGroup, roundGroup);
+  });
+  actions.append(deleteAction);
   button.append(titleWrap, actions);
   button.addEventListener("click", () => startWrongReviewSet(selectedGroup, roundGroup));
   return button;
@@ -2311,13 +2403,60 @@ function formatDateKey(value) {
   return date.toISOString().slice(0, 10);
 }
 
+function showWrongPracticeScreen() {
+  const screen = $("wrongPracticeScreen");
+  if (screen) screen.style.visibility = "visible";
+}
+
+let wrongPracticeLoadingStarted = false;
+let wrongPracticeLoadingTimer = null;
+
+function showWrongPracticeLoading() {
+  showWrongPracticeScreen();
+  $("wrongPracticeScreen")?.classList.add("wrong-practice-loading");
+  if (els.wrongReviewLoading) els.wrongReviewLoading.hidden = false;
+  if (els.wrongReviewLoadingBar) {
+    els.wrongReviewLoadingBar.style.width = "0%";
+    requestAnimationFrame(() => {
+      els.wrongReviewLoadingBar.style.width = "82%";
+    });
+  }
+  if (els.reviewQuestionPanel) els.reviewQuestionPanel.hidden = true;
+  if (els.reviewFeedback) {
+    els.reviewFeedback.hidden = true;
+    els.reviewFeedback.style.display = "none";
+  }
+  if (els.reviewCompletePanel) els.reviewCompletePanel.hidden = true;
+}
+
+function hideWrongPracticeLoading() {
+  clearTimeout(wrongPracticeLoadingTimer);
+  wrongPracticeLoadingTimer = null;
+  $("wrongPracticeScreen")?.classList.remove("wrong-practice-loading");
+  if (els.wrongReviewLoadingBar) els.wrongReviewLoadingBar.style.width = "100%";
+  if (els.wrongReviewLoading) els.wrongReviewLoading.hidden = true;
+}
+
 function renderWrongPractice() {
   if (!els.reviewQuestionText || !els.reviewChoices || !els.reviewFeedback) return;
+
+  if (els.wrongReviewLoading && !wrongPracticeLoadingStarted) {
+    wrongPracticeLoadingStarted = true;
+    showWrongPracticeLoading();
+    wrongPracticeLoadingTimer = window.setTimeout(() => {
+      hideWrongPracticeLoading();
+      renderWrongPractice();
+    }, 360);
+    return;
+  }
+
+  hideWrongPracticeLoading();
 
   const reviewState = syncWrongReviewQuestion();
   const set = reviewState?.set || null;
   if (set && set.currentIndex >= set.notes.length) {
     renderWrongReviewComplete(set);
+    showWrongPracticeScreen();
     return;
   }
 
@@ -2334,6 +2473,7 @@ function renderWrongPractice() {
     if (els.reviewPrevBtn) els.reviewPrevBtn.disabled = true;
     if (els.reviewNextBtn) els.reviewNextBtn.disabled = true;
     if (els.reviewProgress) els.reviewProgress.textContent = "오답노트에서 복습할 세트를 선택하세요.";
+    showWrongPracticeScreen();
     return;
   }
 
@@ -2366,6 +2506,7 @@ function renderWrongPractice() {
   }, state.reviewAnswer);
 
   if (checkedAnswer) renderWrongPracticeFeedback(note, checkedAnswer);
+  showWrongPracticeScreen();
 }
 
 function submitWrongPractice() {
@@ -2447,6 +2588,7 @@ function renderWrongReviewComplete(set) {
     els.reviewCompleteSummary.textContent = `총 ${set.notes.length}문항 중 ${correctCount}문항을 다시 맞혔습니다.`;
   }
   if (els.reviewCompletePanel) els.reviewCompletePanel.hidden = false;
+  showWrongPracticeScreen();
 }
 
 function restartWrongReview() {

@@ -29,7 +29,7 @@
   <main class="page-shell">
     <div class="toast" id="toast" role="status" aria-live="polite"></div>
 
-    <section class="screen active">
+    <section class="screen active" id="wrongPracticeScreen" style="visibility: hidden;">
       <a class="back-btn inline-link" href="wrong.html" data-screen="wrong">오답노트로 돌아가기</a>
       <div class="screen-head compact">
         <p class="eyebrow">Wrong Review</p>
@@ -37,7 +37,14 @@
         <p id="reviewProgress">오답노트에서 복습할 세트를 선택하세요.</p>
       </div>
 
-      <article class="question-panel review-question-panel" id="reviewQuestionPanel">
+      <article class="result-loading wrong-review-loading" id="wrongReviewLoading" aria-live="polite">
+        <p>오답 문제를 불러오는 중입니다.</p>
+        <div class="result-loading-track" aria-hidden="true">
+          <span id="wrongReviewLoadingBar"></span>
+        </div>
+      </article>
+
+      <article class="question-panel review-question-panel" id="reviewQuestionPanel" hidden>
         <p class="question-text" id="reviewQuestionText"></p>
         <ol class="choices" id="reviewChoices"></ol>
         <div class="answer-actions review-actions">
@@ -47,7 +54,7 @@
         </div>
       </article>
 
-      <section class="feedback-panel review-feedback" id="reviewFeedback" aria-live="polite"></section>
+      <section class="feedback-panel review-feedback" id="reviewFeedback" aria-live="polite" hidden></section>
 
       <article class="review-complete-panel" id="reviewCompletePanel" hidden>
         <p class="eyebrow">Complete</p>

@@ -30,27 +30,35 @@
     <div class="toast" id="toast" role="status" aria-live="polite"></div>
 
     <section class="screen active" id="resultScreen">
+      <section class="result-loading" id="resultLoading" aria-live="polite">
+        <p class="eyebrow">Result</p>
+        <p>응시 결과를 불러오는 중입니다.</p>
+        <div class="result-loading-track" aria-hidden="true">
+          <span id="resultLoadingBar"></span>
+        </div>
+      </section>
+      <div id="resultContent" style="visibility: hidden;">
       <a class="back-btn inline-link" href="subjects.html" data-screen="subjects">과목 다시 선택</a>
-      <div class="result-hero" id="resultHero">
+      <div class="result-hero" id="resultHero" style="visibility: hidden;">
         <p class="eyebrow">Result</p>
         <div class="score-row">
-          <h1 id="resultScore">0점</h1>
-          <span class="verdict-badge" id="resultVerdict">불합격</span>
+          <h1 id="resultScore">-</h1>
+          <span class="verdict-badge neutral" id="resultVerdict">결과 없음</span>
         </div>
-        <p id="resultSummary">채점 결과가 표시됩니다.</p>
-        <p class="result-commentary" id="resultCommentary">총평이 표시됩니다.</p>
+        <p id="resultSummary">표시할 응시 결과가 없습니다.</p>
+        <p class="result-commentary" id="resultCommentary" style="display: none;"></p>
       </div>
 
-      <section class="diagnosis-report" id="resultDiagnosis" aria-labelledby="diagnosisTitle">
+      <section class="diagnosis-report" id="resultDiagnosis" aria-labelledby="diagnosisTitle" style="display: none;">
         <div class="report-top">
           <article class="report-card">
             <p id="diagnosisProgramTitle">KB디지털역량평가 모의고사</p>
             <p id="diagnosisSubject">Cloud Developer (Pro)</p>
             <h2>응시 결과</h2>
             <div class="level-seal">
-              <span id="diagnosisLevelName">Beginner</span>
-              <strong id="diagnosisLevel">Level 0</strong>
-              <em id="diagnosisScore">0 / 100점</em>
+              <span id="diagnosisLevelName">-</span>
+              <strong id="diagnosisLevel">-</strong>
+              <em id="diagnosisScore">- / 100점</em>
             </div>
           </article>
 
@@ -114,7 +122,7 @@
         </div>
       </section>
 
-      <section class="wrong-review-section" id="wrongReviewSection" aria-labelledby="wrongReviewTitle">
+      <section class="wrong-review-section" id="wrongReviewSection" aria-labelledby="wrongReviewTitle" style="display: none;">
         <div class="wrong-review-head">
           <div>
             <p class="eyebrow">Wrong Note</p>
@@ -127,6 +135,7 @@
         </div>
         <div class="result-list" id="resultList"></div>
       </section>
+      </div>
     </section>
   </main>
 

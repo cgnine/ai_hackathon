@@ -591,7 +591,7 @@ button:disabled {
 
 .wrong-delete-btn:hover {
   border-color: #fecaca;
-  background: var(--danger-soft);
+  background: #fee2e2;
   color: var(--danger);
 }
 
@@ -1041,6 +1041,18 @@ button:disabled {
   line-height: 1.65;
 }
 
+.wrong-review-loading[hidden] {
+  display: none;
+}
+
+.wrong-practice-loading > .back-btn,
+.wrong-practice-loading > .screen-head,
+.wrong-practice-loading > .question-panel,
+.wrong-practice-loading > .feedback-panel,
+.wrong-practice-loading > .review-complete-panel {
+  display: none;
+}
+
 .complete-actions {
   display: flex;
   justify-content: center;
@@ -1052,6 +1064,46 @@ button:disabled {
 .result-hero {
   padding: 34px;
   margin-bottom: 16px;
+}
+
+.result-loading {
+  display: grid;
+  width: min(640px, 100%);
+  min-height: 220px;
+  place-self: center;
+  align-content: center;
+  gap: 16px;
+  margin: clamp(56px, 12vh, 120px) auto;
+  padding: 40px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--surface);
+  box-shadow: var(--shadow);
+  text-align: center;
+}
+
+.result-loading p:not(.eyebrow) {
+  color: var(--ink);
+  font-size: 1.08rem;
+  font-weight: 800;
+}
+
+.result-loading-track {
+  overflow: hidden;
+  width: min(420px, 100%);
+  height: 10px;
+  margin: 4px auto 0;
+  border-radius: 999px;
+  background: #edf2f7;
+}
+
+.result-loading-track span {
+  display: block;
+  width: 0%;
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, #fde68a 0%, #facc15 52%, #fbbf24 100%);
+  transition: width 0.42s ease;
 }
 
 .result-hero-actions {
