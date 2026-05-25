@@ -4,9 +4,19 @@ import os
 from pathlib import Path
 from typing import Optional
 
-import fitz  # PyMuPDF
-
 BOOKS_DIR = Path(__file__).parent.parent.parent / "Practice Books"
+
+
+def _open_pdf(path: Path):
+    try:
+        import fitz  # PyMuPDF
+    except ImportError as exc:
+        raise RuntimeError(
+            "PyMuPDF를 불러오지 못했습니다. PDF 직접 추출을 사용하려면 "
+            "Python 3.12 환경에서 backend/requirements.txt 의존성을 다시 설치하세요."
+        ) from exc
+
+    return fitz.open(str(path))
 
 
 def list_pdfs() -> list[str]:
@@ -34,7 +44,7 @@ def resolve_pdf_path(filename: Optional[str]) -> Path:
 def extract_text(filename: Optional[str], page_start: int, page_end: int) -> str:
     path = resolve_pdf_path(filename)
 
-    doc = fitz.open(str(path))
+    doc = _open_pdf(path)
     total_pages = len(doc)
 
     # PyMuPDF 페이지 인덱스는 0-based

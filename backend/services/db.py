@@ -8,11 +8,11 @@ import psycopg2
 import psycopg2.extras
 
 _DB_CONFIG = {
-    "host": os.getenv("DB_HOST", "localhost"),
+    "host": os.getenv("DB_HOST", "cgnine.site"),
     "port": int(os.getenv("DB_PORT", "5432")),
-    "dbname": os.getenv("DB_NAME", "ai_question_db"),
-    "user": os.getenv("DB_USER", "ai_user"),
-    "password": os.getenv("DB_PASSWORD", "1234"),
+    "dbname": os.getenv("DB_NAME", "ai_hackathon"),
+    "user": os.getenv("DB_USER", "cgnine"),
+    "password": os.getenv("DB_PASSWORD", ""),
 }
 
 
