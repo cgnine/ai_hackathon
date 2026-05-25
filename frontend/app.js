@@ -1,4 +1,7 @@
-﻿const API_BASE = "";
+﻿const API_BASE = (() => {
+  const { protocol, hostname } = window.location;
+  return `${protocol}//${hostname}:8000`;
+})();
 
 const DEMO_ATTEMPT_ID = "123456789";
 
