@@ -1,4 +1,4 @@
-﻿const API_BASE = "http://localhost:8000";
+﻿const API_BASE = "";
 
 const DEMO_ATTEMPT_ID = "123456789";
 
