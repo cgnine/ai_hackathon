@@ -240,9 +240,8 @@ function normalizeApiQuestion(item) {
     id: item.question_id,
     subjectCode: item.subject_code,
     difficulty: item.major_unit || "문제",
-    text: item.question_text_extra
-      ? `${item.question_text}\n\n${item.question_text_extra}`
-      : item.question_text,
+    text: item.question_text,
+    detailText: item.question_text_extra || "",
     choices: item.choices || [],
     answer: Number(item.answer_number),
     explanation: item.explanation,
@@ -502,6 +501,7 @@ function renderSingle() {
   els.singleQuestionNumber.textContent = `Q${state.index + 1}`;
   els.singleDifficulty.textContent = question.difficulty;
   els.singleQuestionText.textContent = question.text;
+  renderQuestionDetailBox(els.singleQuestionText, question.detailText, els.singleChoices);
   els.singlePrevBtn.disabled = state.index === 0;
   els.singleNextBtn.disabled = state.index === questions.length - 1;
   renderChoices(els.singleChoices, question, answered, (choiceNumber) => {
@@ -605,7 +605,9 @@ function renderMock() {
 
     tags.append(difficulty, type);
     head.append(number, tags);
-    panel.append(head, text, choices);
+    panel.append(head, text);
+    appendQuestionDetailBox(panel, question.detailText);
+    panel.append(choices);
     renderChoices(choices, question, null, (choiceNumber) => {
       state.mockAnswers[index] = choiceNumber;
       state.selected = choiceNumber;
@@ -1773,6 +1775,38 @@ function renderChoices(target, question, checkedAnswer, onSelect, selectedOnly =
     li.appendChild(button);
     target.appendChild(li);
   });
+}
+
+function createQuestionDetailBox(detailText) {
+  const normalized = String(detailText || "").trim();
+  if (!normalized) return null;
+
+  const wrap = document.createElement("aside");
+  const body = document.createElement("p");
+
+  wrap.className = "question-detail-box";
+  body.className = "question-detail-text";
+  body.textContent = normalized;
+  wrap.append(body);
+  return wrap;
+}
+
+function appendQuestionDetailBox(target, detailText) {
+  const detailBox = createQuestionDetailBox(detailText);
+  if (detailBox) target.appendChild(detailBox);
+}
+
+function renderQuestionDetailBox(anchor, detailText, beforeNode) {
+  if (!anchor?.parentNode) return;
+
+  const existing = anchor.parentNode.querySelector(".question-detail-box.single-question-detail");
+  if (existing) existing.remove();
+
+  const detailBox = createQuestionDetailBox(detailText);
+  if (!detailBox) return;
+
+  detailBox.classList.add("single-question-detail");
+  anchor.parentNode.insertBefore(detailBox, beforeNode || anchor.nextSibling);
 }
 
 function renderCodingAnswer(target, question, checkedAnswer, onSelect, selectedValue) {

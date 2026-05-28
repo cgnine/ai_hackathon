@@ -884,6 +884,45 @@ button:disabled {
   white-space: pre-wrap;
 }
 
+.question-detail-box {
+  margin-top: 18px;
+  padding: 16px 18px;
+  border: 1px solid rgba(255, 204, 0, 0.42);
+  border-radius: calc(var(--radius) + 2px);
+  background: linear-gradient(180deg, #fffdf2 0%, #fff7d1 100%);
+}
+
+.question-detail-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: #8a5b00;
+  font-size: 0.8rem;
+  font-weight: 900;
+  letter-spacing: 0.04em;
+}
+
+.question-detail-label::before {
+  content: "참고";
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 38px;
+  min-height: 22px;
+  padding: 0 8px;
+  border-radius: 999px;
+  background: rgba(255, 204, 0, 0.22);
+  color: var(--primary-dark);
+  font-size: 0.7rem;
+}
+
+.question-detail-text {
+  color: #4a3b12;
+  font-size: 0.97rem;
+  line-height: 1.7;
+  white-space: pre-wrap;
+}
+
 .choices {
   display: grid;
   gap: 10px;
@@ -1045,11 +1084,11 @@ button:disabled {
   display: none;
 }
 
-.wrong-practice-loading > .back-btn,
-.wrong-practice-loading > .screen-head,
-.wrong-practice-loading > .question-panel,
-.wrong-practice-loading > .feedback-panel,
-.wrong-practice-loading > .review-complete-panel {
+.wrong-practice-loading>.back-btn,
+.wrong-practice-loading>.screen-head,
+.wrong-practice-loading>.question-panel,
+.wrong-practice-loading>.feedback-panel,
+.wrong-practice-loading>.review-complete-panel {
   display: none;
 }
 
@@ -1216,7 +1255,7 @@ button:disabled {
   content: "";
 }
 
-.report-card > * {
+.report-card>* {
   position: relative;
   z-index: 1;
 }
@@ -1639,7 +1678,7 @@ button:disabled {
   gap: 10px;
 }
 
-.result-detail-section + .result-detail-section {
+.result-detail-section+.result-detail-section {
   margin-top: 12px;
   padding-top: 0;
   border-top: 0;
@@ -1974,7 +2013,9 @@ button:disabled {
 }
 
 @keyframes spin {
-  to { transform: rotate(360deg); }
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 .api-result {
@@ -2149,6 +2190,7 @@ button:disabled {
 }
 
 @media (max-width: 920px) {
+
   .subject-grid,
   .mode-choice-grid,
   .exam-layout,
