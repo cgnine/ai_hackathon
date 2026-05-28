@@ -21,11 +21,11 @@ def _is_correct(value: Any) -> bool:
 
 
 def _question_text(row: dict[str, Any]) -> str:
-    scenario = (row.get("question_content2") or "").strip()
-    content = (row.get("question_content") or "").strip()
-    if scenario:
-        return f"{scenario}\n\n{content}"
-    return content
+    return (row.get("question_content") or "").strip()
+
+
+def _question_scenario(row: dict[str, Any]) -> str:
+    return (row.get("question_content2") or "").strip()
 
 
 def _created_at(row: dict[str, Any]) -> str:
@@ -139,6 +139,7 @@ def get_result(attempt_id: str) -> dict[str, Any]:
         {
             "questionId": row["question_id"],
             "questionText": _question_text(row),
+            "questionScenario": _question_scenario(row),
             "choices": [
                 row["option_1"],
                 row["option_2"],
@@ -344,6 +345,7 @@ def get_saved_wrong_notes() -> dict[str, Any]:
                 "question": {
                     "id": row["question_id"],
                     "text": _question_text(row),
+                    "scenario": _question_scenario(row),
                     "choices": [
                         row["option_1"],
                         row["option_2"],

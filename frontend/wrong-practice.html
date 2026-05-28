@@ -30,10 +30,11 @@
     <div class="toast" id="toast" role="status" aria-live="polite"></div>
 
     <section class="screen active" id="wrongPracticeScreen" style="visibility: hidden;">
-      <a class="back-btn inline-link" href="wrong.html" data-screen="wrong">오답노트로 돌아가기</a>
-      <div class="screen-head compact">
-        <p class="eyebrow">Wrong Review</p>
-        <h1 id="reviewSubject">오답 다시 풀기</h1>
+      <div class="screen-head compact wrong-review-top">
+        <div class="wrong-review-meta-row">
+          <h1 id="reviewSubject">오답 문제</h1>
+          <span id="reviewProgressCount">- / -</span>
+        </div>
         <p id="reviewProgress">오답노트에서 복습할 세트를 선택하세요.</p>
       </div>
 
@@ -46,15 +47,16 @@
 
       <article class="question-panel review-question-panel" id="reviewQuestionPanel" hidden>
         <p class="question-text" id="reviewQuestionText"></p>
+        <div class="question-scenario-box" id="reviewScenarioBox" hidden></div>
+        <strong class="result-detail-title wrong-review-choice-title">보기</strong>
         <ol class="choices" id="reviewChoices"></ol>
         <div class="answer-actions review-actions">
           <button class="secondary-btn" id="reviewPrevBtn" type="button">이전</button>
           <button class="primary-btn" id="reviewSubmitBtn" type="button">정답 확인</button>
           <button class="secondary-btn" id="reviewNextBtn" type="button">다음</button>
         </div>
+        <section class="feedback-panel review-feedback" id="reviewFeedback" aria-live="polite" hidden></section>
       </article>
-
-      <section class="feedback-panel review-feedback" id="reviewFeedback" aria-live="polite" hidden></section>
 
       <article class="review-complete-panel" id="reviewCompletePanel" hidden>
         <p class="eyebrow">Complete</p>

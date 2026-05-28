@@ -199,6 +199,7 @@ const els = {
   reviewDifficulty: $("reviewDifficulty"),
   reviewQuestionType: $("reviewQuestionType"),
   reviewQuestionText: $("reviewQuestionText"),
+  reviewScenarioBox: $("reviewScenarioBox"),
   reviewChoices: $("reviewChoices"),
   reviewSubmitBtn: $("reviewSubmitBtn"),
   reviewFeedback: $("reviewFeedback"),
@@ -210,6 +211,7 @@ const els = {
   reviewBackBtn: $("reviewBackBtn"),
   reviewRestartBtn: $("reviewRestartBtn"),
   reviewProgress: $("reviewProgress"),
+  reviewProgressCount: $("reviewProgressCount"),
   reviewPrevBtn: $("reviewPrevBtn"),
   reviewNextBtn: $("reviewNextBtn"),
   wrongList: $("wrongList"),
@@ -243,9 +245,8 @@ function normalizeApiQuestion(item) {
     id: item.question_id,
     subjectCode: item.subject_code,
     difficulty: item.major_unit || "문제",
-    text: item.question_text_extra
-      ? `${item.question_text}\n\n${item.question_text_extra}`
-      : item.question_text,
+    text: item.question_text,
+    scenario: item.question_text_extra || "",
     choices: item.choices || [],
     answer: Number(item.answer_number),
     explanation: item.explanation,
@@ -703,6 +704,7 @@ function appendResultItem(question, index, selected, correct, meta = {}) {
   const result = document.createElement("strong");
   const explanation = createResultDetail({
     choices: question.choices,
+    scenario: question.scenario,
     selected,
     answer: question.answer,
     explanation: question.explanation,
@@ -788,6 +790,7 @@ function updateToggleAllExplanationsButton() {
 
 function createResultDetail({
   choices = [],
+  scenario = "",
   selected,
   answer,
   explanation,
@@ -801,6 +804,14 @@ function createResultDetail({
 
   const answerSection = document.createElement("div");
   const answerSummary = document.createElement("p");
+  const scenarioText = String(scenario || "").trim();
+
+  if (scenarioText) {
+    const scenarioBox = document.createElement("div");
+    scenarioBox.className = "question-scenario-box result-scenario-box";
+    scenarioBox.textContent = scenarioText;
+    detail.appendChild(scenarioBox);
+  }
 
   answerSection.className = "result-detail-section result-answer-section";
   answerSummary.className = "result-answer-summary";
@@ -916,6 +927,7 @@ function appendApiResultItem(item, index, resultMeta) {
   const result = document.createElement("strong");
   const explanation = createResultDetail({
     choices: item.choices,
+    scenario: item.questionScenario,
     selected: item.selected,
     answer: item.answer,
     explanation: item.explanation,
@@ -983,6 +995,7 @@ function apiWrongNoteKey(result, item, index) {
 function toWrongNoteQuestion(item) {
   return {
     text: item.questionText,
+    scenario: item.questionScenario || "",
     choices: item.choices || [],
     answer: item.answer,
     explanation: item.explanation,
@@ -2324,6 +2337,7 @@ function selectWrongReviewAnswer(answer, set) {
   if (els.reviewFeedback) {
     els.reviewFeedback.style.display = "none";
     els.reviewFeedback.className = "feedback-panel review-feedback";
+    els.reviewFeedback.hidden = true;
   }
   if (els.reviewNextBtn) els.reviewNextBtn.disabled = !set;
   els.reviewChoices?.querySelectorAll(".choice-btn").forEach((button) => {
@@ -2467,7 +2481,7 @@ function renderWrongPractice() {
   }
 
   if (els.reviewQuestionPanel) els.reviewQuestionPanel.hidden = false;
-  if (els.reviewFeedback) els.reviewFeedback.hidden = false;
+  if (els.reviewFeedback) els.reviewFeedback.hidden = true;
   if (els.reviewCompletePanel) els.reviewCompletePanel.hidden = true;
 
   const note = reviewState?.note || state.reviewQuestion;
@@ -2475,10 +2489,19 @@ function renderWrongPractice() {
     els.reviewSubject.textContent = "오답 문제";
     els.reviewQuestionText.textContent = "선택된 오답 문제가 없습니다. 오답노트에서 다시 풀 문제를 선택하세요.";
     els.reviewChoices.innerHTML = "";
+    if (els.reviewScenarioBox) {
+      els.reviewScenarioBox.hidden = true;
+      els.reviewScenarioBox.textContent = "";
+    }
+    if (els.reviewFeedback) {
+      els.reviewFeedback.hidden = true;
+      els.reviewFeedback.style.display = "none";
+    }
     els.reviewSubmitBtn.disabled = true;
     if (els.reviewPrevBtn) els.reviewPrevBtn.disabled = true;
     if (els.reviewNextBtn) els.reviewNextBtn.disabled = true;
     if (els.reviewProgress) els.reviewProgress.textContent = "오답노트에서 복습할 세트를 선택하세요.";
+    if (els.reviewProgressCount) els.reviewProgressCount.textContent = "- / -";
     showWrongPracticeScreen();
     return;
   }
@@ -2486,16 +2509,27 @@ function renderWrongPractice() {
   const question = note.question;
   const checkedAnswer = set?.checked?.[set.currentIndex] || null;
   els.reviewSubject.textContent = note.subjectName;
+  if (els.reviewProgressCount) {
+    els.reviewProgressCount.textContent = set
+      ? `${set.currentIndex + 1} / ${set.notes.length}`
+      : "1 / 1";
+  }
   if (els.reviewQuestionNumber) els.reviewQuestionNumber.textContent = `${note.index + 1}`;
   if (els.reviewDifficulty) els.reviewDifficulty.textContent = question.difficulty;
   if (els.reviewQuestionType) els.reviewQuestionType.textContent = getQuestionType(question, note.index);
   els.reviewQuestionText.textContent = `${note.index + 1}. ${question.text}`;
+  if (els.reviewScenarioBox) {
+    const scenario = String(question.scenario || "").trim();
+    els.reviewScenarioBox.textContent = scenario;
+    els.reviewScenarioBox.hidden = !scenario;
+  }
   els.reviewFeedback.className = "feedback-panel review-feedback";
   els.reviewFeedback.style.display = "none";
+  els.reviewFeedback.hidden = true;
   els.reviewSubmitBtn.disabled = false;
   if (els.reviewProgress) {
     els.reviewProgress.textContent = set
-      ? `${set.roundTitle} · ${set.currentIndex + 1} / ${set.notes.length}`
+      ? `${formatDotDate(set.latestAt)} ${set.roundTitle}`
       : "선택한 오답 문제 1개";
   }
   if (els.reviewPrevBtn) {
@@ -2510,6 +2544,7 @@ function renderWrongPractice() {
   renderChoices(els.reviewChoices, question, checkedAnswer, (choiceNumber) => {
     selectWrongReviewAnswer(choiceNumber, set);
   }, state.reviewAnswer);
+  els.reviewChoices.classList.add("wrong-review-choice-list");
 
   if (checkedAnswer) renderWrongPracticeFeedback(note, checkedAnswer);
   showWrongPracticeScreen();
@@ -2542,24 +2577,37 @@ function submitWrongPractice() {
   renderChoices(els.reviewChoices, question, checkedAnswer, (choiceNumber) => {
     selectWrongReviewAnswer(choiceNumber, set);
   }, state.reviewAnswer);
-  renderWrongPracticeFeedback(note, checkedAnswer);
+  renderWrongPracticeFeedback(note, checkedAnswer, true);
   if (els.reviewNextBtn && set) els.reviewNextBtn.disabled = false;
 }
 
-function renderWrongPracticeFeedback(note, checkedAnswer) {
+function renderWrongPracticeFeedback(note, checkedAnswer, shouldFocus = false) {
   const question = note.question;
-  const selectedText = question.type === "coding"
-    ? "코드 답안"
-    : `선택 ${checkedAnswer.selected}번 · 정답 ${question.answer}번`;
-  els.reviewFeedback.style.display = "grid";
-  els.reviewFeedback.className = `feedback-panel review-feedback ${checkedAnswer.correct ? "correct" : "wrong"}`;
+  els.reviewFeedback.style.display = "block";
+  els.reviewFeedback.hidden = false;
+  els.reviewFeedback.className = "feedback-panel review-feedback wrong-review-detail";
   els.reviewFeedback.innerHTML = `
-    <div>
-      <span class="result-badge ${checkedAnswer.correct ? "correct" : "wrong"}">${checkedAnswer.correct ? "정답" : "오답"}</span>
-      <h3>${checkedAnswer.correct ? "다시 풀어서 맞혔습니다." : selectedText}</h3>
+    <div class="result-detail-section result-answer-section">
+      <p class="result-answer-summary"><span class="answer-label">선택한 답:</span> ${formatAnswerNumber(checkedAnswer.selected)}  <span class="answer-label">정답:</span> ${formatAnswerNumber(question.answer)}</p>
     </div>
-    <p>${question.explanation}</p>
+    <div class="result-detail-section result-explanation-line">
+      <strong class="result-detail-title">해설</strong>
+      <span>${question.explanation}</span>
+    </div>
   `;
+  requestAnimationFrame(() => {
+    els.reviewFeedback.classList.add("open");
+    if (shouldFocus) focusWrongReviewFeedback();
+  });
+}
+
+function focusWrongReviewFeedback() {
+  if (!els.reviewFeedback) return;
+  if (!els.reviewFeedback.hasAttribute("tabindex")) els.reviewFeedback.setAttribute("tabindex", "-1");
+  window.setTimeout(() => {
+    els.reviewFeedback.focus({ preventScroll: true });
+    els.reviewFeedback.scrollIntoView({ behavior: "smooth", block: "center" });
+  }, 180);
 }
 
 function moveWrongReview(delta) {
@@ -2579,12 +2627,23 @@ function moveWrongReview(delta) {
   state.reviewAnswer = set.answers[set.currentIndex] ?? null;
   saveState();
   renderWrongPractice();
+  focusWrongReviewQuestion();
+}
+
+function focusWrongReviewQuestion() {
+  if (!els.reviewQuestionPanel) return;
+  if (!els.reviewQuestionPanel.hasAttribute("tabindex")) els.reviewQuestionPanel.setAttribute("tabindex", "-1");
+  requestAnimationFrame(() => {
+    els.reviewQuestionPanel.focus({ preventScroll: true });
+    els.reviewQuestionPanel.scrollIntoView({ behavior: "smooth", block: "center" });
+  });
 }
 
 function renderWrongReviewComplete(set) {
   const correctCount = Object.values(set.checked || {}).filter((answer) => answer?.correct).length;
   if (els.reviewSubject) els.reviewSubject.textContent = "오답 리뷰 완료";
   if (els.reviewProgress) els.reviewProgress.textContent = `${set.roundTitle} · 복습 완료`;
+  if (els.reviewProgressCount) els.reviewProgressCount.textContent = `${set.notes.length} / ${set.notes.length}`;
   if (els.reviewQuestionPanel) els.reviewQuestionPanel.hidden = true;
   if (els.reviewFeedback) {
     els.reviewFeedback.hidden = true;
