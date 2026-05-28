@@ -13,6 +13,7 @@ _DB_CONFIG = {
     "dbname": os.getenv("DB_NAME", "ai_question_db"),
     "user": os.getenv("DB_USER", "ai_user"),
     "password": os.getenv("DB_PASSWORD", "1234"),
+    "connect_timeout": int(os.getenv("DB_CONNECT_TIMEOUT", "5")),
 }
 
 

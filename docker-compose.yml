@@ -14,7 +14,7 @@ services:
       - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}
       - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}
       - BEDROCK_MODEL_ID=${BEDROCK_MODEL_ID:-global.anthropic.claude-sonnet-4-5-20250929-v1:0}
-      - DB_HOST=${DB_HOST:-host-gateway}
+      - DB_HOST=${DOCKER_DB_HOST:-host-gateway}
       - DB_PORT=${DB_PORT:-5432}
       - DB_NAME=${DB_NAME:-ai_question_db}
       - DB_USER=${DB_USER:-ai_user}
