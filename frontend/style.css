@@ -483,15 +483,7 @@ button:disabled {
   background: transparent;
   color: var(--ink);
   text-align: left;
-  font-weight: 500;
-}
-
-.wrong-date-marker {
-  flex: 0 0 auto;
-}
-
-.wrong-date-head span:nth-child(2) {
-  flex: 1;
+  font-weight: 400;
 }
 
 .wrong-date-group:has(> .wrong-date-head:hover) {

@@ -2062,7 +2062,6 @@ function renderWrongNotes() {
   groupRoundsByDate(selectedGroup.rounds).forEach((dateGroup) => {
     const section = document.createElement("section");
     const head = document.createElement("button");
-    const marker = document.createElement("span");
     const title = document.createElement("span");
     const count = document.createElement("span");
     const list = document.createElement("div");
@@ -2072,8 +2071,6 @@ function renderWrongNotes() {
     head.type = "button";
     head.className = "wrong-date-head";
     head.setAttribute("aria-expanded", String(isOpen));
-    marker.className = "status-dot wrong-date-marker";
-    marker.textContent = "-";
     title.textContent = dateGroup.label;
     count.textContent = `${dateGroup.rounds.length}개 세트`;
     list.className = "wrong-date-sets";
@@ -2085,9 +2082,8 @@ function renderWrongNotes() {
       state.wrongOpenDateKey = isOpen ? null : dateGroup.key;
       saveState();
       renderWrongNotes();
-      if (willOpen) focusWrongDateSets(dateGroup.key);
     });
-    head.append(marker, title, count);
+    head.append(title, count);
     section.append(head, list);
 
     dateGroup.rounds.forEach((roundGroup) => {
