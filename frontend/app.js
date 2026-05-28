@@ -737,7 +737,7 @@ function toggleResultItem(item, toggle, detail) {
   toggle.setAttribute("aria-expanded", String(isOpen));
   if (isOpen) {
     detail.style.maxHeight = "none";
-    focusResultItem(item);
+    focusResultFirstChoice(detail);
   } else {
     detail.style.maxHeight = "0px";
   }
@@ -753,6 +753,19 @@ function focusResultItem(item) {
   requestAnimationFrame(() => {
     item.focus({ preventScroll: true });
     item.scrollIntoView({ behavior: "smooth", block: "center" });
+  });
+}
+
+function focusResultFirstChoice(detail) {
+  const firstChoice = detail?.querySelector(".result-choice");
+  if (!firstChoice) {
+    focusResultItem(detail?.closest(".result-item"));
+    return;
+  }
+  if (!firstChoice.hasAttribute("tabindex")) firstChoice.setAttribute("tabindex", "-1");
+  requestAnimationFrame(() => {
+    firstChoice.focus({ preventScroll: true });
+    firstChoice.scrollIntoView({ behavior: "smooth", block: "center" });
   });
 }
 
@@ -2038,17 +2051,18 @@ function renderWrongNotes() {
   }
 
   if (els.selectedWrongSubjectTitle) {
-    els.selectedWrongSubjectTitle.textContent = `${selectedGroup.subjectName} 오답 세트`;
+    els.selectedWrongSubjectTitle.textContent = `${selectedGroup.subjectId} 오답 세트`;
   }
 
   if (selectedGroup.rounds.length === 0) {
-    renderWrongRoundPlaceholder(`${selectedGroup.subjectName}에 저장된 오답 세트가 없습니다.`);
+    renderWrongRoundPlaceholder("저장된 오답 세트가 없습니다.");
     return;
   }
 
   groupRoundsByDate(selectedGroup.rounds).forEach((dateGroup) => {
     const section = document.createElement("section");
     const head = document.createElement("button");
+    const marker = document.createElement("span");
     const title = document.createElement("span");
     const count = document.createElement("span");
     const list = document.createElement("div");
@@ -2058,6 +2072,8 @@ function renderWrongNotes() {
     head.type = "button";
     head.className = "wrong-date-head";
     head.setAttribute("aria-expanded", String(isOpen));
+    marker.className = "status-dot wrong-date-marker";
+    marker.textContent = "-";
     title.textContent = dateGroup.label;
     count.textContent = `${dateGroup.rounds.length}개 세트`;
     list.className = "wrong-date-sets";
@@ -2071,7 +2087,7 @@ function renderWrongNotes() {
       renderWrongNotes();
       if (willOpen) focusWrongDateSets(dateGroup.key);
     });
-    head.append(title, count);
+    head.append(marker, title, count);
     section.append(head, list);
 
     dateGroup.rounds.forEach((roundGroup) => {
@@ -2199,7 +2215,7 @@ function deleteWrongReviewSet(subjectGroup, roundGroup) {
 function renderWrongRoundPlaceholder(message) {
   if (!els.wrongRoundList) return;
   const empty = document.createElement("article");
-  empty.className = "wrong-item";
+  empty.className = "wrong-item wrong-round-placeholder";
   empty.innerHTML = `
       <span class="status-dot">-</span>
       <div>

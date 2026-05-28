@@ -486,6 +486,14 @@ button:disabled {
   font-weight: 500;
 }
 
+.wrong-date-marker {
+  flex: 0 0 auto;
+}
+
+.wrong-date-head span:nth-child(2) {
+  flex: 1;
+}
+
 .wrong-date-group:has(> .wrong-date-head:hover) {
   border-color: rgba(255, 204, 0, 0.85);
 }
@@ -2076,6 +2084,10 @@ button:disabled {
 .item-title {
   font-weight: 900;
   white-space: pre-wrap;
+}
+
+.wrong-round-placeholder .item-title {
+  font-weight: 400;
 }
 
 .result-toggle .item-title {
