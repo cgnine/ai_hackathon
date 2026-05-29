@@ -51,10 +51,7 @@ function syncAuthState() {
 }
 
 function loginUrl() {
-  if (window.location.protocol === "file:" || ["localhost", "127.0.0.1"].includes(window.location.hostname)) {
-    return "login.html";
-  }
-  return "/login";
+  return "login.html";
 }
 
 function requireLogin(page) {
