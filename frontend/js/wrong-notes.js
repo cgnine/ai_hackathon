@@ -137,14 +137,21 @@ function renderWrongNotes() {
     };
     const total = subject.total ?? group.total;
     const roundCount = subject.roundCount ?? group.rounds.length;
+    const visual = getWrongSubjectVisual(subject);
     const card = document.createElement("button");
     card.type = "button";
-    card.className = "subject-card wrong-subject-card";
+    card.className = `subject-card wrong-subject-card ${visual.className}`;
+    card.style.setProperty("--wrong-card-accent", visual.color);
     if (selectedGroup && group.subjectId === selectedGroup.subjectId) card.classList.add("active");
     card.innerHTML = `
-      <strong>${subject.code || subject.subjectCode || group.subjectId}</strong>
-      <small>${subject.desc || group.subjectName}</small>
-      <small class="item-sub">${roundCount ? `${roundCount}개 회차의 저장 세트가 있습니다.` : "아직 저장된 세트가 없습니다."}</small>
+      <span class="wrong-subject-visual" aria-hidden="true">
+        <span class="wrong-subject-code">${subject.code || subject.subjectCode || group.subjectId}</span>
+      </span>
+      <span class="wrong-subject-info">
+        <span><b>시험과목</b>${subject.name || group.subjectName}</span>
+        <span><b>오답세트</b>${roundCount ? `${roundCount}개 세트` : "저장된 세트 없음"}</span>
+        <span class="wrong-subject-count">${total}개 문항 저장</span>
+      </span>
     `;
     card.addEventListener("click", () => {
       state.wrongSubjectId = group.subjectId;
@@ -205,6 +212,45 @@ function renderWrongNotes() {
 
     els.wrongRoundList?.appendChild(section);
   });
+}
+
+function getWrongSubjectVisual(subject) {
+  const code = String(subject.code || subject.subjectCode || subject.id || "").toUpperCase();
+  const name = String(subject.name || "").toLowerCase();
+  const icons = {
+    SW: {
+      color: "#9fb8f4",
+      className: "wrong-theme-sw"
+    },
+    CD: {
+      color: "#a7d9b8",
+      className: "wrong-theme-cd"
+    },
+    CA: {
+      color: "#c7b7f4",
+      className: "wrong-theme-ca"
+    },
+    DE: {
+      color: "#f4c98b",
+      className: "wrong-theme-de"
+    },
+    AI: {
+      color: "#d9a0c2",
+      className: "wrong-theme-ai"
+    }
+  };
+  const key = icons[code]
+    ? code
+    : name.includes("developer")
+      ? "CD"
+      : name.includes("architect")
+        ? "CA"
+        : name.includes("data")
+          ? "DE"
+          : name.includes("sw") || name.includes("software") || name.includes("분석")
+            ? "SW"
+            : "AI";
+  return icons[key];
 }
 
 function focusWrongRoundSection() {

@@ -109,6 +109,7 @@ const els = {
   startPracticeBtn: $("startPracticeBtn"),
   profileSummary: $("profileSummary"),
   subjectGrid: $("subjectGrid"),
+  startSelectedSubjectBtn: $("startSelectedSubjectBtn"),
   selectedSubjectEyebrow: $("selectedSubjectEyebrow"),
   selectedSubjectTitle: $("selectedSubjectTitle"),
   startMockBtn: $("startMockBtn"),

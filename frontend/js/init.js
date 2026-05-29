@@ -13,6 +13,9 @@ function bindOptional(element, eventName, handler) {
 
 async function initPage() {
   const page = document.body.dataset.page || "subjects";
+  if (page === "subjects" && "scrollRestoration" in history) {
+    history.scrollRestoration = "manual";
+  }
 
   if (page === "login") {
     initLoginPage();
@@ -43,6 +46,7 @@ async function initPage() {
     els.profileSearch?.setAttribute("aria-expanded", "false");
   });
   bindOptional(els.startPracticeBtn, "click", startPractice);
+  bindOptional(els.startSelectedSubjectBtn, "click", startSelectedSubject);
   bindOptional(els.startMockBtn, "click", startMock);
   bindOptional(els.singleSubmitBtn, "click", submitSingle);
   bindOptional(els.singleWrongBtn, "click", () => addWrongNote(state.index));
@@ -70,12 +74,18 @@ async function initPage() {
   } catch (error) {
     showToast(`DB 과목 목록을 불러오지 못했습니다. (${error.message})`);
   }
-  if (!state.subjectId || !subjects.some((subject) => subject.id === state.subjectId)) {
+  if (page === "subjects") {
+    state.subjectId = null;
+    saveState();
+  } else if (!state.subjectId || !subjects.some((subject) => subject.id === state.subjectId)) {
     state.subjectId = subjects[0]?.id || null;
   }
   ensureSampleWrongNotes();
   if (page === "profile") initProfilePage();
-  if (page === "subjects") renderSubjects();
+  if (page === "subjects") {
+    renderSubjects();
+    scrollSubjectsToTop();
+  }
   if (page === "mock") renderMock();
   if (page === "result") {
     loadBackendResultPage();
@@ -92,6 +102,14 @@ async function initPage() {
 
   renderProfileButton();
   renderTopStats();
+}
+
+function scrollSubjectsToTop() {
+  window.scrollTo({ top: 0, left: 0, behavior: "auto" });
+  requestAnimationFrame(() => window.scrollTo({ top: 0, left: 0, behavior: "auto" }));
+  window.addEventListener("load", () => {
+    window.scrollTo({ top: 0, left: 0, behavior: "auto" });
+  }, { once: true });
 }
 
 initPage();
