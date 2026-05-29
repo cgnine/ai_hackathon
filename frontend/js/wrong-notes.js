@@ -148,8 +148,8 @@ function renderWrongNotes() {
         <span class="wrong-subject-code">${subject.code || subject.subjectCode || group.subjectId}</span>
       </span>
       <span class="wrong-subject-info">
-        <span><b>시험과목</b>${subject.name || group.subjectName}</span>
-        <span><b>오답세트</b>${roundCount ? `${roundCount}개 세트` : "저장된 세트 없음"}</span>
+        <strong>${subject.name || group.subjectName}</strong>
+        <small>${roundCount ? `${roundCount}개 오답세트` : "저장된 세트 없음"}</small>
         <span class="wrong-subject-count">${total}개 문항 저장</span>
       </span>
     `;
