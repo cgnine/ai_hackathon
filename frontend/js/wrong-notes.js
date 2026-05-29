@@ -91,12 +91,22 @@ function renderWrongNotes() {
     }))).map((subject) => ({
       id: subject.subjectId,
       code: subject.subjectCode || subject.subjectId,
-      name: subject.subjectName || subject.subjectId,
+      name: getWrongSubjectName(subject),
       desc: subject.subjectDescription || subject.subjectName || subject.subjectId,
       total: subject.wrongCount ?? subject.total ?? 0,
       roundCount: subject.roundCount ?? subject.rounds?.length ?? 0
     }))
     : subjects;
+  if (!state.wrongSubjectId || !subjectOptions.some((subject) => subject.id === state.wrongSubjectId)) {
+    const defaultSubject = subjectOptions.find((subject) => {
+      const code = String(subject.code || subject.subjectCode || subject.id || "").toUpperCase();
+      const name = String(subject.name || "").toLowerCase();
+      return code === "AI" || name.includes("ai engineering");
+    }) || subjectOptions[0];
+    state.wrongSubjectId = defaultSubject?.id || null;
+    state.wrongOpenDateKey = null;
+    saveState();
+  }
   const selectedSubject = state.wrongSubjectId
     ? subjectOptions.find((subject) => subject.id === state.wrongSubjectId)
     : null;
@@ -109,11 +119,6 @@ function renderWrongNotes() {
     }
     : null;
 
-  if (state.wrongSubjectId && !selectedSubject) {
-    state.wrongSubjectId = null;
-    state.wrongOpenDateKey = null;
-    saveState();
-  }
   if (els.wrongList) els.wrongList.innerHTML = "";
   if (els.wrongSubjectGrid) els.wrongSubjectGrid.innerHTML = "";
   if (els.wrongRoundList) els.wrongRoundList.innerHTML = "";
@@ -148,7 +153,6 @@ function renderWrongNotes() {
         <span class="wrong-subject-code">${subject.code || subject.subjectCode || group.subjectId}</span>
       </span>
       <span class="wrong-subject-info">
-        <strong>${subject.name || group.subjectName}</strong>
         <small>${roundCount ? `${roundCount}개 오답세트` : "저장된 세트 없음"}</small>
         <span class="wrong-subject-count">${total}개 문항 저장</span>
       </span>
@@ -171,7 +175,8 @@ function renderWrongNotes() {
   }
 
   if (els.selectedWrongSubjectTitle) {
-    els.selectedWrongSubjectTitle.textContent = `${selectedGroup.subjectId} 오답 세트`;
+    const selectedSummary = subjectOptions.find((subject) => subject.id === selectedGroup.subjectId);
+    els.selectedWrongSubjectTitle.textContent = selectedSummary?.name || selectedGroup.subjectName;
   }
 
   if (selectedGroup.rounds.length === 0) {
@@ -212,6 +217,17 @@ function renderWrongNotes() {
 
     els.wrongRoundList?.appendChild(section);
   });
+}
+
+function getWrongSubjectName(subject) {
+  const subjectId = subject.subjectId || subject.id;
+  const subjectCode = subject.subjectCode || subject.code || subjectId;
+  const dbSubject = subjects.find((item) =>
+    item.id === subjectId ||
+    item.subjectCode === subjectCode ||
+    item.id === subjectCode
+  );
+  return subject.subjectName || dbSubject?.name || subjectId;
 }
 
 function getWrongSubjectVisual(subject) {
