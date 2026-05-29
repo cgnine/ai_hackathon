@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from collections import defaultdict
+from datetime import datetime
 from typing import Any
 
 from fastapi import HTTPException
@@ -21,11 +22,15 @@ def _is_correct(value: Any) -> bool:
 
 
 def _question_text(row: dict[str, Any]) -> str:
-    scenario = (row.get("question_content2") or "").strip()
-    content = (row.get("question_content") or "").strip()
-    if scenario:
-        return f"{scenario}\n\n{content}"
-    return content
+    return (row.get("question_content") or "").strip()
+
+
+def _question_scenario(row: dict[str, Any]) -> str:
+    return (row.get("question_content2") or "").strip()
+
+
+def _question_type(row: dict[str, Any]) -> str:
+    return "실무형" if _question_scenario(row) else "이론형"
 
 
 def _created_at(row: dict[str, Any]) -> str:
@@ -83,6 +88,136 @@ def _build_diagnosis(items: list[dict[str, Any]], summary: str | None) -> dict[s
     }
 
 
+def save_exam_result(member_id: str, subject_code: str, answers: list[dict[str, Any]]) -> dict[str, Any]:
+    normalized_member_id = member_id.strip()
+    normalized_subject_code = subject_code.strip()
+    question_ids = [str(answer["question_id"]).strip() for answer in answers]
+    selected_by_question = {
+        str(answer["question_id"]).strip(): answer.get("selected_number")
+        for answer in answers
+    }
+
+    if not normalized_member_id:
+        raise HTTPException(status_code=400, detail="member_id is required")
+    if not normalized_subject_code:
+        raise HTTPException(status_code=400, detail="subject_code is required")
+    if any(not question_id for question_id in question_ids):
+        raise HTTPException(status_code=400, detail="question_id is required")
+
+    now = datetime.now()
+    exam_date = now.strftime("%Y%m%d")
+    exam_time = now.strftime("%H:%M:%S")
+    created_at = now.strftime("%Y-%m-%d %H:%M:%S")
+
+    with get_conn() as conn:
+        with conn.cursor(cursor_factory=RealDictCursor) as cur:
+            cur.execute(
+                """
+                SELECT question_id, answer_number
+                FROM question_tb
+                WHERE subject_code = %s
+                  AND question_id = ANY(%s)
+                """,
+                (normalized_subject_code, question_ids),
+            )
+            question_rows = cur.fetchall()
+
+            answer_by_question = {
+                str(row["question_id"]): _to_int(row["answer_number"])
+                for row in question_rows
+            }
+            missing_question_ids = [
+                question_id for question_id in question_ids
+                if question_id not in answer_by_question
+            ]
+            if missing_question_ids:
+                raise HTTPException(
+                    status_code=400,
+                    detail=f"저장할 수 없는 question_id가 있습니다: {', '.join(missing_question_ids)}",
+                )
+
+            correct_count = 0
+            history_rows = []
+            for question_id in question_ids:
+                selected = _to_int(selected_by_question.get(question_id))
+                answer_number = answer_by_question[question_id]
+                is_correct = selected == answer_number
+                if is_correct:
+                    correct_count += 1
+                history_rows.append(
+                    (
+                        question_id,
+                        str(selected) if selected is not None else None,
+                        str(answer_number) if answer_number is not None else None,
+                        "Y" if is_correct else "N",
+                        created_at,
+                    )
+                )
+
+            total = len(question_ids)
+            score = round((correct_count / total) * 100) if total else 0
+
+            cur.execute(
+                """
+                SELECT COALESCE(MAX(exam_round), 0) + 1 AS next_round
+                FROM (
+                    SELECT
+                        CASE
+                            WHEN exam_round ~ '^[0-9]+$' THEN exam_round::integer
+                            ELSE NULL
+                        END AS exam_round
+                    FROM exam_tb
+                    WHERE member_id = %s
+                      AND subject_code = %s
+                ) rounds
+                """,
+                (normalized_member_id, normalized_subject_code),
+            )
+            next_round = int(cur.fetchone()["next_round"] or 1)
+
+            cur.execute(
+                """
+                INSERT INTO exam_tb (
+                    member_id, subject_code, exam_round,
+                    exam_score, exam_date, exam_time, diagnosis_content, created_at
+                )
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
+                RETURNING exam_id
+                """,
+                (
+                    normalized_member_id,
+                    normalized_subject_code,
+                    str(next_round),
+                    str(score),
+                    exam_date,
+                    exam_time,
+                    "모의고사 풀이 결과입니다. 오답 문항의 해설을 중심으로 복습하세요.",
+                    created_at,
+                ),
+            )
+            exam_id = str(cur.fetchone()["exam_id"])
+
+            cur.executemany(
+                """
+                INSERT INTO exam_history_tb (
+                    exam_id, question_id, selected_number,
+                    answer_number, is_correct, created_at
+                )
+                VALUES (%s, %s, %s, %s, %s, %s)
+                """,
+                [(exam_id, *row) for row in history_rows],
+            )
+
+    return {
+        "attemptId": exam_id,
+        "roundTitle": f"{next_round}회차",
+        "score": score,
+        "correctCount": correct_count,
+        "total": len(question_ids),
+        "createdAt": now.isoformat(),
+    }
+
+
 def get_result(attempt_id: str) -> dict[str, Any]:
     with get_conn() as conn:
         with conn.cursor(cursor_factory=RealDictCursor) as cur:
@@ -135,34 +270,36 @@ def get_result(attempt_id: str) -> dict[str, Any]:
         raise HTTPException(status_code=404, detail="Result not found")
 
     first = rows[0]
-    items = [
-        {
-            "questionId": row["question_id"],
-            "questionText": _question_text(row),
-            "choices": [
-                row["option_1"],
-                row["option_2"],
-                row["option_3"],
-                row["option_4"],
-                row["option_5"],
-            ],
-            "difficulty": row["minor_unit"] or "-",
-            "questionType": row["question_type"] or "이론형",
-            "diagnosisArea": row["major_unit"] or "-",
-            "minorUnit": row["minor_unit"] or "-",
-            "selected": _to_int(row["selected_number"]),
-            "answer": _to_int(row["answer_number"]),
-            "correct": _is_correct(row["is_correct"]),
-            "wrongNoteSaved": str(row["wrong_note_saved"] or "").upper() == "Y",
-            "explanation": row["explanation"] or "",
-        }
-        for row in rows
-    ]
+    items = []
+    for row in rows:
+        selected = _to_int(row["selected_number"])
+        answer = _to_int(row["answer_number"])
+        items.append(
+            {
+                "questionId": row["question_id"],
+                "questionText": _question_text(row),
+                "questionScenario": _question_scenario(row),
+                "choices": [
+                    row["option_1"],
+                    row["option_2"],
+                    row["option_3"],
+                    row["option_4"],
+                    row["option_5"],
+                ],
+                "difficulty": row["minor_unit"] or "-",
+                "questionType": _question_type(row),
+                "diagnosisArea": row["major_unit"] or "-",
+                "minorUnit": row["minor_unit"] or "-",
+                "selected": selected,
+                "answer": answer,
+                "correct": selected == answer,
+                "wrongNoteSaved": str(row["wrong_note_saved"] or "").upper() == "Y",
+                "explanation": row["explanation"] or "",
+            }
+        )
     total = len(items)
     correct_count = sum(1 for item in items if item["correct"])
-    score = _to_int(first["exam_score"])
-    if score is None:
-        score = round((correct_count / total) * 100) if total else 0
+    score = round((correct_count / total) * 100) if total else 0
 
     return {
         "attemptId": first["exam_id"],
@@ -344,6 +481,7 @@ def get_saved_wrong_notes() -> dict[str, Any]:
                 "question": {
                     "id": row["question_id"],
                     "text": _question_text(row),
+                    "scenario": _question_scenario(row),
                     "choices": [
                         row["option_1"],
                         row["option_2"],
@@ -354,7 +492,7 @@ def get_saved_wrong_notes() -> dict[str, Any]:
                     "answer": _to_int(row["answer_number"]),
                     "explanation": row["explanation"] or "",
                     "difficulty": row["minor_unit"] or "-",
-                    "questionType": row["question_type"] or "이론형",
+                    "questionType": _question_type(row),
                     "majorUnit": row["major_unit"] or "-",
                 },
             }
