@@ -1213,6 +1213,16 @@ button:disabled {
   white-space: pre-wrap;
 }
 
+.mock-scenario-box {
+  margin: 14px 0 18px;
+  padding: 14px 16px;
+  border-color: #dbe3ed;
+  background: #f8fafc;
+  color: #334155;
+  font-size: 1rem;
+  line-height: 1.6;
+}
+
 .question-scenario-box[hidden] {
   display: none;
 }

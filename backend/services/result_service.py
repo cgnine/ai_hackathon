@@ -29,6 +29,10 @@ def _question_scenario(row: dict[str, Any]) -> str:
     return (row.get("question_content2") or "").strip()
 
 
+def _question_type(row: dict[str, Any]) -> str:
+    return "실무형" if _question_scenario(row) else "이론형"
+
+
 def _created_at(row: dict[str, Any]) -> str:
     exam_date = str(row.get("exam_date") or "").strip()
     exam_time = str(row.get("exam_time") or "").strip()
@@ -283,7 +287,7 @@ def get_result(attempt_id: str) -> dict[str, Any]:
                     row["option_5"],
                 ],
                 "difficulty": row["minor_unit"] or "-",
-                "questionType": row["question_type"] or "이론형",
+                "questionType": _question_type(row),
                 "diagnosisArea": row["major_unit"] or "-",
                 "minorUnit": row["minor_unit"] or "-",
                 "selected": selected,
@@ -488,7 +492,7 @@ def get_saved_wrong_notes() -> dict[str, Any]:
                     "answer": _to_int(row["answer_number"]),
                     "explanation": row["explanation"] or "",
                     "difficulty": row["minor_unit"] or "-",
-                    "questionType": row["question_type"] or "이론형",
+                    "questionType": _question_type(row),
                     "majorUnit": row["major_unit"] or "-",
                 },
             }

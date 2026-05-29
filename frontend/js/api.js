@@ -11,16 +11,17 @@ function currentQuestions() {
 }
 
 function normalizeApiQuestion(item) {
+  const scenario = item.question_text_extra || "";
   return {
     id: item.question_id,
     subjectCode: item.subject_code,
     difficulty: item.major_unit || "문제",
     text: item.question_text,
-    scenario: item.question_text_extra || "",
+    scenario,
     choices: item.choices || [],
     answer: Number(item.answer_number),
     explanation: item.explanation,
-    questionType: item.question_type || item.minor_unit || "객관식"
+    questionType: String(scenario).trim() ? "실무형" : "이론형"
   };
 }
 

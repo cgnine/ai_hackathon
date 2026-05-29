@@ -1,7 +1,5 @@
 function getQuestionType(question, index) {
-  if (question.questionType) return question.questionType;
-  const types = ["자격증연계형", "실무형", "이론형"];
-  return types[index % types.length];
+  return String(question?.scenario || "").trim() ? "실무형" : "이론형";
 }
 
 function showScreen(name) {

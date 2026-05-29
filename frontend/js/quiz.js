@@ -93,8 +93,10 @@ function renderMock() {
     const tags = document.createElement("div");
     const difficulty = document.createElement("span");
     const type = document.createElement("span");
+    const scenario = document.createElement("div");
     const text = document.createElement("p");
     const choices = document.createElement("ol");
+    const scenarioText = String(question.scenario || "").trim();
 
     panel.className = "question-panel mock-question-panel";
     panel.id = `mock-question-${index + 1}`;
@@ -106,13 +108,19 @@ function renderMock() {
     difficulty.textContent = question.difficulty;
     type.className = "pill type-pill";
     type.textContent = getQuestionType(question, index);
+    scenario.className = "question-scenario-box mock-scenario-box";
+    scenario.hidden = !scenarioText;
+    scenario.textContent = scenarioText;
     text.className = "question-text";
     text.textContent = question.text;
     choices.className = "choices";
 
     tags.append(difficulty, type);
     head.append(number, tags);
-    panel.append(head, text, choices);
+    panel.append(head);
+    panel.appendChild(text);
+    if (scenarioText) panel.appendChild(scenario);
+    panel.appendChild(choices);
     renderChoices(choices, question, null, (choiceNumber) => {
       state.mockAnswers[index] = choiceNumber;
       state.selected = choiceNumber;
