@@ -1,7 +1,9 @@
 from __future__ import annotations
 
 from collections import defaultdict
+from datetime import datetime
 from typing import Any
+from uuid import uuid4
 
 from fastapi import HTTPException
 from psycopg2.extras import RealDictCursor
@@ -80,6 +82,128 @@ def _build_diagnosis(items: list[dict[str, Any]], summary: str | None) -> dict[s
         "axes": axes,
         "radarAxes": radar_axes,
         "summary": summary or "응시 결과와 오답 해설을 기준으로 취약 영역을 복습하세요.",
+    }
+
+
+def save_exam_result(member_id: str, subject_code: str, answers: list[dict[str, Any]]) -> dict[str, Any]:
+    normalized_member_id = member_id.strip()
+    normalized_subject_code = subject_code.strip()
+    question_ids = [str(answer["question_id"]).strip() for answer in answers]
+    selected_by_question = {
+        str(answer["question_id"]).strip(): answer.get("selected_number")
+        for answer in answers
+    }
+
+    if not normalized_member_id:
+        raise HTTPException(status_code=400, detail="member_id is required")
+    if not normalized_subject_code:
+        raise HTTPException(status_code=400, detail="subject_code is required")
+    if any(not question_id for question_id in question_ids):
+        raise HTTPException(status_code=400, detail="question_id is required")
+
+    now = datetime.now()
+    exam_id = f"exam-{now.strftime('%Y%m%d%H%M%S')}-{uuid4().hex[:8]}"
+    exam_date = now.strftime("%Y%m%d")
+    exam_time = now.strftime("%H:%M:%S")
+
+    with get_conn() as conn:
+        with conn.cursor(cursor_factory=RealDictCursor) as cur:
+            cur.execute(
+                """
+                SELECT question_id, answer_number
+                FROM question_tb
+                WHERE subject_code = %s
+                  AND question_id = ANY(%s)
+                """,
+                (normalized_subject_code, question_ids),
+            )
+            question_rows = cur.fetchall()
+
+            answer_by_question = {
+                str(row["question_id"]): _to_int(row["answer_number"])
+                for row in question_rows
+            }
+            missing_question_ids = [
+                question_id for question_id in question_ids
+                if question_id not in answer_by_question
+            ]
+            if missing_question_ids:
+                raise HTTPException(
+                    status_code=400,
+                    detail=f"저장할 수 없는 question_id가 있습니다: {', '.join(missing_question_ids)}",
+                )
+
+            correct_count = 0
+            history_rows = []
+            for index, question_id in enumerate(question_ids, start=1):
+                selected = _to_int(selected_by_question.get(question_id))
+                answer_number = answer_by_question[question_id]
+                is_correct = selected == answer_number
+                if is_correct:
+                    correct_count += 1
+                history_rows.append(
+                    (
+                        exam_id,
+                        index,
+                        question_id,
+                        selected,
+                        answer_number,
+                        "Y" if is_correct else "N",
+                    )
+                )
+
+            total = len(question_ids)
+            score = round((correct_count / total) * 100) if total else 0
+
+            cur.execute(
+                """
+                SELECT COALESCE(MAX(exam_round), 0) + 1 AS next_round
+                FROM exam_tb
+                WHERE member_id = %s
+                  AND subject_code = %s
+                """,
+                (normalized_member_id, normalized_subject_code),
+            )
+            next_round = int(cur.fetchone()["next_round"] or 1)
+
+            cur.execute(
+                """
+                INSERT INTO exam_tb (
+                    exam_id, member_id, subject_code, exam_round,
+                    exam_score, exam_date, exam_time, diagnosis_content
+                )
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
+                """,
+                (
+                    exam_id,
+                    normalized_member_id,
+                    normalized_subject_code,
+                    next_round,
+                    score,
+                    exam_date,
+                    exam_time,
+                    "모의고사 풀이 결과입니다. 오답 문항의 해설을 중심으로 복습하세요.",
+                ),
+            )
+
+            cur.executemany(
+                """
+                INSERT INTO exam_history_tb (
+                    exam_id, exam_question_id, question_id,
+                    selected_number, answer_number, is_correct
+                )
+                VALUES (%s, %s, %s, %s, %s, %s)
+                """,
+                history_rows,
+            )
+
+    return {
+        "attemptId": exam_id,
+        "roundTitle": f"{next_round}회차",
+        "score": score,
+        "correctCount": correct_count,
+        "total": len(question_ids),
+        "createdAt": now.isoformat(),
     }
 
 

@@ -164,3 +164,13 @@ class SolveResponse(BaseModel):
     explanation: str
     solved_count: int
     correct_count: int
+
+
+class LoginRequest(BaseModel):
+    member_id: str = Field(min_length=1, max_length=50)
+    password: Optional[str] = None
+
+
+class LoginResponse(BaseModel):
+    member_id: str
+    member_name: str
