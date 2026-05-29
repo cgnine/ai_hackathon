@@ -3,6 +3,9 @@ const API_BASE = (() => {
   if (window.location.protocol === "file:" || localHosts.has(window.location.hostname)) {
     return "http://localhost:8000";
   }
+  if (window.location.port && window.location.port !== "80" && window.location.port !== "443") {
+    return `${window.location.protocol}//${window.location.hostname}:8000`;
+  }
   return "";
 })();
 

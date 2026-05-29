@@ -7,7 +7,6 @@ RUN pip install --no-cache-dir -r backend/requirements.txt
 
 COPY backend/ ./backend/
 COPY ["Practice Books/", "./Practice Books/"]
-
 ENV PYTHONPATH=/app
 ENV PYTHONUNBUFFERED=1
 
