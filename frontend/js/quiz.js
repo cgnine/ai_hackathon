@@ -173,8 +173,14 @@ async function gradeMock() {
 
   const score = Math.round((correctCount / questions.length) * 100);
   let savedResult;
+  let memberId = currentMemberId();
+  let questionIds = questions.map((question) => String(question.id));
   try {
     savedResult = await saveMockExamResult(subject, questions, state.mockAnswers);
+    memberId = savedResult.memberId || memberId;
+    questionIds = Array.isArray(savedResult.questionIds) && savedResult.questionIds.length > 0
+      ? savedResult.questionIds.map((questionId) => String(questionId))
+      : questionIds;
     attemptId = savedResult.attemptId || attemptId;
     roundTitle = savedResult.roundTitle || roundTitle;
     showToast("응시 결과를 저장했습니다.");
@@ -184,7 +190,10 @@ async function gradeMock() {
   }
 
   state.lastResult = {
+    examId: attemptId,
     attemptId,
+    memberId,
+    questionIds,
     profileName: state.profileName,
     subjectId: state.subjectId,
     subjectName: subject.name,
@@ -197,6 +206,9 @@ async function gradeMock() {
   };
   state.attemptHistory.push({
     id: attemptId,
+    examId: attemptId,
+    memberId,
+    questionIds,
     profileName: state.profileName,
     subjectId: state.subjectId,
     subjectName: subject.name,
@@ -210,5 +222,15 @@ async function gradeMock() {
   saveState();
   renderResultPage();
   renderTopStats();
-  window.location.href = `${PAGE_URLS.result}?attemptId=${encodeURIComponent(attemptId)}`;
+  console.log("result page payload", {
+    attemptId,
+    examId: attemptId,
+    memberId,
+    questionIds
+  });
+  saveResultNavigation({
+    examId: attemptId,
+    memberId
+  });
+  window.location.href = PAGE_URLS.result;
 }

@@ -705,8 +705,8 @@ function showResultContent() {
 async function loadBackendResultPage() {
   if (!els.resultList || !els.resultScore || !els.resultSummary) return;
 
-  const params = new URLSearchParams(window.location.search);
-  const attemptId = params.get("attemptId");
+  const navigation = loadResultNavigation();
+  const attemptId = navigation?.examId || state.lastResult?.examId || state.lastResult?.attemptId || null;
 
   startResultLoading();
   els.resultScore.textContent = "-";
@@ -734,6 +734,7 @@ async function loadBackendResultPage() {
     }
     if (!response.ok) throw new Error(`HTTP ${response.status}`);
     const result = await response.json();
+    clearResultNavigation();
     renderApiResultPage(result);
   } catch (error) {
     renderResultEmptyState({

@@ -20,6 +20,7 @@ const PAGE_URLS = {
 };
 
 const STATE_KEY = "kbCbtState";
+const RESULT_NAV_KEY = "kbCbtResultNavigation";
 
 const defaultState = {
   screen: "profile",
@@ -90,6 +91,22 @@ function saveState() {
     ...state,
     wrongNotes: Array.from(state.wrongNotes.entries())
   }));
+}
+
+function saveResultNavigation(payload) {
+  sessionStorage.setItem(RESULT_NAV_KEY, JSON.stringify(payload || {}));
+}
+
+function loadResultNavigation() {
+  try {
+    return JSON.parse(sessionStorage.getItem(RESULT_NAV_KEY) || "null");
+  } catch {
+    return null;
+  }
+}
+
+function clearResultNavigation() {
+  sessionStorage.removeItem(RESULT_NAV_KEY);
 }
 
 const $ = (id) => document.getElementById(id);

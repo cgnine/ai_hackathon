@@ -1,11 +1,14 @@
 from __future__ import annotations
 
+import logging
+
 from fastapi import APIRouter
 from pydantic import BaseModel, Field
 
 from backend.services import result_service
 
 router = APIRouter(prefix="/results", tags=["results"])
+logger = logging.getLogger(__name__)
 
 
 class WrongNoteSaveRequest(BaseModel):
@@ -30,11 +33,20 @@ async def get_saved_wrong_notes():
 
 @router.post("")
 async def save_result(request: ExamResultSaveRequest):
-    return result_service.save_exam_result(
-        member_id=request.member_id,
-        subject_code=request.subject_code,
-        answers=[answer.model_dump() for answer in request.answers],
-    )
+    try:
+        return result_service.save_exam_result(
+            member_id=request.member_id,
+            subject_code=request.subject_code,
+            answers=[answer.model_dump() for answer in request.answers],
+        )
+    except Exception:
+        logger.exception(
+            "Failed to save exam result: member_id=%s subject_code=%s answer_count=%s",
+            request.member_id,
+            request.subject_code,
+            len(request.answers),
+        )
+        raise
 
 
 @router.get("/latest")

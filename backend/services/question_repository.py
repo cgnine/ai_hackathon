@@ -170,6 +170,9 @@ def get_questions_by_subject_code(subject_code: str, count: int) -> list[Subject
         if not rows:
             return []
 
+        if len(rows) <= count:
+            return [_row_to_subject_question(row) for row in rows]
+
         grouped_rows: dict[str, list[tuple]] = {}
         for row in rows:
             major_unit = (row[2] or "").strip()
@@ -178,7 +181,7 @@ def get_questions_by_subject_code(subject_code: str, count: int) -> list[Subject
 
         selected_rows: list[tuple] = []
         selected_ids: set[str] = set()
-        selected_units = list(grouped_rows.keys())[:5]
+        selected_units = list(grouped_rows.keys())
 
         if selected_units:
             base_quota = count // len(selected_units)

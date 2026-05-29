@@ -4,3 +4,10 @@ __pycache__/
 *.pyc
 backend/logs/
 .claude/
+
+# 가상환경 폴더 제외
+.venv312/
+# 로그 파일 제외
+*.log
+# SQL 파일 제외
+*.sql

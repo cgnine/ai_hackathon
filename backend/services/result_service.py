@@ -17,10 +17,6 @@ def _to_int(value: Any) -> int | None:
         return None
 
 
-def _is_correct(value: Any) -> bool:
-    return str(value or "").upper() in {"Y", "TRUE", "1", "O"}
-
-
 def _question_text(row: dict[str, Any]) -> str:
     return (row.get("question_content") or "").strip()
 
@@ -84,7 +80,7 @@ def _build_diagnosis(items: list[dict[str, Any]], summary: str | None) -> dict[s
     return {
         "axes": axes,
         "radarAxes": radar_axes,
-        "summary": summary or "응시 결과와 오답 해설을 기준으로 취약 영역을 복습하세요.",
+        "summary": summary or "진단 내용이 아직 없습니다.",
     }
 
 
@@ -133,12 +129,32 @@ def save_exam_result(member_id: str, subject_code: str, answers: list[dict[str, 
             if missing_question_ids:
                 raise HTTPException(
                     status_code=400,
-                    detail=f"저장할 수 없는 question_id가 있습니다: {', '.join(missing_question_ids)}",
+                    detail=f"유효하지 않은 question_id가 있습니다: {', '.join(missing_question_ids)}",
                 )
+
+            cur.execute(
+                """
+                SELECT LPAD((COALESCE(MAX(exam_id::integer), 0) + 1)::text, 8, '0') AS next_exam_id
+                FROM exam_tb
+                WHERE exam_id ~ '^[0-9]+$'
+                """
+            )
+            next_exam_id = str(cur.fetchone()["next_exam_id"] or "00000001")
+
+            cur.execute(
+                """
+                SELECT COALESCE(MAX(RIGHT(exam_question_id, 4)::integer), 0) AS last_exam_question_seq
+                FROM exam_history_tb
+                WHERE exam_question_id ~ '^[0-9]{12}$'
+                  AND LEFT(exam_question_id, 8) = %s
+                """,
+                (exam_date,),
+            )
+            last_exam_question_seq = int(cur.fetchone()["last_exam_question_seq"] or 0)
 
             correct_count = 0
             history_rows = []
-            for question_id in question_ids:
+            for index, question_id in enumerate(question_ids, start=1):
                 selected = _to_int(selected_by_question.get(question_id))
                 answer_number = answer_by_question[question_id]
                 is_correct = selected == answer_number
@@ -146,6 +162,7 @@ def save_exam_result(member_id: str, subject_code: str, answers: list[dict[str, 
                     correct_count += 1
                 history_rows.append(
                     (
+                        f"{exam_date}{last_exam_question_seq + index:04d}",
                         question_id,
                         str(selected) if selected is not None else None,
                         str(answer_number) if answer_number is not None else None,
@@ -168,30 +185,30 @@ def save_exam_result(member_id: str, subject_code: str, answers: list[dict[str, 
                         END AS exam_round
                     FROM exam_tb
                     WHERE member_id = %s
-                      AND subject_code = %s
                 ) rounds
                 """,
-                (normalized_member_id, normalized_subject_code),
+                (normalized_member_id,),
             )
             next_round = int(cur.fetchone()["next_round"] or 1)
 
             cur.execute(
                 """
                 INSERT INTO exam_tb (
-                    member_id, subject_code, exam_round,
-                    exam_score, exam_date, exam_time, diagnosis_content, created_at
+                    exam_id, member_id, subject_code, exam_date, exam_time,
+                    exam_round, exam_score, diagnosis_content, created_at
                 )
-                VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
                 RETURNING exam_id
                 """,
                 (
+                    next_exam_id,
                     normalized_member_id,
                     normalized_subject_code,
-                    str(next_round),
-                    str(score),
                     exam_date,
                     exam_time,
-                    "모의고사 풀이 결과입니다. 오답 문항의 해설을 중심으로 복습하세요.",
+                    str(next_round),
+                    str(score),
+                    None,
                     created_at,
                 ),
             )
@@ -200,16 +217,19 @@ def save_exam_result(member_id: str, subject_code: str, answers: list[dict[str, 
             cur.executemany(
                 """
                 INSERT INTO exam_history_tb (
-                    exam_id, question_id, selected_number,
-                    answer_number, is_correct, created_at
+                    exam_question_id, exam_id, question_id,
+                    selected_number, answer_number, is_correct, created_at
                 )
-                VALUES (%s, %s, %s, %s, %s, %s)
+                VALUES (%s, %s, %s, %s, %s, %s, %s)
                 """,
-                [(exam_id, *row) for row in history_rows],
+                [(history_row[0], exam_id, *history_row[1:]) for history_row in history_rows],
             )
 
     return {
+        "examId": exam_id,
         "attemptId": exam_id,
+        "memberId": normalized_member_id,
+        "questionIds": question_ids,
         "roundTitle": f"{next_round}회차",
         "score": score,
         "correctCount": correct_count,
@@ -297,6 +317,7 @@ def get_result(attempt_id: str) -> dict[str, Any]:
                 "explanation": row["explanation"] or "",
             }
         )
+
     total = len(items)
     correct_count = sum(1 for item in items if item["correct"])
     score = round((correct_count / total) * 100) if total else 0
