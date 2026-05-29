@@ -164,21 +164,16 @@ async function gradeMock() {
   });
 
   const score = Math.round((correctCount / questions.length) * 100);
+  let savedResult;
   try {
-    const savedResult = await saveMockExamResult(subject, questions, state.mockAnswers);
+    savedResult = await saveMockExamResult(subject, questions, state.mockAnswers);
     attemptId = savedResult.attemptId || attemptId;
     roundTitle = savedResult.roundTitle || roundTitle;
     showToast("응시 결과를 저장했습니다.");
   } catch (error) {
     showToast(`응시 결과 저장에 실패했습니다. (${error.message})`);
+    return;
   }
-
-  if (els.resultList) els.resultList.innerHTML = "";
-  questions.forEach((question, index) => {
-    const selected = state.mockAnswers[index];
-    const correct = question.type === "coding" ? evaluateCodingAnswer(question, selected) : selected === question.answer;
-    appendResultItem(question, index, selected, correct, { attemptId, roundTitle, createdAt });
-  });
 
   state.lastResult = {
     attemptId,
@@ -207,5 +202,5 @@ async function gradeMock() {
   saveState();
   renderResultPage();
   renderTopStats();
-  showScreen("result");
+  window.location.href = `${PAGE_URLS.result}?attemptId=${encodeURIComponent(attemptId)}`;
 }

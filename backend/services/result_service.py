@@ -3,7 +3,6 @@ from __future__ import annotations
 from collections import defaultdict
 from datetime import datetime
 from typing import Any
-from uuid import uuid4
 
 from fastapi import HTTPException
 from psycopg2.extras import RealDictCursor
@@ -102,9 +101,9 @@ def save_exam_result(member_id: str, subject_code: str, answers: list[dict[str, 
         raise HTTPException(status_code=400, detail="question_id is required")
 
     now = datetime.now()
-    exam_id = f"exam-{now.strftime('%Y%m%d%H%M%S')}-{uuid4().hex[:8]}"
     exam_date = now.strftime("%Y%m%d")
     exam_time = now.strftime("%H:%M:%S")
+    created_at = now.strftime("%Y-%m-%d %H:%M:%S")
 
     with get_conn() as conn:
         with conn.cursor(cursor_factory=RealDictCursor) as cur:
@@ -135,7 +134,7 @@ def save_exam_result(member_id: str, subject_code: str, answers: list[dict[str, 
 
             correct_count = 0
             history_rows = []
-            for index, question_id in enumerate(question_ids, start=1):
+            for question_id in question_ids:
                 selected = _to_int(selected_by_question.get(question_id))
                 answer_number = answer_by_question[question_id]
                 is_correct = selected == answer_number
@@ -143,12 +142,11 @@ def save_exam_result(member_id: str, subject_code: str, answers: list[dict[str, 
                     correct_count += 1
                 history_rows.append(
                     (
-                        exam_id,
-                        index,
                         question_id,
-                        selected,
-                        answer_number,
+                        str(selected) if selected is not None else None,
+                        str(answer_number) if answer_number is not None else None,
                         "Y" if is_correct else "N",
+                        created_at,
                     )
                 )
 
@@ -158,9 +156,16 @@ def save_exam_result(member_id: str, subject_code: str, answers: list[dict[str, 
             cur.execute(
                 """
                 SELECT COALESCE(MAX(exam_round), 0) + 1 AS next_round
-                FROM exam_tb
-                WHERE member_id = %s
-                  AND subject_code = %s
+                FROM (
+                    SELECT
+                        CASE
+                            WHEN exam_round ~ '^[0-9]+$' THEN exam_round::integer
+                            ELSE NULL
+                        END AS exam_round
+                    FROM exam_tb
+                    WHERE member_id = %s
+                      AND subject_code = %s
+                ) rounds
                 """,
                 (normalized_member_id, normalized_subject_code),
             )
@@ -169,32 +174,34 @@ def save_exam_result(member_id: str, subject_code: str, answers: list[dict[str, 
             cur.execute(
                 """
                 INSERT INTO exam_tb (
-                    exam_id, member_id, subject_code, exam_round,
-                    exam_score, exam_date, exam_time, diagnosis_content
+                    member_id, subject_code, exam_round,
+                    exam_score, exam_date, exam_time, diagnosis_content, created_at
                 )
                 VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
+                RETURNING exam_id
                 """,
                 (
-                    exam_id,
                     normalized_member_id,
                     normalized_subject_code,
-                    next_round,
-                    score,
+                    str(next_round),
+                    str(score),
                     exam_date,
                     exam_time,
                     "모의고사 풀이 결과입니다. 오답 문항의 해설을 중심으로 복습하세요.",
+                    created_at,
                 ),
             )
+            exam_id = str(cur.fetchone()["exam_id"])
 
             cur.executemany(
                 """
                 INSERT INTO exam_history_tb (
-                    exam_id, exam_question_id, question_id,
-                    selected_number, answer_number, is_correct
+                    exam_id, question_id, selected_number,
+                    answer_number, is_correct, created_at
                 )
                 VALUES (%s, %s, %s, %s, %s, %s)
                 """,
-                history_rows,
+                [(exam_id, *row) for row in history_rows],
             )
 
     return {
@@ -259,35 +266,36 @@ def get_result(attempt_id: str) -> dict[str, Any]:
         raise HTTPException(status_code=404, detail="Result not found")
 
     first = rows[0]
-    items = [
-        {
-            "questionId": row["question_id"],
-            "questionText": _question_text(row),
-            "questionScenario": _question_scenario(row),
-            "choices": [
-                row["option_1"],
-                row["option_2"],
-                row["option_3"],
-                row["option_4"],
-                row["option_5"],
-            ],
-            "difficulty": row["minor_unit"] or "-",
-            "questionType": row["question_type"] or "이론형",
-            "diagnosisArea": row["major_unit"] or "-",
-            "minorUnit": row["minor_unit"] or "-",
-            "selected": _to_int(row["selected_number"]),
-            "answer": _to_int(row["answer_number"]),
-            "correct": _is_correct(row["is_correct"]),
-            "wrongNoteSaved": str(row["wrong_note_saved"] or "").upper() == "Y",
-            "explanation": row["explanation"] or "",
-        }
-        for row in rows
-    ]
+    items = []
+    for row in rows:
+        selected = _to_int(row["selected_number"])
+        answer = _to_int(row["answer_number"])
+        items.append(
+            {
+                "questionId": row["question_id"],
+                "questionText": _question_text(row),
+                "questionScenario": _question_scenario(row),
+                "choices": [
+                    row["option_1"],
+                    row["option_2"],
+                    row["option_3"],
+                    row["option_4"],
+                    row["option_5"],
+                ],
+                "difficulty": row["minor_unit"] or "-",
+                "questionType": row["question_type"] or "이론형",
+                "diagnosisArea": row["major_unit"] or "-",
+                "minorUnit": row["minor_unit"] or "-",
+                "selected": selected,
+                "answer": answer,
+                "correct": selected == answer,
+                "wrongNoteSaved": str(row["wrong_note_saved"] or "").upper() == "Y",
+                "explanation": row["explanation"] or "",
+            }
+        )
     total = len(items)
     correct_count = sum(1 for item in items if item["correct"])
-    score = _to_int(first["exam_score"])
-    if score is None:
-        score = round((correct_count / total) * 100) if total else 0
+    score = round((correct_count / total) * 100) if total else 0
 
     return {
         "attemptId": first["exam_id"],
