@@ -151,20 +151,74 @@ def get_questions_by_category(category: str) -> list[QuestionRow]:
 
 
 def get_questions_by_subject_code(subject_code: str, count: int) -> list[SubjectQuestionRow]:
-    sql = """
-        SELECT
-            question_id, subject_code, major_unit, minor_unit, question_type,
-            question_content, question_content2,
-            option_1, option_2, option_3, option_4, option_5,
-            answer_number, explanation
-        FROM question_tb
-        WHERE subject_code = %s
-        ORDER BY RANDOM()
-        LIMIT %s
-    """
+    if count == 20:
+        sql = """
+            SELECT
+                question_id, subject_code, major_unit, minor_unit, question_type,
+                question_content, question_content2,
+                option_1, option_2, option_3, option_4, option_5,
+                answer_number, explanation
+            FROM question_tb
+            WHERE subject_code = %s
+            ORDER BY RANDOM()
+        """
+        with get_conn() as conn:
+            with conn.cursor() as cur:
+                cur.execute(sql, (subject_code,))
+                rows = cur.fetchall()
+
+        if not rows:
+            return []
+
+        grouped_rows: dict[str, list[tuple]] = {}
+        for row in rows:
+            major_unit = (row[2] or "").strip()
+            if major_unit:
+                grouped_rows.setdefault(major_unit, []).append(row)
+
+        selected_rows: list[tuple] = []
+        selected_ids: set[str] = set()
+        selected_units = list(grouped_rows.keys())[:5]
+
+        if selected_units:
+            base_quota = count // len(selected_units)
+            extra_quota = count % len(selected_units)
+            for idx, unit in enumerate(selected_units):
+                quota = base_quota + (1 if idx < extra_quota else 0)
+                for row in grouped_rows[unit][:quota]:
+                    selected_rows.append(row)
+                    selected_ids.add(str(row[0]))
+
+        fill_candidates: list[tuple] = []
+        for unit in selected_units:
+            fill_candidates.extend(grouped_rows[unit])
+
+        for row in fill_candidates:
+            if len(selected_rows) >= count:
+                break
+            question_id = str(row[0])
+            if question_id in selected_ids:
+                continue
+            selected_rows.append(row)
+            selected_ids.add(question_id)
+
+        return [_row_to_subject_question(row) for row in selected_rows[:count]]
+    else:
+        sql = """
+            SELECT
+                question_id, subject_code, major_unit, minor_unit, question_type,
+                question_content, question_content2,
+                option_1, option_2, option_3, option_4, option_5,
+                answer_number, explanation
+            FROM question_tb
+            WHERE subject_code = %s
+            ORDER BY RANDOM()
+            LIMIT %s
+        """
+        params = (subject_code, count)
     with get_conn() as conn:
         with conn.cursor() as cur:
-            cur.execute(sql, (subject_code, count))
+            cur.execute(sql, params)
             rows = cur.fetchall()
     return [_row_to_subject_question(row) for row in rows]
 

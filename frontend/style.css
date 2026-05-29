@@ -37,6 +37,18 @@ body[data-page="wrong"] {
   background: #fff;
 }
 
+body[data-page="wrong-practice"] {
+  background: #fff;
+}
+
+body[data-page="mock"] {
+  background: #fff;
+}
+
+body[data-page="result"] {
+  background: #fff;
+}
+
 .login-body {
   display: grid;
   min-height: 100vh;
@@ -264,8 +276,8 @@ button:disabled {
 
 .nav-btn.active,
 .nav-btn:hover {
-  background: #fff3bf;
-  color: var(--primary-dark);
+  background: #dbeafe;
+  color: #1d4ed8;
 }
 
 .top-stats {
@@ -758,8 +770,20 @@ button:disabled {
 }
 
 .wrong-round-head h2 strong {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
   font-size: 1.08rem;
   font-weight: 700;
+}
+
+.wrong-round-head h2 strong::before {
+  display: inline-block;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #facc15;
+  content: "";
 }
 
 .wrong-round-head h2 span {
@@ -791,7 +815,7 @@ button:disabled {
   min-height: 186px;
   padding: 0;
   overflow: hidden;
-  border-color: color-mix(in srgb, var(--wrong-card-accent, #9fb8f4) 36%, #d8e1ec);
+  border: 2px solid #dbeafe;
   border-radius: 14px;
   background: #fff;
   color: #102033;
@@ -802,7 +826,7 @@ button:disabled {
 
 .wrong-subject-card:hover,
 .wrong-subject-card:focus-visible {
-  border-color: var(--wrong-card-accent, #9fb8f4);
+  border-color: color-mix(in srgb, var(--wrong-card-accent, #9fb8f4) 76%, #0f172a);
   background: #fff;
   box-shadow: 0 16px 30px rgba(43, 58, 87, 0.1);
   transform: translateY(-5px);
@@ -826,7 +850,7 @@ button:disabled {
 }
 
 .wrong-subject-code {
-  color: color-mix(in srgb, var(--wrong-card-accent, #9fb8f4) 72%, #17202a);
+  color: #1e3a8a;
   font-size: 2.1rem;
   font-weight: 900;
   letter-spacing: 0;
@@ -862,13 +886,13 @@ button:disabled {
 }
 
 .wrong-subject-card.active {
-  border-color: var(--wrong-card-accent, #6352e8);
+  border-color: color-mix(in srgb, var(--wrong-card-accent, #9fb8f4) 68%, #0f172a);
   background: #fff;
   box-shadow: 0 0 0 3px color-mix(in srgb, var(--wrong-card-accent, #9fb8f4) 20%, transparent);
 }
 
 .wrong-subject-grid:has(.wrong-subject-card:hover) .wrong-subject-card.active:not(:hover) {
-  border-color: var(--wrong-card-accent, #6352e8);
+  border-color: color-mix(in srgb, var(--wrong-card-accent, #9fb8f4) 68%, #0f172a);
   background: #fff;
 }
 
@@ -908,7 +932,7 @@ button:disabled {
 }
 
 .wrong-date-group:has(> .wrong-date-head:hover) {
-  border-color: rgba(255, 204, 0, 0.85);
+  border-color: #bfdbfe;
 }
 
 .wrong-date-head span:last-child {
@@ -923,7 +947,7 @@ button:disabled {
 
 .wrong-date-head:hover,
 .wrong-date-group.open .wrong-date-head:hover {
-  background: #fff8d7;
+  background: #eff6ff;
 }
 
 .wrong-date-sets {
@@ -954,9 +978,9 @@ button:disabled {
 }
 
 .wrong-set-card:hover {
-  border-color: rgba(255, 204, 0, 0.85);
+  border-color: #bfdbfe;
   background: #fff;
-  box-shadow: 0 8px 18px rgba(17, 24, 39, 0.055);
+  box-shadow: 0 8px 18px rgba(37, 99, 235, 0.06);
 }
 
 .wrong-set-title {
@@ -1095,7 +1119,7 @@ button:disabled {
   border: 1px solid var(--line);
   border-radius: 8px;
   background: #fff;
-  color: var(--primary-dark);
+  color: #1d4ed8;
   font-weight: 900;
 }
 
@@ -1160,14 +1184,15 @@ button:disabled {
 }
 
 .question-jump.active {
-  border-color: var(--primary);
-  background: var(--primary);
-  color: var(--primary-dark);
+  border-color: #fde68a;
+  background: #fef9c3;
+  color: #7c5a00;
 }
 
 .question-jump.answered {
-  background: #fff8dc;
-  color: var(--primary-dark);
+  border-color: #2563eb;
+  background: #eff6ff;
+  color: #1e40af;
 }
 
 .question-jump.wrong {
@@ -1225,17 +1250,18 @@ button:disabled {
 .ghost-btn:hover,
 .secondary-btn:hover,
 .back-btn:hover {
-  border-color: #b8c3ce;
-  background: #f8fafc;
+  border-color: #bfdbfe;
+  background: #eff6ff;
+  color: #1d4ed8;
 }
 
 .primary-btn {
-  background: var(--primary);
-  color: var(--primary-dark);
+  background: #3b82f6;
+  color: #fff;
 }
 
 .primary-btn:hover {
-  background: var(--primary-dark);
+  background: #2563eb;
   color: #fff;
 }
 
@@ -2179,7 +2205,7 @@ button:disabled {
 
 .result-toggle {
   display: grid;
-  grid-template-columns: auto 1fr auto;
+  grid-template-columns: auto minmax(0, 1fr);
   align-items: center;
   gap: 14px;
   width: 100%;
@@ -2189,6 +2215,10 @@ button:disabled {
   color: inherit;
   text-align: left;
   font-weight: 500;
+}
+
+.result-toggle > strong {
+  display: none;
 }
 
 .result-item:hover {
@@ -2514,12 +2544,17 @@ button:disabled {
 }
 
 .result-toggle .item-title {
+  display: -webkit-box;
   overflow: hidden;
+  padding-right: 16px;
   color: var(--ink);
   font-weight: 500;
   line-height: 1.45;
   text-overflow: ellipsis;
-  white-space: nowrap;
+  white-space: normal;
+  overflow-wrap: anywhere;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
 }
 
 .wrong-review-section .result-toggle .item-title {
@@ -2536,6 +2571,7 @@ button:disabled {
   overflow: visible;
   text-overflow: clip;
   white-space: pre-wrap;
+  -webkit-line-clamp: unset;
 }
 
 .item-sub {

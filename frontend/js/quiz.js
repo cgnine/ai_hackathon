@@ -102,7 +102,7 @@ function renderMock() {
     panel.id = `mock-question-${index + 1}`;
     head.className = "question-head";
     number.className = "question-number";
-    number.textContent = `Q${index + 1}`;
+    number.textContent = `${index + 1}.`;
     tags.className = "question-tags";
     difficulty.className = "pill";
     difficulty.textContent = question.difficulty;

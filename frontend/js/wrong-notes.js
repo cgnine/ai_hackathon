@@ -227,7 +227,9 @@ function getWrongSubjectName(subject) {
     item.subjectCode === subjectCode ||
     item.id === subjectCode
   );
-  return subject.subjectName || dbSubject?.name || subjectId;
+  const subjectName = subject.subjectName || subject.name;
+  const isCodeLikeName = String(subjectName || "").toUpperCase() === String(subjectCode || "").toUpperCase();
+  return subject.subjectDescription || (!isCodeLikeName ? subjectName : "") || dbSubject?.desc || dbSubject?.name || subjectId;
 }
 
 function getWrongSubjectVisual(subject) {
@@ -388,7 +390,6 @@ function renderWrongRoundPlaceholder(message) {
   const empty = document.createElement("article");
   empty.className = "wrong-item wrong-round-placeholder";
   empty.innerHTML = `
-      <span class="status-dot">-</span>
       <div>
         <div class="item-title">${message}</div>
       </div>

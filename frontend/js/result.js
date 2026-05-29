@@ -6,7 +6,6 @@ function appendResultItem(question, index, selected, correct, meta = {}) {
   const status = document.createElement("span");
   const body = document.createElement("div");
   const title = document.createElement("div");
-  const result = document.createElement("strong");
   const explanation = createResultDetail({
     choices: question.choices,
     scenario: question.scenario,
@@ -26,9 +25,8 @@ function appendResultItem(question, index, selected, correct, meta = {}) {
   status.textContent = correct ? "O" : "X";
   title.className = "item-title";
   title.textContent = `${index + 1}. ${question.text}`;
-  result.textContent = correct ? "정답" : "오답";
   body.append(title);
-  toggle.append(status, body, result);
+  toggle.append(status, body);
   toggle.addEventListener("click", () => {
     toggleResultItem(item, toggle, explanation);
   });
@@ -242,7 +240,6 @@ function appendApiResultItem(item, index, resultMeta) {
   const status = document.createElement("span");
   const body = document.createElement("div");
   const title = document.createElement("div");
-  const result = document.createElement("strong");
   const explanation = createResultDetail({
     choices: item.choices,
     scenario: item.questionScenario,
@@ -263,9 +260,8 @@ function appendApiResultItem(item, index, resultMeta) {
   title.dataset.previewText = previewQuestionText(item.questionText, index);
   title.dataset.fullText = fullQuestionText(item.questionText, index);
   title.textContent = title.dataset.previewText;
-  result.textContent = item.correct ? "정답" : "오답";
   body.append(title);
-  toggle.append(status, body, result);
+  toggle.append(status, body);
   toggle.addEventListener("click", () => {
     toggleResultItem(row, toggle, explanation);
   });
