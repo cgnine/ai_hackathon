@@ -1101,6 +1101,10 @@ button:disabled {
   margin-bottom: 10px;
 }
 
+.wrong-review-top[hidden] {
+  display: none;
+}
+
 .wrong-review-meta-row {
   display: flex;
   align-items: center;
@@ -1734,6 +1738,7 @@ body[data-page="mock"] .choice-btn.selected {
 .review-complete-panel {
   display: grid;
   gap: 14px;
+  margin-top: 42px;
   padding: 30px;
   border: 1px solid var(--line);
   border-radius: var(--radius);
@@ -1744,6 +1749,10 @@ body[data-page="mock"] .choice-btn.selected {
 
 .review-complete-panel[hidden] {
   display: none;
+}
+
+.wrong-review-complete .review-complete-panel {
+  margin-top: 96px;
 }
 
 .review-complete-panel h2 {

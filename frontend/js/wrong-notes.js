@@ -207,6 +207,7 @@ function renderWrongNotes() {
       state.wrongOpenDateKey = isOpen ? null : dateGroup.key;
       saveState();
       renderWrongNotes();
+      if (willOpen) focusWrongDateSets(dateGroup.key);
     });
     head.append(title, count);
     section.append(head, list);
@@ -280,18 +281,14 @@ function focusWrongRoundSection() {
 }
 
 function focusWrongDateSets(dateKey) {
-  requestAnimationFrame(() => {
-    const target = document.querySelector(`.wrong-date-sets[data-date-key="${dateKey}"]`);
-    if (!target || target.hidden) return;
-    const firstRound = target.querySelector(".wrong-set-card");
-    if (firstRound) {
-      firstRound.focus({ preventScroll: true });
-      firstRound.scrollIntoView({ behavior: "smooth", block: "center" });
-      return;
-    }
-    target.focus({ preventScroll: true });
-    target.scrollIntoView({ behavior: "smooth", block: "center" });
-  });
+  window.setTimeout(() => {
+    requestAnimationFrame(() => {
+      const target = document.querySelector(`.wrong-date-sets[data-date-key="${dateKey}"]`);
+      if (!target || target.hidden) return;
+      const top = window.scrollY + target.getBoundingClientRect().top - 112;
+      window.scrollTo({ top: Math.max(0, top), behavior: "smooth" });
+    });
+  }, 90);
 }
 
 function createWrongSetCard(selectedGroup, roundGroup) {
@@ -348,9 +345,9 @@ function groupRoundsByDate(rounds) {
     .map((dateGroup) => ({
       ...dateGroup,
       rounds: dateGroup.rounds.sort((a, b) => {
-        const roundCompare = getRoundOrder(a.roundTitle) - getRoundOrder(b.roundTitle);
+        const roundCompare = getRoundOrder(b.roundTitle) - getRoundOrder(a.roundTitle);
         if (roundCompare !== 0) return roundCompare;
-        return new Date(a.latestAt || 0) - new Date(b.latestAt || 0);
+        return new Date(b.latestAt || 0) - new Date(a.latestAt || 0);
       })
     }))
     .sort((a, b) => new Date(b.latestAt || 0) - new Date(a.latestAt || 0));
@@ -671,6 +668,8 @@ function renderWrongPractice() {
   if (els.reviewQuestionPanel) els.reviewQuestionPanel.hidden = false;
   if (els.reviewFeedback) els.reviewFeedback.hidden = true;
   if (els.reviewCompletePanel) els.reviewCompletePanel.hidden = true;
+  if (els.wrongReviewTop) els.wrongReviewTop.hidden = false;
+  $("wrongPracticeScreen")?.classList.remove("wrong-review-complete");
 
   const note = reviewState?.note || state.reviewQuestion;
   if (!note) {
@@ -827,9 +826,8 @@ function focusWrongReviewQuestion() {
 
 function renderWrongReviewComplete(set) {
   const correctCount = Object.values(set.checked || {}).filter((answer) => answer?.correct).length;
-  if (els.reviewSubject) els.reviewSubject.textContent = "오답 리뷰 완료";
-  if (els.reviewProgress) els.reviewProgress.textContent = `${set.roundTitle} · 복습 완료`;
-  if (els.reviewProgressCount) els.reviewProgressCount.textContent = `${set.notes.length} / ${set.notes.length}`;
+  $("wrongPracticeScreen")?.classList.add("wrong-review-complete");
+  if (els.wrongReviewTop) els.wrongReviewTop.hidden = true;
   if (els.reviewQuestionPanel) els.reviewQuestionPanel.hidden = true;
   if (els.reviewFeedback) {
     els.reviewFeedback.hidden = true;

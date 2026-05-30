@@ -190,6 +190,7 @@ const els = {
   analysisText: $("analysisText"),
   skillMetrics: $("skillMetrics"),
   recommendationCard: $("recommendationCard"),
+  wrongReviewTop: $("wrongReviewTop"),
   reviewSubject: $("reviewSubject"),
   reviewQuestionNumber: $("reviewQuestionNumber"),
   reviewDifficulty: $("reviewDifficulty"),
