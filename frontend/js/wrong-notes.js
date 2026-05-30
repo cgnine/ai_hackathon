@@ -229,7 +229,7 @@ function getWrongSubjectName(subject) {
   );
   const subjectName = subject.subjectName || subject.name;
   const isCodeLikeName = String(subjectName || "").toUpperCase() === String(subjectCode || "").toUpperCase();
-  return subject.subjectDescription || (!isCodeLikeName ? subjectName : "") || dbSubject?.desc || dbSubject?.name || subjectId;
+  return (!isCodeLikeName ? subjectName : "") || dbSubject?.name || subject.subjectDescription || dbSubject?.desc || subjectId;
 }
 
 function getWrongSubjectVisual(subject) {
@@ -779,8 +779,7 @@ function renderWrongPracticeFeedback(note, checkedAnswer, shouldFocus = false) {
       <p class="result-answer-summary"><span class="answer-label">선택한 답:</span> ${formatAnswerNumber(checkedAnswer.selected)}  <span class="answer-label">정답:</span> ${formatAnswerNumber(question.answer)}</p>
     </div>
     <div class="result-detail-section result-explanation-line">
-      <strong class="result-detail-title">해설</strong>
-      <span>${question.explanation}</span>
+      <span>${cleanExplanationText(question.explanation)}</span>
     </div>
   `;
   requestAnimationFrame(() => {
@@ -791,11 +790,10 @@ function renderWrongPracticeFeedback(note, checkedAnswer, shouldFocus = false) {
 
 function focusWrongReviewFeedback() {
   if (!els.reviewFeedback) return;
-  if (!els.reviewFeedback.hasAttribute("tabindex")) els.reviewFeedback.setAttribute("tabindex", "-1");
   window.setTimeout(() => {
-    els.reviewFeedback.focus({ preventScroll: true });
-    els.reviewFeedback.scrollIntoView({ behavior: "smooth", block: "center" });
-  }, 180);
+    const top = window.scrollY + els.reviewFeedback.getBoundingClientRect().top - 96;
+    window.scrollTo({ top: Math.max(0, top), behavior: "smooth" });
+  }, 360);
 }
 
 function moveWrongReview(delta) {

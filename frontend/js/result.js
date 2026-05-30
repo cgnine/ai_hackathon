@@ -92,6 +92,7 @@ function toggleAllResultExplanations() {
   const shouldOpen = items.some((item) => !item.classList.contains("open"));
   items.forEach((item) => setResultItemOpen(item, shouldOpen));
   updateToggleAllExplanationsButton();
+  els.wrongReviewSection?.scrollIntoView({ behavior: "smooth", block: "start" });
 }
 
 function updateToggleAllExplanationsButton() {
@@ -101,7 +102,16 @@ function updateToggleAllExplanationsButton() {
   const allOpen = hasItems && items.every((item) => item.classList.contains("open"));
   els.toggleAllExplanationsBtn.style.display = hasItems ? "inline-flex" : "none";
   els.toggleAllExplanationsBtn.disabled = !hasItems;
-  els.toggleAllExplanationsBtn.textContent = allOpen ? "해설 모두 접기" : "해설 모두 펼치기";
+  els.toggleAllExplanationsBtn.textContent = allOpen ? "문제 모두 접기" : "문제 모두 펼치기";
+}
+
+function cleanExplanationText(text) {
+  return String(text || "")
+    .replace(/\r\n/g, "\n")
+    .split("\n")
+    .map((line) => line.replace(/^[\s\u00a0\u3000]+/, ""))
+    .join("\n")
+    .trimStart();
 }
 
 function createResultDetail({
@@ -172,17 +182,16 @@ function createResultDetail({
   detail.appendChild(answerSection);
 
   const explanationSection = document.createElement("div");
-  const explanationTitle = document.createElement("strong");
   const explanationText = document.createElement("span");
+  const cleanedExplanation = cleanExplanationText(explanation);
+  const cleanedSampleSolution = cleanExplanationText(sampleSolution);
 
   explanationSection.className = "result-detail-section result-explanation-line";
-  explanationTitle.className = "result-detail-title";
-  explanationTitle.textContent = "해설";
-  explanationText.textContent = sampleSolution
-    ? `${explanation}\n\n모범답안\n${sampleSolution}`
-    : explanation;
+  explanationText.textContent = cleanedSampleSolution
+    ? `${cleanedExplanation}\n\n모범답안\n${cleanedSampleSolution}`
+    : cleanedExplanation;
 
-  explanationSection.append(explanationTitle, explanationText);
+  explanationSection.appendChild(explanationText);
   detail.appendChild(explanationSection);
 
   if (onSave) {

@@ -28,10 +28,17 @@
     <div class="toast" id="toast" role="status" aria-live="polite"></div>
 
     <section class="screen active" id="subjectsScreen">
-      <div class="subject-page-title">
+      <div class="subject-page-title" id="subjectPageTitle">
         <h1><span id="subjectExamYear"></span> <span class="subject-title-kb">KB</span>디지털역량진단 모의고사</h1>
         <p>응시를 원하시는 시험 접수 카드를 선택해주세요.</p>
         <button class="subject-start-btn" id="startSelectedSubjectBtn" type="button">문제 풀기</button>
+      </div>
+
+      <div class="subject-loading" id="subjectLoading" hidden aria-live="polite">
+        <p>잠시만 기다려주세요.</p>
+        <div class="result-loading-track" aria-hidden="true">
+          <span id="subjectLoadingBar"></span>
+        </div>
       </div>
 
       <div class="subject-grid" id="subjectGrid"></div>

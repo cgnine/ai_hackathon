@@ -508,7 +508,7 @@ def get_saved_wrong_notes() -> dict[str, Any]:
                 "source": "db",
                 "profileName": row["member_name"],
                 "subjectId": row["subject_code"],
-                "subjectName": row["subject_description"] or row["subject_name"],
+                "subjectName": row["subject_name"] or row["subject_description"],
                 "attemptId": row["exam_id"],
                 "roundTitle": f"{row['exam_round']}회차" if row["exam_round"] else "응시 결과",
                 "createdAt": _created_at(row),
