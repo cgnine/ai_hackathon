@@ -186,9 +186,11 @@ def save_exam_result(member_id: str, subject_code: str, answers: list[dict[str, 
                         END AS exam_round
                     FROM exam_tb
                     WHERE member_id = %s
+                      AND subject_code = %s
+                      AND exam_date = %s
                 ) rounds
                 """,
-                (normalized_member_id,),
+                (normalized_member_id, normalized_subject_code, exam_date),
             )
             next_round = int(cur.fetchone()["next_round"] or 1)
 

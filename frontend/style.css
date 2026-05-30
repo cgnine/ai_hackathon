@@ -45,6 +45,10 @@ body[data-page="mock"] {
   background: #fff;
 }
 
+body[data-page="mock"].mock-booting #mockScreen {
+  visibility: hidden;
+}
+
 body[data-page="result"] {
   background: #fff;
 }

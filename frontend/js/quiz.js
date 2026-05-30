@@ -75,7 +75,10 @@ function renderMock() {
 
   els.mockSubject.textContent = subject.name;
   els.mockProgress.textContent = `${Object.keys(state.mockAnswers).length} / ${questions.length}`;
-  if (!els.mockQuestionList) return;
+  if (!els.mockQuestionList) {
+    document.body.classList.remove("mock-booting");
+    return;
+  }
 
   els.mockQuestionList.innerHTML = "";
   if (questions.length === 0) {
@@ -84,6 +87,7 @@ function renderMock() {
     empty.textContent = "표시할 DB 문제가 없습니다. 백엔드와 DB 데이터를 확인하세요.";
     els.mockQuestionList.appendChild(empty);
     renderMockProgress();
+    document.body.classList.remove("mock-booting");
     return;
   }
   questions.forEach((question, index) => {
@@ -133,6 +137,7 @@ function renderMock() {
   });
 
   renderMockProgress();
+  document.body.classList.remove("mock-booting");
 }
 
 function moveMock(index) {
