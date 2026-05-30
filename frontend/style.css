@@ -118,6 +118,12 @@ body[data-page="result"] {
   font-weight: 700;
 }
 
+.login-input::placeholder {
+  color: #9ca3af;
+  font-size: 0.86rem;
+  font-weight: 400;
+}
+
 .login-input:focus {
   outline: 3px solid rgba(59, 130, 246, 0.18);
   border-color: #3b82f6;
@@ -300,7 +306,7 @@ button:disabled {
   border: 1px solid var(--line);
   border-radius: 8px;
   background: #fff;
-  color: var(--primary-dark);
+  color: #1d4ed8;
   font-weight: 900;
 }
 
@@ -311,8 +317,8 @@ button:disabled {
 
 .profile-button:hover,
 .logout-button:hover {
-  border-color: rgba(255, 204, 0, 0.85);
-  background: var(--warning-soft);
+  border-color: #93c5fd;
+  background: #eff6ff;
 }
 
 .top-stats span {
@@ -569,6 +575,10 @@ button:disabled {
   font-weight: 900;
   line-height: 1.25;
   letter-spacing: 0;
+}
+
+.subject-title-kb {
+  color: #ffcc00;
 }
 
 .subject-page-title p {
@@ -2143,7 +2153,7 @@ button:disabled {
 
 .diagnosis-radar-label {
   fill: var(--muted);
-  font-size: 8px;
+  font-size: 10px;
   font-weight: 800;
   text-anchor: middle;
   dominant-baseline: middle;
@@ -2157,7 +2167,7 @@ button:disabled {
 
 .diagnosis-radar-value {
   fill: #4b5563;
-  font-size: 8px;
+  font-size: 10.5px;
   font-weight: 800;
   text-anchor: middle;
 }

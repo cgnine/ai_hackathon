@@ -175,12 +175,16 @@ async function gradeMock() {
   let savedResult;
   let memberId = currentMemberId();
   let questionIds = questions.map((question) => String(question.id));
+  let examHistoryIds = [];
   try {
     savedResult = await saveMockExamResult(subject, questions, state.mockAnswers);
     memberId = savedResult.memberId || memberId;
     questionIds = Array.isArray(savedResult.questionIds) && savedResult.questionIds.length > 0
       ? savedResult.questionIds.map((questionId) => String(questionId))
       : questionIds;
+    examHistoryIds = Array.isArray(savedResult.examHistoryIds)
+      ? savedResult.examHistoryIds.map((historyId) => String(historyId))
+      : [];
     attemptId = savedResult.attemptId || attemptId;
     roundTitle = savedResult.roundTitle || roundTitle;
     showToast("응시 결과를 저장했습니다.");
@@ -194,6 +198,7 @@ async function gradeMock() {
     attemptId,
     memberId,
     questionIds,
+    examHistoryIds,
     profileName: state.profileName,
     subjectId: state.subjectId,
     subjectName: subject.name,
@@ -209,6 +214,7 @@ async function gradeMock() {
     examId: attemptId,
     memberId,
     questionIds,
+    examHistoryIds,
     profileName: state.profileName,
     subjectId: state.subjectId,
     subjectName: subject.name,
@@ -226,11 +232,13 @@ async function gradeMock() {
     attemptId,
     examId: attemptId,
     memberId,
-    questionIds
+    questionIds,
+    examHistoryIds
   });
   saveResultNavigation({
     examId: attemptId,
-    memberId
+    memberId,
+    examHistoryIds
   });
   window.location.href = PAGE_URLS.result;
 }

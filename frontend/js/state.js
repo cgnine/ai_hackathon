@@ -73,6 +73,7 @@ let latestApiResult = null;
 let backendWrongNotes = null;
 let backendWrongSubjects = null;
 let backendWrongNotesLoading = false;
+let subjectHoverScrollLockedUntil = 0;
 const SAMPLE_WRONG_ATTEMPT_ID = "sample-wrong-ai-engineering";
 const SAMPLE_WRONG_COUNT = 3;
 const SAMPLE_WRONG_DATES = [

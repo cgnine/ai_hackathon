@@ -10,6 +10,8 @@ from backend.services.db import get_conn
 
 _Q = "questions"
 _H = "question_solve_history"
+_MOCK_EXAM_UNIT_LIMIT = 5
+_MOCK_EXAM_QUESTIONS_PER_UNIT = 4
 
 _Q_COLS = """
     id, category, sub_category, source_type, source_id,
@@ -170,9 +172,6 @@ def get_questions_by_subject_code(subject_code: str, count: int) -> list[Subject
         if not rows:
             return []
 
-        if len(rows) <= count:
-            return [_row_to_subject_question(row) for row in rows]
-
         grouped_rows: dict[str, list[tuple]] = {}
         for row in rows:
             major_unit = (row[2] or "").strip()
@@ -180,30 +179,18 @@ def get_questions_by_subject_code(subject_code: str, count: int) -> list[Subject
                 grouped_rows.setdefault(major_unit, []).append(row)
 
         selected_rows: list[tuple] = []
-        selected_ids: set[str] = set()
-        selected_units = list(grouped_rows.keys())
+        full_units = [
+            unit for unit, unit_rows in grouped_rows.items()
+            if len(unit_rows) >= _MOCK_EXAM_QUESTIONS_PER_UNIT
+        ]
+        short_units = [
+            unit for unit, unit_rows in grouped_rows.items()
+            if len(unit_rows) < _MOCK_EXAM_QUESTIONS_PER_UNIT
+        ]
+        selected_units = (full_units + short_units)[:_MOCK_EXAM_UNIT_LIMIT]
 
-        if selected_units:
-            base_quota = count // len(selected_units)
-            extra_quota = count % len(selected_units)
-            for idx, unit in enumerate(selected_units):
-                quota = base_quota + (1 if idx < extra_quota else 0)
-                for row in grouped_rows[unit][:quota]:
-                    selected_rows.append(row)
-                    selected_ids.add(str(row[0]))
-
-        fill_candidates: list[tuple] = []
         for unit in selected_units:
-            fill_candidates.extend(grouped_rows[unit])
-
-        for row in fill_candidates:
-            if len(selected_rows) >= count:
-                break
-            question_id = str(row[0])
-            if question_id in selected_ids:
-                continue
-            selected_rows.append(row)
-            selected_ids.add(question_id)
+            selected_rows.extend(grouped_rows[unit][:_MOCK_EXAM_QUESTIONS_PER_UNIT])
 
         return [_row_to_subject_question(row) for row in selected_rows[:count]]
     else:

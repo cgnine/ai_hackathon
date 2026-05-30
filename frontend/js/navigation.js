@@ -158,6 +158,7 @@ function renderSubjects() {
       </span>
     `;
     card.addEventListener("mouseenter", () => {
+      if (Date.now() < subjectHoverScrollLockedUntil) return;
       card.scrollIntoView({ behavior: "smooth", block: "center", inline: "nearest" });
     });
     card.addEventListener("click", () => chooseSubject(subject.id));

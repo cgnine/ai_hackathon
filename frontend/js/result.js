@@ -450,7 +450,7 @@ function renderDiagnosis(diagnosis) {
 function renderDiagnosisRadar(axes) {
   const center = 140;
   const maxRadius = 76;
-  const labelRadius = 118;
+  const labelRadius = 108;
   const count = axes.length;
   const axisPoints = axes.map((axis, index) => {
     const angle = (-90 + index * (360 / count)) * Math.PI / 180;
@@ -459,9 +459,12 @@ function renderDiagnosisRadar(axes) {
     const scoreRadius = maxRadius * (axis.score / 100);
     const scoreX = center + Math.cos(angle) * scoreRadius;
     const scoreY = center + Math.sin(angle) * scoreRadius;
+    const valueRadius = Math.min(maxRadius + 12, Math.max(scoreRadius + 14, 24));
+    const valueX = center + Math.cos(angle) * valueRadius;
+    const valueY = center + Math.sin(angle) * valueRadius;
     const labelX = center + Math.cos(angle) * labelRadius;
     const labelY = center + Math.sin(angle) * labelRadius;
-    return { axis, outerX, outerY, scoreX, scoreY, labelX, labelY };
+    return { axis, outerX, outerY, scoreX, scoreY, valueX, valueY, labelX, labelY };
   });
 
   const grid = [1, 0.66, 0.33].map((scale) => {
@@ -479,7 +482,7 @@ function renderDiagnosisRadar(axes) {
   `).join("");
 
   const scoreMarkup = axisPoints.map((point) => `
-    <text x="${point.scoreX}" y="${point.scoreY + 3}" class="diagnosis-radar-value">${point.axis.score}</text>
+    <text x="${point.valueX}" y="${point.valueY + 3}" class="diagnosis-radar-value">${point.axis.score}</text>
   `).join("");
 
   const scorePoints = axisPoints.map((point) => `${point.scoreX},${point.scoreY}`).join(" ");
@@ -503,13 +506,24 @@ function simplifyRadarLabel(name) {
 
 function splitRadarLabel(name) {
   const label = simplifyRadarLabel(name);
-  if (label.length <= 7) return [label];
+  if (label.length <= 6) return [label];
   const words = label.split(/\s+/);
   if (words.length >= 2) {
-    const middle = Math.ceil(words.length / 2);
-    return [words.slice(0, middle).join(" "), words.slice(middle).join(" ")];
+    const lines = [];
+    let current = "";
+    words.forEach((word) => {
+      const next = current ? `${current} ${word}` : word;
+      if (next.length > 8 && current) {
+        lines.push(current);
+        current = word;
+      } else {
+        current = next;
+      }
+    });
+    if (current) lines.push(current);
+    return lines;
   }
-  return [label.slice(0, 7), label.slice(7)];
+  return [label.slice(0, 6), label.slice(6, 12), label.slice(12)].filter(Boolean);
 }
 
 function renderRadarLabel(point) {
@@ -706,7 +720,10 @@ async function loadBackendResultPage() {
   if (!els.resultList || !els.resultScore || !els.resultSummary) return;
 
   const navigation = loadResultNavigation();
-  const attemptId = navigation?.examId || state.lastResult?.examId || state.lastResult?.attemptId || null;
+  const attemptId = navigation?.examId || null;
+  const examHistoryIds = Array.isArray(navigation?.examHistoryIds) && navigation.examHistoryIds.length > 0
+    ? navigation.examHistoryIds
+    : [];
 
   startResultLoading();
   els.resultScore.textContent = "-";
@@ -723,10 +740,16 @@ async function loadBackendResultPage() {
   if (els.saveWrongAllBtn) els.saveWrongAllBtn.style.display = "none";
   els.resultList.innerHTML = "";
 
+  if (!attemptId) {
+    renderResultEmptyState();
+    return;
+  }
+
   try {
-    const url = attemptId
-      ? `${API_BASE}/results/${attemptId}`
-      : `${API_BASE}/results/latest?profile_name=${encodeURIComponent(state.profileName || profiles[0])}`;
+    const historyQuery = examHistoryIds.length
+      ? `?history_ids=${encodeURIComponent(examHistoryIds.join(","))}`
+      : "";
+    const url = `${API_BASE}/results/${attemptId}${historyQuery}`;
     const response = await fetch(url);
     if (response.status === 404) {
       renderResultEmptyState();
@@ -734,7 +757,6 @@ async function loadBackendResultPage() {
     }
     if (!response.ok) throw new Error(`HTTP ${response.status}`);
     const result = await response.json();
-    clearResultNavigation();
     renderApiResultPage(result);
   } catch (error) {
     renderResultEmptyState({

@@ -164,6 +164,7 @@ def save_exam_result(member_id: str, subject_code: str, answers: list[dict[str, 
                     (
                         f"{exam_date}{last_exam_question_seq + index:04d}",
                         question_id,
+                        normalized_subject_code,
                         str(selected) if selected is not None else None,
                         str(answer_number) if answer_number is not None else None,
                         "Y" if is_correct else "N",
@@ -214,13 +215,14 @@ def save_exam_result(member_id: str, subject_code: str, answers: list[dict[str, 
             )
             exam_id = str(cur.fetchone()["exam_id"])
 
+            exam_question_ids = [history_row[0] for history_row in history_rows]
             cur.executemany(
                 """
                 INSERT INTO exam_history_tb (
-                    exam_question_id, exam_id, question_id,
+                    exam_question_id, exam_id, question_id, subject_code,
                     selected_number, answer_number, is_correct, created_at
                 )
-                VALUES (%s, %s, %s, %s, %s, %s, %s)
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
                 """,
                 [(history_row[0], exam_id, *history_row[1:]) for history_row in history_rows],
             )
@@ -230,6 +232,7 @@ def save_exam_result(member_id: str, subject_code: str, answers: list[dict[str, 
         "attemptId": exam_id,
         "memberId": normalized_member_id,
         "questionIds": question_ids,
+        "examHistoryIds": exam_question_ids,
         "roundTitle": f"{next_round}회차",
         "score": score,
         "correctCount": correct_count,
@@ -238,11 +241,17 @@ def save_exam_result(member_id: str, subject_code: str, answers: list[dict[str, 
     }
 
 
-def get_result(attempt_id: str) -> dict[str, Any]:
+def get_result(attempt_id: str, exam_question_ids: list[str] | None = None) -> dict[str, Any]:
+    history_filter = ""
+    params: tuple[Any, ...] = (attempt_id,)
+    if exam_question_ids:
+        history_filter = "AND h.exam_question_id = ANY(%s)"
+        params = (attempt_id, exam_question_ids)
+
     with get_conn() as conn:
         with conn.cursor(cursor_factory=RealDictCursor) as cur:
             cur.execute(
-                """
+                f"""
                 SELECT
                     e.exam_id,
                     e.exam_round,
@@ -278,11 +287,14 @@ def get_result(attempt_id: str) -> dict[str, Any]:
                 JOIN member_tb m ON m.member_id = e.member_id
                 JOIN subject_tb s ON s.subject_code = e.subject_code
                 JOIN exam_history_tb h ON h.exam_id = e.exam_id
-                JOIN question_tb q ON q.question_id = h.question_id
+                JOIN question_tb q
+                    ON q.question_id = h.question_id
+                   AND q.subject_code = e.subject_code
                 WHERE e.exam_id = %s
+                  {history_filter}
                 ORDER BY h.exam_question_id
                 """,
-                (attempt_id,),
+                params,
             )
             rows = cur.fetchall()
 
@@ -297,6 +309,7 @@ def get_result(attempt_id: str) -> dict[str, Any]:
         items.append(
             {
                 "questionId": row["question_id"],
+                "examHistoryId": row["exam_question_id"],
                 "questionText": _question_text(row),
                 "questionScenario": _question_scenario(row),
                 "choices": [
@@ -327,7 +340,7 @@ def get_result(attempt_id: str) -> dict[str, Any]:
         "profileName": first["member_name"],
         "memberId": first["member_id"],
         "subjectId": first["subject_code"],
-        "subjectName": first["subject_description"] or first["subject_name"],
+        "subjectName": first["subject_name"] or first["subject_description"],
         "roundTitle": f"{first['exam_round']}회차" if first["exam_round"] else "응시 결과",
         "score": score,
         "correctCount": correct_count,
@@ -479,7 +492,9 @@ def get_saved_wrong_notes() -> dict[str, Any]:
                 JOIN exam_tb e ON e.exam_id = h.exam_id
                 JOIN member_tb m ON m.member_id = e.member_id
                 JOIN subject_tb s ON s.subject_code = e.subject_code
-                JOIN question_tb q ON q.question_id = h.question_id
+                JOIN question_tb q
+                    ON q.question_id = h.question_id
+                   AND q.subject_code = e.subject_code
                 WHERE h.wrong_note_saved = 'Y'
                 ORDER BY s.subject_code, e.exam_date DESC, e.exam_time DESC, e.exam_round, h.exam_question_id
                 """

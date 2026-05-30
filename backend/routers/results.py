@@ -55,8 +55,13 @@ async def get_latest_result(profile_name: str | None = None):
 
 
 @router.get("/{attempt_id}")
-async def get_result(attempt_id: str):
-    return result_service.get_result(attempt_id)
+async def get_result(attempt_id: str, history_ids: str | None = None):
+    exam_question_ids = [
+        history_id.strip()
+        for history_id in (history_ids or "").split(",")
+        if history_id.strip()
+    ]
+    return result_service.get_result(attempt_id, exam_question_ids or None)
 
 
 @router.get("/{attempt_id}/wrong")

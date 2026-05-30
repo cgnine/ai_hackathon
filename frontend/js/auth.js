@@ -33,6 +33,31 @@ function clearAuthSession() {
   sessionStorage.removeItem(AUTH_SESSION_KEY);
 }
 
+function clearExamSessionState() {
+  clearResultNavigation();
+  localStorage.removeItem(STATE_KEY);
+  state.subjectId = null;
+  state.activeQuestions = [];
+  state.mode = null;
+  state.index = 0;
+  state.selected = null;
+  state.singleAnswers = {};
+  state.mockAnswers = {};
+  state.lastResult = null;
+  state.attemptHistory = [];
+  state.recommendationAnswer = null;
+  state.reviewQuestion = null;
+  state.reviewAnswer = null;
+  state.wrongSubjectId = null;
+  state.wrongOpenDateKey = null;
+  state.wrongReviewSet = null;
+  state.wrongNotes = new Map();
+  latestApiResult = null;
+  backendWrongNotes = null;
+  backendWrongSubjects = null;
+  backendWrongNotesLoading = false;
+}
+
 function currentMemberId() {
   return readAuthSession()?.memberId || "";
 }
@@ -116,6 +141,7 @@ function initLoginPage() {
 
 function logout() {
   clearAuthSession();
+  clearExamSessionState();
   state.profileName = "";
   saveState();
   window.location.href = loginUrl();
