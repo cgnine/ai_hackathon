@@ -54,6 +54,11 @@ async def get_latest_result(profile_name: str | None = None):
     return result_service.get_latest_result(profile_name)
 
 
+@router.get("/analysis")
+async def get_analysis(member_id: str):
+    return result_service.get_analysis(member_id)
+
+
 @router.get("/{attempt_id}")
 async def get_result(attempt_id: str, history_ids: str | None = None):
     exam_question_ids = [
