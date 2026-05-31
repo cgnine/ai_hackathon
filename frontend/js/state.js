@@ -221,6 +221,7 @@ const els = {
   homeLink: $("homeLink"),
   toast: $("toast"),
   generateBtn: $("generateBtn"),
+  systemPromptInput: $("systemPromptInput"),
   loading: $("loading"),
   apiResult: $("apiResult")
 };

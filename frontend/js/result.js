@@ -348,7 +348,7 @@ async function saveApiResultItemToWrongNote(result, item, index, notify = true, 
     subjectId: result.subjectId,
     subjectName: result.subjectName,
     attemptId: result.attemptId || "api-result",
-    roundTitle: result.roundTitle || "PDF 생성 결과",
+    roundTitle: result.roundTitle || "AI문제생성 결과",
     createdAt: result.createdAt || new Date().toISOString(),
     index,
     question: toWrongNoteQuestion(item)
