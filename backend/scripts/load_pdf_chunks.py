@@ -17,11 +17,11 @@ DEFAULT_MAX_CHARS = 2500
 
 def _db_config() -> dict:
     return {
-        "host": os.getenv("DB_HOST", "cgnine.site"),
-        "port": int(os.getenv("DB_PORT", "5432")),
-        "dbname": os.getenv("DB_NAME", "ai_hackathon"),
-        "user": os.getenv("DB_USER", "cgnine"),
-        "password": os.getenv("DB_PASSWORD", ""),
+        "host": os.getenv("CHUNK_DB_HOST", os.getenv("DB_HOST", "cgnine.site")),
+        "port": int(os.getenv("CHUNK_DB_PORT", os.getenv("DB_PORT", "5432"))),
+        "dbname": os.getenv("CHUNK_DB_NAME", "ai_question_db"),
+        "user": os.getenv("CHUNK_DB_USER", os.getenv("DB_USER", "cgnine")),
+        "password": os.getenv("CHUNK_DB_PASSWORD", os.getenv("DB_PASSWORD", "")),
     }
 
 
