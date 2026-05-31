@@ -1950,6 +1950,8 @@ body[data-page="mock"] .choice-btn.selected {
 }
 
 #diagnosisProgramTitle {
+  display: grid;
+  gap: 2px;
   font-size: 1.28rem;
   font-weight: 900;
   line-height: 1.35;

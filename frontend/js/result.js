@@ -444,7 +444,7 @@ function renderDiagnosis(diagnosis) {
   els.resultDiagnosis.style.display = "grid";
   const level = getScoreLevel(diagnosis.score || 0);
   if (els.diagnosisProgramTitle) {
-    els.diagnosisProgramTitle.innerHTML = `${new Date().getFullYear()} KB디지털역량진단 <span class="nowrap">모의고사</span>`;
+    els.diagnosisProgramTitle.innerHTML = `<span>${new Date().getFullYear()} KB디지털역량진단</span><span class="nowrap">모의고사</span>`;
   }
   if (els.diagnosisSubject) els.diagnosisSubject.textContent = diagnosis.subjectName || "응시 과목";
   if (els.diagnosisLevelName) els.diagnosisLevelName.textContent = level.name;
