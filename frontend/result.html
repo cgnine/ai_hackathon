@@ -14,7 +14,7 @@
     <nav class="main-nav" aria-label="주요 메뉴">
       <a class="nav-btn active" href="index.html" data-screen="profile">시험응시</a>
       <a class="nav-btn" href="wrong.html" data-screen="wrong">오답노트</a>
-      <a class="nav-btn" href="harness.html" data-screen="harness">PDF 생성</a>
+      <a class="nav-btn" href="harness.html" data-screen="harness">AI문제생성</a>
     </nav>
     <div class="top-stats" aria-label="학습 통계">
       <span>Today <strong id="todayCount">0</strong></span>
@@ -47,7 +47,7 @@
       <section class="diagnosis-report" id="resultDiagnosis" aria-labelledby="diagnosisTitle" style="display: none;">
         <div class="report-top">
           <article class="report-card">
-            <p id="diagnosisProgramTitle">KB디지털역량평가 모의고사</p>
+            <p id="diagnosisProgramTitle"><span>KB디지털역량진단</span><span class="nowrap">모의고사</span></p>
             <p id="diagnosisSubject">Cloud Developer (Pro)</p>
             <h2>응시 결과</h2>
             <div class="level-seal">
@@ -124,7 +124,7 @@
             <h2 id="wrongReviewTitle">오답 해설</h2>
           </div>
           <div class="wrong-review-actions">
-            <button class="secondary-btn" id="toggleAllExplanationsBtn" type="button">해설 모두 펼치기</button>
+            <button class="secondary-btn" id="toggleAllExplanationsBtn" type="button">문제 모두 펼치기</button>
             <button class="secondary-btn" id="saveWrongAllBtn" type="button">오답노트 모두저장</button>
           </div>
         </div>

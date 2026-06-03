@@ -75,7 +75,10 @@ function renderMock() {
 
   els.mockSubject.textContent = subject.name;
   els.mockProgress.textContent = `${Object.keys(state.mockAnswers).length} / ${questions.length}`;
-  if (!els.mockQuestionList) return;
+  if (!els.mockQuestionList) {
+    document.body.classList.remove("mock-booting");
+    return;
+  }
 
   els.mockQuestionList.innerHTML = "";
   if (questions.length === 0) {
@@ -84,6 +87,7 @@ function renderMock() {
     empty.textContent = "표시할 DB 문제가 없습니다. 백엔드와 DB 데이터를 확인하세요.";
     els.mockQuestionList.appendChild(empty);
     renderMockProgress();
+    document.body.classList.remove("mock-booting");
     return;
   }
   questions.forEach((question, index) => {
@@ -133,6 +137,7 @@ function renderMock() {
   });
 
   renderMockProgress();
+  document.body.classList.remove("mock-booting");
 }
 
 function moveMock(index) {
@@ -175,12 +180,16 @@ async function gradeMock() {
   let savedResult;
   let memberId = currentMemberId();
   let questionIds = questions.map((question) => String(question.id));
+  let examHistoryIds = [];
   try {
     savedResult = await saveMockExamResult(subject, questions, state.mockAnswers);
     memberId = savedResult.memberId || memberId;
     questionIds = Array.isArray(savedResult.questionIds) && savedResult.questionIds.length > 0
       ? savedResult.questionIds.map((questionId) => String(questionId))
       : questionIds;
+    examHistoryIds = Array.isArray(savedResult.examHistoryIds)
+      ? savedResult.examHistoryIds.map((historyId) => String(historyId))
+      : [];
     attemptId = savedResult.attemptId || attemptId;
     roundTitle = savedResult.roundTitle || roundTitle;
     showToast("응시 결과를 저장했습니다.");
@@ -194,6 +203,7 @@ async function gradeMock() {
     attemptId,
     memberId,
     questionIds,
+    examHistoryIds,
     profileName: state.profileName,
     subjectId: state.subjectId,
     subjectName: subject.name,
@@ -209,6 +219,7 @@ async function gradeMock() {
     examId: attemptId,
     memberId,
     questionIds,
+    examHistoryIds,
     profileName: state.profileName,
     subjectId: state.subjectId,
     subjectName: subject.name,
@@ -226,11 +237,13 @@ async function gradeMock() {
     attemptId,
     examId: attemptId,
     memberId,
-    questionIds
+    questionIds,
+    examHistoryIds
   });
   saveResultNavigation({
     examId: attemptId,
-    memberId
+    memberId,
+    examHistoryIds
   });
   window.location.href = PAGE_URLS.result;
 }

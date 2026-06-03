@@ -6,7 +6,7 @@ from typing import Optional
 
 import psycopg2.extras
 
-from backend.services.db import get_conn
+from backend.services.db import get_chunk_conn
 
 _TABLE = "ai_course_chunks"
 
@@ -70,7 +70,7 @@ def _row_to_chunk(row: tuple) -> ChunkRow:
 
 def get_chunk_by_id(chunk_id: int) -> Optional[ChunkRow]:
     sql = f"SELECT {_SELECT_ALL_COLS} FROM {_TABLE} WHERE id = %s"
-    with get_conn() as conn:
+    with get_chunk_conn() as conn:
         with conn.cursor() as cur:
             cur.execute(sql, (chunk_id,))
             row = cur.fetchone()
@@ -83,7 +83,7 @@ def get_chunks_by_chapter(chapter_no: int) -> list[ChunkRow]:
         WHERE chapter_no = %s
         ORDER BY section_no NULLS FIRST, chunk_no
     """
-    with get_conn() as conn:
+    with get_chunk_conn() as conn:
         with conn.cursor() as cur:
             cur.execute(sql, (chapter_no,))
             rows = cur.fetchall()
@@ -96,7 +96,7 @@ def get_chunks_by_section(chapter_no: int, section_no: int) -> list[ChunkRow]:
         WHERE chapter_no = %s AND section_no = %s
         ORDER BY chunk_no
     """
-    with get_conn() as conn:
+    with get_chunk_conn() as conn:
         with conn.cursor() as cur:
             cur.execute(sql, (chapter_no, section_no))
             rows = cur.fetchall()
@@ -125,7 +125,7 @@ def get_least_used_chunk(
         ORDER BY question_count ASC, created_at ASC
         LIMIT 1
     """
-    with get_conn() as conn:
+    with get_chunk_conn() as conn:
         with conn.cursor() as cur:
             cur.execute(sql, params)
             row = cur.fetchone()
@@ -140,7 +140,7 @@ def increment_question_count(chunk_id: int) -> None:
             updated_at = NOW()
         WHERE id = %s
     """
-    with get_conn() as conn:
+    with get_chunk_conn() as conn:
         with conn.cursor() as cur:
             cur.execute(sql, (chunk_id,))
 
@@ -152,7 +152,7 @@ def get_chapter_list() -> list[dict]:
         GROUP BY chapter_no, chapter_title
         ORDER BY chapter_no
     """
-    with get_conn() as conn:
+    with get_chunk_conn() as conn:
         with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
             cur.execute(sql)
             return [dict(r) for r in cur.fetchall()]
@@ -168,7 +168,7 @@ def get_stats() -> dict:
             COUNT(*) FILTER (WHERE question_count = 0) AS unused_chunks
         FROM {_TABLE}
     """
-    with get_conn() as conn:
+    with get_chunk_conn() as conn:
         with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
             cur.execute(sql)
             return dict(cur.fetchone())

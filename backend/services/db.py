@@ -16,10 +16,32 @@ _DB_CONFIG = {
     "connect_timeout": int(os.getenv("DB_CONNECT_TIMEOUT", "5")),
 }
 
+_CHUNK_DB_CONFIG = {
+    "host": os.getenv("CHUNK_DB_HOST", os.getenv("DB_HOST", "cgnine.site")),
+    "port": int(os.getenv("CHUNK_DB_PORT", os.getenv("DB_PORT", "5432"))),
+    "dbname": os.getenv("CHUNK_DB_NAME", "ai_question_db"),
+    "user": os.getenv("CHUNK_DB_USER", os.getenv("DB_USER", "cgnine")),
+    "password": os.getenv("CHUNK_DB_PASSWORD", os.getenv("DB_PASSWORD", "")),
+    "connect_timeout": int(os.getenv("CHUNK_DB_CONNECT_TIMEOUT", os.getenv("DB_CONNECT_TIMEOUT", "5"))),
+}
+
 
 @contextmanager
 def get_conn() -> Generator[psycopg2.extensions.connection, None, None]:
     conn = psycopg2.connect(**_DB_CONFIG)
+    try:
+        yield conn
+        conn.commit()
+    except Exception:
+        conn.rollback()
+        raise
+    finally:
+        conn.close()
+
+
+@contextmanager
+def get_chunk_conn() -> Generator[psycopg2.extensions.connection, None, None]:
+    conn = psycopg2.connect(**_CHUNK_DB_CONFIG)
     try:
         yield conn
         conn.commit()

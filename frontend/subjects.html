@@ -16,7 +16,7 @@
     <nav class="main-nav" aria-label="주요 메뉴">
       <a class="nav-btn active" href="index.html" data-screen="profile">시험응시</a>
       <a class="nav-btn" href="wrong.html" data-screen="wrong">오답노트</a>
-      <a class="nav-btn" href="harness.html" data-screen="harness">PDF 생성</a>
+      <a class="nav-btn" href="harness.html" data-screen="harness">AI문제생성</a>
     </nav>
     <div class="top-stats" aria-label="학습 통계">
       <span>Today <strong id="todayCount">0</strong></span>
@@ -28,10 +28,17 @@
     <div class="toast" id="toast" role="status" aria-live="polite"></div>
 
     <section class="screen active" id="subjectsScreen">
-      <div class="subject-page-title">
-        <h1><span id="subjectExamYear"></span> KB디지털역량진단 모의고사</h1>
+      <div class="subject-page-title" id="subjectPageTitle">
+        <h1><span id="subjectExamYear"></span> <span class="subject-title-kb">KB</span>디지털역량진단 모의고사</h1>
         <p>응시를 원하시는 시험 접수 카드를 선택해주세요.</p>
         <button class="subject-start-btn" id="startSelectedSubjectBtn" type="button">문제 풀기</button>
+      </div>
+
+      <div class="subject-loading" id="subjectLoading" hidden aria-live="polite">
+        <p>잠시만 기다려주세요.</p>
+        <div class="result-loading-track" aria-hidden="true">
+          <span id="subjectLoadingBar"></span>
+        </div>
       </div>
 
       <div class="subject-grid" id="subjectGrid"></div>

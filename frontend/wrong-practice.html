@@ -14,7 +14,7 @@
     <nav class="main-nav" aria-label="주요 메뉴">
       <a class="nav-btn" href="index.html" data-screen="profile">시험응시</a>
       <a class="nav-btn active" href="wrong.html" data-screen="wrong">오답노트</a>
-      <a class="nav-btn" href="harness.html" data-screen="harness">PDF 생성</a>
+      <a class="nav-btn" href="harness.html" data-screen="harness">AI문제생성</a>
     </nav>
     <div class="top-stats" aria-label="학습 통계">
       <span>Today <strong id="todayCount">0</strong></span>
@@ -26,7 +26,7 @@
     <div class="toast" id="toast" role="status" aria-live="polite"></div>
 
     <section class="screen active" id="wrongPracticeScreen" style="visibility: hidden;">
-      <div class="screen-head compact wrong-review-top">
+      <div class="screen-head compact wrong-review-top" id="wrongReviewTop">
         <div class="wrong-review-meta-row">
           <h1 id="reviewSubject">오답 문제</h1>
           <span id="reviewProgressCount">- / -</span>

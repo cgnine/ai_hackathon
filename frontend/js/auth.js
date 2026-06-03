@@ -379,6 +379,7 @@ function initResetPasswordPage() {
 
 function logout() {
   clearAuthSession();
+  clearExamSessionState();
   state.profileName = "";
   saveState();
   window.location.href = loginUrl();

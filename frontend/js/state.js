@@ -75,6 +75,7 @@ let latestApiResult = null;
 let backendWrongNotes = null;
 let backendWrongSubjects = null;
 let backendWrongNotesLoading = false;
+let subjectHoverScrollLockedUntil = 0;
 const SAMPLE_WRONG_ATTEMPT_ID = "sample-wrong-ai-engineering";
 const SAMPLE_WRONG_COUNT = 3;
 const SAMPLE_WRONG_DATES = [
@@ -139,8 +140,11 @@ const els = {
   profileSelectBox: $("profileSelectBox"),
   startPracticeBtn: $("startPracticeBtn"),
   profileSummary: $("profileSummary"),
+  subjectPageTitle: $("subjectPageTitle"),
   subjectGrid: $("subjectGrid"),
   startSelectedSubjectBtn: $("startSelectedSubjectBtn"),
+  subjectLoading: $("subjectLoading"),
+  subjectLoadingBar: $("subjectLoadingBar"),
   selectedSubjectEyebrow: $("selectedSubjectEyebrow"),
   selectedSubjectTitle: $("selectedSubjectTitle"),
   startMockBtn: $("startMockBtn"),
@@ -200,6 +204,7 @@ const els = {
   analysisText: $("analysisText"),
   skillMetrics: $("skillMetrics"),
   recommendationCard: $("recommendationCard"),
+  wrongReviewTop: $("wrongReviewTop"),
   reviewSubject: $("reviewSubject"),
   reviewQuestionNumber: $("reviewQuestionNumber"),
   reviewDifficulty: $("reviewDifficulty"),
@@ -230,6 +235,7 @@ const els = {
   homeLink: $("homeLink"),
   toast: $("toast"),
   generateBtn: $("generateBtn"),
+  systemPromptInput: $("systemPromptInput"),
   loading: $("loading"),
   apiResult: $("apiResult")
 };

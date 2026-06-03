@@ -158,6 +158,7 @@ function renderSubjects() {
       </span>
     `;
     card.addEventListener("mouseenter", () => {
+      if (Date.now() < subjectHoverScrollLockedUntil) return;
       card.scrollIntoView({ behavior: "smooth", block: "center", inline: "nearest" });
     });
     card.addEventListener("click", () => chooseSubject(subject.id));
@@ -183,6 +184,16 @@ function startSelectedSubject() {
     return;
   }
   selectSubject(subjectId);
+}
+
+function setSubjectLoading(isLoading) {
+  if (els.subjectLoading) els.subjectLoading.hidden = !isLoading;
+  if (els.subjectLoadingBar) {
+    els.subjectLoadingBar.style.width = isLoading ? "82%" : "0%";
+  }
+  if (els.subjectPageTitle) els.subjectPageTitle.hidden = isLoading;
+  if (els.subjectGrid) els.subjectGrid.style.display = isLoading ? "none" : "";
+  if (els.startSelectedSubjectBtn) els.startSelectedSubjectBtn.disabled = isLoading;
 }
 
 function getSubjectVisual(subject) {
@@ -262,6 +273,7 @@ function getSubjectVisual(subject) {
 }
 
 async function selectSubject(subjectId) {
+  setSubjectLoading(true);
   state.questionCount = 20;
   state.subjectId = subjectId;
   state.activeQuestions = [];
@@ -286,10 +298,12 @@ async function selectSubject(subjectId) {
   } catch (error) {
     state.activeQuestions = [];
     saveState();
+    setSubjectLoading(false);
     showToast(`DB 문제를 불러오지 못했습니다. (${error.message})`);
     return;
   }
 
+  if (els.subjectLoadingBar) els.subjectLoadingBar.style.width = "100%";
   startMock();
 }
 

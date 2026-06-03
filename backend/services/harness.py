@@ -47,9 +47,9 @@ GENERATE_SYSTEM_PROMPT = """\
 """
 
 
-def _generate_question(source_text: str) -> tuple[QuestionOutput, str]:
+def _generate_question(source_text: str, system_prompt: str = GENERATE_SYSTEM_PROMPT) -> tuple[QuestionOutput, str]:
     user_prompt = f"[교재 원문]\n{source_text[:4000]}\n\n위 내용을 바탕으로 문제를 생성하세요."
-    raw = bedrock_client.invoke(GENERATE_SYSTEM_PROMPT, user_prompt)
+    raw = bedrock_client.invoke(system_prompt, user_prompt)
     data = question_parser.extract_json(raw)
     return QuestionOutput(**data), raw
 
@@ -69,6 +69,7 @@ def run(request: GenerateRequest) -> GenerateResponse:
     recovery_used = False
     retry_count = 0
     used_chunk: Optional[chunk_repository.ChunkRow] = None
+    system_prompt = (request.system_prompt or "").strip() or GENERATE_SYSTEM_PROMPT
 
     # 1. 입력 통제: DB 청크 또는 PDF 추출
     try:
@@ -121,7 +122,7 @@ def run(request: GenerateRequest) -> GenerateResponse:
 
         # 2-1. Bedrock 호출
         try:
-            question, raw_response = _generate_question(source_text)
+            question, raw_response = _generate_question(source_text, system_prompt)
             step(f"generate_attempt_{attempt+1}", {"status": "ok"})
         except (ValidationError, ValueError, Exception) as e:
             step(f"generate_attempt_{attempt+1}", {"status": "error", "error": str(e)})

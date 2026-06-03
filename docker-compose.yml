@@ -13,12 +13,18 @@ services:
       - AWS_REGION=${AWS_REGION:-ap-northeast-2}
       - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}
       - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}
+      - AWS_SESSION_TOKEN=${AWS_SESSION_TOKEN}
       - BEDROCK_MODEL_ID=${BEDROCK_MODEL_ID:-global.anthropic.claude-sonnet-4-5-20250929-v1:0}
       - DB_HOST=${DB_HOST:-cgnine.site}
       - DB_PORT=${DB_PORT:-5432}
       - DB_NAME=${DB_NAME:-ai_hackathon}
       - DB_USER=${DB_USER:-cgnine}
       - DB_PASSWORD=${DB_PASSWORD:-cgnine1234!}
+      - CHUNK_DB_HOST=${CHUNK_DB_HOST:-cgnine.site}
+      - CHUNK_DB_PORT=${CHUNK_DB_PORT:-5432}
+      - CHUNK_DB_NAME=${CHUNK_DB_NAME:-ai_question_db}
+      - CHUNK_DB_USER=${CHUNK_DB_USER:-cgnine}
+      - CHUNK_DB_PASSWORD=${CHUNK_DB_PASSWORD:-cgnine1234!}
     volumes:
       - ./backend/logs:/app/backend/logs
     restart: unless-stopped

@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>PDF 문제 생성 | KB 개발자 역량평가 CBT</title>
+  <title>AI문제생성 | KB 개발자 역량평가 CBT</title>
   <link rel="stylesheet" href="style.css" />
 </head>
 <body data-page="harness">
@@ -14,7 +14,7 @@
     <nav class="main-nav" aria-label="주요 메뉴">
       <a class="nav-btn" href="index.html" data-screen="subjects">시험응시</a>
       <a class="nav-btn" href="wrong.html" data-screen="wrong">오답노트</a>
-      <a class="nav-btn active" href="harness.html" data-screen="harness">PDF 생성</a>
+      <a class="nav-btn active" href="harness.html" data-screen="harness">AI문제생성</a>
     </nav>
     <div class="top-stats" aria-label="학습 통계">
       <span>Today <strong id="todayCount">0</strong></span>
@@ -29,10 +29,34 @@
       <div class="harness-panel">
         <div>
           <p class="eyebrow">Harness Pipeline</p>
-          <h1>PDF 기반 문제 생성</h1>
-          <p>Practice Books의 PDF를 추출하고 Bedrock 생성, 규칙 검증, LLM-as-Judge 평가를 실행합니다.</p>
+          <h1>AI 문제 생성</h1>
+          <p>DB 청크 원문을 바탕으로 Bedrock 생성, 규칙 검증, LLM-as-Judge 평가를 실행합니다.</p>
         </div>
-        <button class="primary-btn" id="generateBtn">PDF 문제 생성 및 Harness 실행</button>
+        <label class="prompt-editor">
+          <span>생성 프롬프트</span>
+          <textarea id="systemPromptInput" spellcheck="false">당신은 IT 개발자 역량평가 시험 문제 출제 전문가입니다.
+주어진 교재 원문을 바탕으로 객관식 5지선다 문제 1개를 생성하세요.
+
+반드시 아래 JSON 형식만 응답하세요. 다른 텍스트는 절대 포함하지 마세요.
+
+{
+  "question": "문제 내용",
+  "choices": ["선택지1", "선택지2", "선택지3", "선택지4", "선택지5"],
+  "answer": 정답번호(1~5 정수),
+  "explanation": "정답 해설 (원문 근거 포함)",
+  "difficulty": "easy 또는 medium 또는 hard",
+  "tags": ["태그1", "태그2"],
+  "source_summary": "원문에서 문제의 근거가 된 내용 요약"
+}
+
+규칙:
+- 원문에 명확하게 근거가 있는 내용만 출제한다.
+- 정답은 반드시 하나여야 한다.
+- 오답은 그럴듯하게 혼동을 줄 수 있어야 한다.
+- 해설은 원문 근거를 포함해 30자 이상으로 작성한다.
+- 임의로 정보를 추가하거나 추측하지 않는다.</textarea>
+        </label>
+        <button class="primary-btn" id="generateBtn">AI 문제 생성</button>
         <div class="loading" id="loading">
           <span class="spinner"></span>
           문제를 생성하고 검증하는 중입니다.

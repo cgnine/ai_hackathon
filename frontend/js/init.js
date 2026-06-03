@@ -95,6 +95,7 @@ async function initPage() {
   if (page === "subjects") {
     renderSubjects();
     scrollSubjectsToTop();
+    requestAnimationFrame(scrollSubjectsToTop);
   }
   if (page === "mock") renderMock();
   if (page === "result") {
@@ -115,11 +116,13 @@ async function initPage() {
 }
 
 function scrollSubjectsToTop() {
+  subjectHoverScrollLockedUntil = Date.now() + 1200;
   window.scrollTo({ top: 0, left: 0, behavior: "auto" });
   requestAnimationFrame(() => window.scrollTo({ top: 0, left: 0, behavior: "auto" }));
   window.addEventListener("load", () => {
     window.scrollTo({ top: 0, left: 0, behavior: "auto" });
   }, { once: true });
+  window.setTimeout(() => window.scrollTo({ top: 0, left: 0, behavior: "auto" }), 80);
 }
 
 initPage();

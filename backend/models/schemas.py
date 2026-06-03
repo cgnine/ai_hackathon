@@ -14,6 +14,7 @@ class GenerateRequest(BaseModel):
     pdf_filename: Optional[str] = None
     page_start: int = Field(default=1, ge=1)
     page_end: int = Field(default=10, ge=1)
+    system_prompt: Optional[str] = Field(default=None, max_length=8000)
 
     @field_validator("page_end")
     @classmethod
