@@ -1,11 +1,22 @@
 const API_BASE = (() => {
-  const localHosts = new Set(["localhost", "127.0.0.1"]);
-  if (window.location.protocol === "file:" || localHosts.has(window.location.hostname)) {
-    return "http://localhost:8000";
+  const { protocol, hostname, port } = window.location;
+  const localHosts = new Set(["", "localhost", "127.0.0.1"]);
+
+  // Local development:
+  // - file:// open
+  // - localhost / 127.0.0.1 static server
+  // In all of these cases, use the local FastAPI server directly.
+  if (protocol === "file:" || localHosts.has(hostname)) {
+    return "http://127.0.0.1:8000";
   }
-  if (window.location.port && window.location.port !== "80" && window.location.port !== "443") {
-    return `${window.location.protocol}//${window.location.hostname}:8000`;
+
+  // When the frontend is served from a custom local HTTP host/port,
+  // keep the same host and point to the backend port.
+  if (protocol === "http:" && port && port !== "80") {
+    return `http://${hostname}:8000`;
   }
+
+  // Fallback for same-origin deployments behind a reverse proxy.
   return "";
 })();
 
@@ -31,4 +42,3 @@ function makeCodingQuestions(rows) {
     explanation
   }));
 }
-

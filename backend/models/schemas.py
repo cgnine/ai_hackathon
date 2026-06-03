@@ -168,9 +168,29 @@ class SolveResponse(BaseModel):
 
 class LoginRequest(BaseModel):
     member_id: str = Field(min_length=1, max_length=50)
-    password: Optional[str] = None
+    password: str = Field(min_length=1, max_length=255)
 
 
 class LoginResponse(BaseModel):
     member_id: str
     member_name: str
+
+
+class SignupRequest(BaseModel):
+    member_id: str = Field(min_length=1, max_length=50)
+    member_name: str = Field(min_length=1, max_length=100)
+    password: str = Field(min_length=1, max_length=255)
+
+
+class SignupResponse(BaseModel):
+    member_id: str
+    member_name: str
+
+
+class PasswordResetRequest(BaseModel):
+    member_id: str = Field(min_length=1, max_length=50)
+    password: str = Field(min_length=1, max_length=255)
+
+
+class PasswordResetResponse(BaseModel):
+    member_id: str

@@ -22,6 +22,16 @@ async function initPage() {
     return;
   }
 
+  if (page === "signup") {
+    initSignupPage();
+    return;
+  }
+
+  if (page === "reset-password") {
+    initResetPasswordPage();
+    return;
+  }
+
   if (!requireLogin(page)) return;
 
   bindScreenLinks();
