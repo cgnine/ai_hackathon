@@ -59,6 +59,28 @@ function setPoolStatus(text) {
   if (el) el.textContent = text;
 }
 
+function recommendErrorMessage(detail) {
+  if (detail === "NO_HISTORY") {
+    return "모의고사 응시 이력이 있어야 AI 맞춤형 문제를 생성할 수 있습니다.";
+  }
+  if (detail === "NO_WEAKNESS") {
+    return "추천할 응시 데이터가 부족합니다. 모의고사를 한 번 더 응시해 주세요.";
+  }
+  if (String(detail || "").includes("UnrecognizedClientException")) {
+    return "AWS 인증 토큰이 유효하지 않습니다. EC2의 AWS_ACCESS_KEY_ID/AWS_SECRET_ACCESS_KEY/AWS_SESSION_TOKEN을 확인해 주세요.";
+  }
+  if (String(detail || "").includes("AccessDeniedException")) {
+    return "Bedrock 호출 권한이 없습니다. 해당 IAM 사용자/키에 bedrock:InvokeModel 권한을 확인해 주세요.";
+  }
+  if (String(detail || "").startsWith("BEDROCK_")) {
+    return `Bedrock 호출 실패: ${detail}`;
+  }
+  if (detail === "AI_RECOMMEND_FILL_FAILED") {
+    return "추천문제 생성 중 서버 오류가 발생했습니다. 백엔드 로그를 확인해 주세요.";
+  }
+  return `문제 생성 실패: ${detail}`;
+}
+
 // ─── 카드 생성 ───────────────────────────────────────────────
 
 function buildCard(question) {
@@ -259,11 +281,17 @@ async function fillOneSlot() {
     skeleton.remove();
     const detail = err.message;
     if (detail === "POOL_FULL") return false;
-    if (detail === "NO_HISTORY" || detail === "NO_WEAKNESS") return false;
-    // 예상치 못한 오류만 에러 카드 표시
+    if (detail === "NO_HISTORY") {
+      setPoolStatus(recommendErrorMessage(detail));
+      return false;
+    }
+    if (detail === "NO_WEAKNESS") {
+      setPoolStatus(recommendErrorMessage(detail));
+      return false;
+    }
     const errCard = document.createElement("div");
     errCard.className = "ai-pool-error-msg";
-    errCard.textContent = `문제 생성 실패: ${detail}`;
+    errCard.textContent = recommendErrorMessage(detail);
     list.appendChild(errCard);
     return false;
   }
@@ -279,7 +307,7 @@ async function fillPool(currentSize) {
   const list = document.getElementById("aiPoolList");
   const cardCount = list ? list.querySelectorAll(".ai-pool-card:not(.generating)").length : 0;
   if (cardCount === 0) {
-    setPoolStatus("더 이상 풀 문제가 없어요");
+    setPoolStatus("생성 가능한 추천 문제가 없습니다.");
   }
 }
 

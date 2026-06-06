@@ -7,10 +7,86 @@ from psycopg2.extras import RealDictCursor
 from backend.services.db import get_conn
 
 MAX_POOL = 5
+_TABLE_READY = False
+
+
+def ensure_table() -> None:
+    global _TABLE_READY
+    if _TABLE_READY:
+        return
+    expected_columns = {
+        "session_id": "TEXT",
+        "member_id": "VARCHAR(50)",
+        "question_no": "INT",
+        "weak_area": "TEXT",
+        "subject_code": "VARCHAR(50)",
+        "reason": "TEXT",
+        "question_text": "TEXT",
+        "scenario": "TEXT",
+        "option_1": "TEXT",
+        "option_2": "TEXT",
+        "option_3": "TEXT",
+        "option_4": "TEXT",
+        "option_5": "TEXT",
+        "correct_option_no": "INT",
+        "explanation": "TEXT",
+        "difficulty": "VARCHAR(20) DEFAULT 'medium'",
+        "selected_option_no": "INT",
+        "is_correct": "BOOLEAN",
+        "created_at": "TIMESTAMP DEFAULT NOW()",
+        "solved_at": "TIMESTAMP",
+    }
+    with get_conn() as conn:
+        with conn.cursor() as cur:
+            cur.execute(
+                """
+                CREATE TABLE IF NOT EXISTS ai_recommend_question_tb (
+                    id BIGSERIAL PRIMARY KEY,
+                    session_id TEXT,
+                    member_id VARCHAR(50) NOT NULL,
+                    question_no INT NOT NULL,
+                    weak_area TEXT,
+                    subject_code VARCHAR(50),
+                    reason TEXT,
+                    question_text TEXT NOT NULL,
+                    scenario TEXT,
+                    option_1 TEXT,
+                    option_2 TEXT,
+                    option_3 TEXT,
+                    option_4 TEXT,
+                    option_5 TEXT,
+                    correct_option_no INT NOT NULL,
+                    explanation TEXT,
+                    difficulty VARCHAR(20) DEFAULT 'medium',
+                    selected_option_no INT,
+                    is_correct BOOLEAN,
+                    created_at TIMESTAMP DEFAULT NOW(),
+                    solved_at TIMESTAMP
+                )
+                """
+            )
+            cur.execute(
+                """
+                SELECT column_name
+                FROM information_schema.columns
+                WHERE table_schema = current_schema()
+                  AND table_name = 'ai_recommend_question_tb'
+                """
+            )
+            existing_columns = {row[0] for row in cur.fetchall()}
+            missing_columns = [
+                (column, definition)
+                for column, definition in expected_columns.items()
+                if column not in existing_columns
+            ]
+            for column, definition in missing_columns:
+                cur.execute(f"ALTER TABLE ai_recommend_question_tb ADD COLUMN {column} {definition}")
+    _TABLE_READY = True
 
 
 def get_active_pool(member_id: str) -> list[dict[str, Any]]:
     """미답변 + 오답 문제 목록 (최대 MAX_POOL개)"""
+    ensure_table()
     with get_conn() as conn:
         with conn.cursor(cursor_factory=RealDictCursor) as cur:
             cur.execute(
@@ -31,6 +107,7 @@ def get_active_pool(member_id: str) -> list[dict[str, Any]]:
 
 
 def get_pool_size(member_id: str) -> int:
+    ensure_table()
     with get_conn() as conn:
         with conn.cursor() as cur:
             cur.execute(
@@ -45,6 +122,7 @@ def get_pool_size(member_id: str) -> int:
 
 def get_current_pool_weak_areas(member_id: str) -> set[str]:
     """현재 풀에 있는 weak_area (같은 영역 중복 출제 방지)"""
+    ensure_table()
     with get_conn() as conn:
         with conn.cursor() as cur:
             cur.execute(
@@ -61,6 +139,7 @@ def get_current_pool_weak_areas(member_id: str) -> set[str]:
 
 def get_mastered_weak_areas(member_id: str) -> set[str]:
     """전체 이력 기준 정답 처리된 weak_area (재출제 금지)"""
+    ensure_table()
     with get_conn() as conn:
         with conn.cursor() as cur:
             cur.execute(
@@ -85,6 +164,7 @@ def save_pool_question(
     explanation: str,
     difficulty: str,
 ) -> dict[str, Any]:
+    ensure_table()
     opts = (options + ["", "", "", "", ""])[:5]
     with get_conn() as conn:
         with conn.cursor(cursor_factory=RealDictCursor) as cur:
@@ -116,6 +196,7 @@ def save_pool_question(
 
 def record_answer(question_id: int, member_id: str, selected_option_no: int) -> dict[str, Any]:
     """오답 재도전 허용 (is_correct = FALSE인 경우도 UPDATE 가능)"""
+    ensure_table()
     with get_conn() as conn:
         with conn.cursor(cursor_factory=RealDictCursor) as cur:
             cur.execute(
