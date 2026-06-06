@@ -321,30 +321,176 @@ body[data-page="wrong"] .brand {
 }
 
 .top-stats {
-  display: flex;
+  display: none;
   gap: 10px;
   color: var(--muted);
   font-size: 0.82rem;
 }
 
 .profile-actions {
+  position: relative;
   display: flex;
   align-items: center;
   gap: 8px;
 }
 
-.profile-button,
-.logout-button {
+.profile-button {
+  display: inline-flex;
+  align-items: center;
   min-height: 38px;
-  padding: 0 14px;
+  padding: 3px;
   border: 1px solid var(--line);
-  border-radius: 8px;
+  border-radius: 999px;
   background: #fff;
-  color: #1d4ed8;
+  color: var(--ink);
   font-weight: 900;
 }
 
+.profile-avatar {
+  display: grid;
+  width: 30px;
+  height: 30px;
+  place-items: center;
+  border-radius: 50%;
+  background: #ffcc00;
+  color: #4a3b12;
+  font-size: 0.86rem;
+  font-weight: 900;
+}
+
+.profile-pill {
+  display: inline-flex;
+  min-height: 30px;
+  align-items: center;
+  padding: 0 12px;
+  border-radius: 999px;
+  background: #ffcc00;
+  color: #4a3b12;
+  font-size: 0.82rem;
+  font-weight: 900;
+  white-space: nowrap;
+}
+
+.profile-avatar.large {
+  width: 56px;
+  height: 56px;
+  font-size: 1.25rem;
+}
+
+.profile-menu {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  z-index: 30;
+  width: 280px;
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #fff;
+  box-shadow: 0 18px 42px rgba(15, 23, 42, 0.14);
+}
+
+.profile-menu[hidden] {
+  display: none;
+}
+
+.profile-menu-head {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 4px 4px 12px;
+  border-bottom: 1px solid #e2e8f0;
+  margin-bottom: 10px;
+}
+
+.profile-menu-head strong,
+.profile-menu-head p,
+.profile-menu-head small {
+  display: block;
+  margin: 0;
+}
+
+.profile-menu-head strong {
+  color: var(--ink);
+  font-size: 1rem;
+}
+
+.profile-menu-head p,
+.profile-menu-head small {
+  color: var(--muted);
+  font-size: 0.82rem;
+  line-height: 1.45;
+}
+
+.profile-menu-head small {
+  white-space: nowrap;
+}
+
+.profile-menu-head em {
+  color: var(--ink);
+  font-style: normal;
+  font-weight: 800;
+}
+
+.profile-summary-card {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.profile-summary-tile {
+  padding: 10px;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  background: #f8fafc;
+}
+
+.profile-summary-tile span,
+.profile-summary-tile strong {
+  display: block;
+}
+
+.profile-summary-tile span {
+  color: var(--muted);
+  font-size: 0.75rem;
+  font-weight: 800;
+}
+
+.profile-summary-tile strong {
+  margin-top: 4px;
+  color: var(--ink);
+  font-size: 1.05rem;
+}
+
+.profile-menu-list {
+  display: grid;
+  gap: 6px;
+  margin-top: 10px;
+}
+
+.profile-menu-list a,
+.profile-menu .logout-button {
+  display: flex;
+  min-height: 36px;
+  align-items: center;
+  padding: 0 10px;
+  border-radius: 8px;
+  color: var(--ink);
+  font-size: 0.9rem;
+  font-weight: 800;
+  text-decoration: none;
+}
+
+.profile-menu-list a:hover,
+.profile-menu .logout-button:hover {
+  background: #eff6ff;
+  color: #1d4ed8;
+}
+
 .logout-button {
+  width: 100%;
+  border: 0;
+  background: transparent;
   color: var(--muted);
   font-size: 0.86rem;
 }
@@ -353,6 +499,173 @@ body[data-page="wrong"] .brand {
 .logout-button:hover {
   border-color: #93c5fd;
   background: #eff6ff;
+}
+
+.my-info-panel {
+  display: grid;
+  gap: 18px;
+  max-width: 720px;
+  margin: 0 auto;
+  padding: 24px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: #fff;
+  box-shadow: var(--shadow);
+}
+
+.my-info-main {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.my-info-main h2 {
+  margin: 0;
+  font-size: 1.5rem;
+}
+
+.my-info-main p {
+  margin-top: 4px;
+  color: var(--muted);
+}
+
+.my-info-metrics {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.my-info-menu {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  margin-top: 0;
+}
+
+.my-info-menu a {
+  border: 1px solid var(--line);
+  background: #f8fafc;
+}
+
+.my-history-panel {
+  display: grid;
+  gap: 14px;
+  max-width: 720px;
+  margin: 18px auto 0;
+  padding: 24px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: #fff;
+  box-shadow: var(--shadow);
+}
+
+body[data-page="my-info"] .screen-head,
+.history-screen-head {
+  max-width: 720px;
+  margin-right: auto;
+  margin-left: auto;
+  text-align: center;
+}
+
+.exam-history-panel {
+  max-width: 860px;
+}
+
+.my-history-head {
+  display: flex;
+  align-items: end;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.my-history-head h2 {
+  margin: 4px 0 0;
+  font-size: 1.28rem;
+}
+
+.my-history-head a {
+  color: #1d4ed8;
+  font-size: 0.86rem;
+  font-weight: 900;
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.my-history-list {
+  display: grid;
+  gap: 10px;
+}
+
+.my-history-card {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  align-items: center;
+  gap: 14px;
+  padding: 14px;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  background: #f8fafc;
+}
+
+.my-history-card h3,
+.my-history-card p {
+  margin: 0;
+}
+
+.my-history-card h3 {
+  margin-top: 4px;
+  color: var(--ink);
+  font-size: 1rem;
+}
+
+.my-history-card p,
+.my-history-date,
+.my-history-score span,
+.my-history-empty p {
+  color: var(--muted);
+  font-size: 0.82rem;
+  font-weight: 800;
+}
+
+.my-history-score {
+  min-width: 76px;
+  text-align: right;
+}
+
+.my-history-score strong,
+.my-history-score span {
+  display: block;
+}
+
+.my-history-score strong {
+  color: #4a3b12;
+  font-size: 1.1rem;
+}
+
+.my-history-card button {
+  min-height: 36px;
+  padding: 0 12px;
+  border: 0;
+  border-radius: 8px;
+  background: #ffcc00;
+  color: #4a3b12;
+  font-weight: 900;
+}
+
+.my-history-empty {
+  padding: 18px;
+  border: 1px dashed #cbd5e1;
+  border-radius: 8px;
+  background: #f8fafc;
+}
+
+.my-history-empty strong {
+  color: var(--ink);
+}
+
+.my-history-empty p {
+  margin: 6px 0 0;
+}
+
+.my-history-empty.error {
+  border-color: #f59e0b;
+  background: #fffbeb;
 }
 
 .top-stats span {
@@ -1564,7 +1877,7 @@ body[data-page="wrong"] .brand {
 }
 
 .question-detail-label::before {
-  content: "참고";
+  content: "嶺뚣볝늾??;
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -3479,7 +3792,7 @@ body[data-page="mock"] .choice-btn.selected {
   display: none;
 }
 
-/* ── AI 개인 문제 풀 ───────────────────────────── */
+/* ???? AI ?띠룇裕????쒖굣???? ?????????????????????????????????????????????????????????? */
 
 .ai-pool-header {
   display: flex;
@@ -3741,7 +4054,7 @@ body[data-page="mock"] .choice-btn.selected {
   font-size: 0.85rem;
 }
 
-/* 진행 바 */
+/* 嶺뚯쉳?듸쭛???*/
 .ai-recommend-progress-header {
   display: flex;
   justify-content: space-between;
@@ -3766,14 +4079,14 @@ body[data-page="mock"] .choice-btn.selected {
   transition: width 0.4s ease;
 }
 
-/* 액션 버튼 영역 */
+/* ???떷??뺢퀗?????⑤챶??*/
 .ai-recommend-actions {
   display: flex;
   gap: 10px;
   flex-wrap: wrap;
 }
 
-/* 세션 요약 */
+/* ?筌뤾쑬????븐슜??*/
 .ai-recommend-summary-card[hidden] {
   display: none;
 }
@@ -3930,10 +4243,9 @@ body[data-page="mock"] .choice-btn.selected {
     margin-left: auto;
   }
 
-  .profile-button,
-  .logout-button {
+  .profile-button {
     min-height: 32px;
-    padding: 0 10px;
+    padding: 2px;
     font-size: 0.8rem;
   }
 
@@ -3943,15 +4255,20 @@ body[data-page="mock"] .choice-btn.selected {
 
   .nav-btn[data-screen="profile"]::after,
   .nav-btn[data-screen="subjects"]::after {
-    content: "응시";
+    content: "\C751\C2DC";
   }
 
   .nav-btn[data-screen="wrong"]::after {
-    content: "오답";
+    content: "\C624\B2F5";
   }
 
   .nav-btn[data-screen="aiRecommend"]::after {
-    content: "AI추천";
+    content: "AI\CD94\CC9C";
+  }
+
+  .profile-menu {
+    right: 0;
+    width: min(300px, calc(100vw - 24px));
   }
 
   .top-stats {
@@ -3960,7 +4277,7 @@ body[data-page="mock"] .choice-btn.selected {
 
   .main-nav {
     display: grid;
-    grid-template-columns: repeat(3, minmax(0, 1fr));
+    grid-template-columns: repeat(2, minmax(0, 1fr));
     width: 100%;
     gap: 6px;
     overflow: visible;
@@ -3988,17 +4305,17 @@ body[data-page="mock"] .choice-btn.selected {
 
   .nav-btn[data-screen="profile"]::after,
   .nav-btn[data-screen="subjects"]::after {
-    content: "응시";
+    content: "\C751\C2DC";
     font-size: 0.82rem;
   }
 
   .nav-btn[data-screen="wrong"]::after {
-    content: "오답";
+    content: "\C624\B2F5";
     font-size: 0.82rem;
   }
 
   .nav-btn[data-screen="aiRecommend"]::after {
-    content: "AI추천";
+    content: "AI\CD94\CC9C";
     font-size: 0.82rem;
   }
 
@@ -4024,6 +4341,27 @@ body[data-page="mock"] .choice-btn.selected {
 
   .result-score-card {
     width: min(260px, calc(100vw - 72px));
+  }
+
+  .my-info-panel,
+  .my-history-panel {
+    padding: 18px;
+  }
+
+  .my-info-metrics,
+  .my-info-menu,
+  .my-history-card {
+    grid-template-columns: 1fr;
+  }
+
+  .my-history-head {
+    align-items: flex-start;
+  }
+
+  .my-history-score {
+    min-width: 0;
+    text-align: left;
+  }
   }
 
   .question-panel,
