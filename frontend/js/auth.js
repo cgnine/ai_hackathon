@@ -80,6 +80,7 @@ function clearExamSessionState() {
   state.lastResult = null;
   state.attemptHistory = [];
   state.recommendationAnswer = null;
+  state.aiRecommendationAnswer = null;
   state.reviewQuestion = null;
   state.reviewAnswer = null;
   state.wrongSubjectId = null;

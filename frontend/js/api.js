@@ -104,5 +104,9 @@ async function saveMockExamResult(subject, questions, answers) {
     throw new Error(data.detail || `HTTP ${response.status}`);
   }
 
-  return response.json();
+  const data = await response.json();
+  if (typeof clearAnalysisCache === "function") {
+    clearAnalysisCache(memberId);
+  }
+  return data;
 }

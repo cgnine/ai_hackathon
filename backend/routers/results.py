@@ -55,8 +55,18 @@ async def get_latest_result(profile_name: str | None = None):
 
 
 @router.get("/analysis")
-async def get_analysis(member_id: str):
-    return result_service.get_analysis(member_id)
+async def get_analysis(member_id: str, include_commentary: bool = True):
+    return result_service.get_analysis(member_id, include_commentary=include_commentary)
+
+
+@router.get("/analysis/commentary")
+async def get_analysis_commentary(member_id: str):
+    return result_service.get_analysis_commentary(member_id)
+
+
+@router.get("/ai-recommendation")
+async def get_ai_recommendation(member_id: str):
+    return result_service.get_ai_recommendation(member_id)
 
 
 @router.get("/{attempt_id}")

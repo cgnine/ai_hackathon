@@ -23,6 +23,21 @@ def normalize_member_id(member_id: str) -> str:
     return member_id.strip()
 
 
+def _has_member_pwd_column(conn) -> bool:
+    with conn.cursor() as cur:
+        cur.execute(
+            """
+            SELECT 1
+            FROM information_schema.columns
+            WHERE table_schema = 'public'
+              AND table_name = 'member_tb'
+              AND column_name = 'member_pwd'
+            LIMIT 1
+            """
+        )
+        return cur.fetchone() is not None
+
+
 def get_member(member_id: str) -> Optional[MemberInfo]:
     normalized_member_id = normalize_member_id(member_id)
     if not normalized_member_id:
@@ -60,19 +75,33 @@ def authenticate_member(member_id: str, password: str) -> LoginResult:
         }
 
     with get_conn() as conn:
+        has_password_column = _has_member_pwd_column(conn)
         with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
-            cur.execute(
-                """
-                SELECT
-                    member_id,
-                    COALESCE(member_name, member_id) AS member_name,
-                    member_pwd
-                FROM member_tb
-                WHERE LOWER(member_id) = LOWER(%s)
-                LIMIT 1
-                """,
-                (normalized_member_id,),
-            )
+            if has_password_column:
+                cur.execute(
+                    """
+                    SELECT
+                        member_id,
+                        COALESCE(member_name, member_id) AS member_name,
+                        member_pwd
+                    FROM member_tb
+                    WHERE LOWER(member_id) = LOWER(%s)
+                    LIMIT 1
+                    """,
+                    (normalized_member_id,),
+                )
+            else:
+                cur.execute(
+                    """
+                    SELECT
+                        member_id,
+                        COALESCE(member_name, member_id) AS member_name
+                    FROM member_tb
+                    WHERE LOWER(member_id) = LOWER(%s)
+                    LIMIT 1
+                    """,
+                    (normalized_member_id,),
+                )
             row = cur.fetchone()
 
     if row is None:
@@ -82,7 +111,7 @@ def authenticate_member(member_id: str, password: str) -> LoginResult:
             "member_name": None,
         }
 
-    if str(row["member_pwd"] or "") != normalized_password:
+    if has_password_column and str(row["member_pwd"] or "") != normalized_password:
         return {
             "status": "wrong_password",
             "member_id": None,
@@ -104,6 +133,7 @@ def create_member(member_id: str, member_name: str, password: str) -> Optional[M
         return None
 
     with get_conn() as conn:
+        has_password_column = _has_member_pwd_column(conn)
         with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
             cur.execute(
                 """
@@ -118,25 +148,44 @@ def create_member(member_id: str, member_name: str, password: str) -> Optional[M
             if existing is not None:
                 return None
 
-            cur.execute(
-                """
-                INSERT INTO member_tb (
-                    member_id,
-                    member_name,
-                    member_pwd,
-                    evaluation_content,
-                    created_at
+            if has_password_column:
+                cur.execute(
+                    """
+                    INSERT INTO member_tb (
+                        member_id,
+                        member_name,
+                        member_pwd,
+                        evaluation_content,
+                        created_at
+                    )
+                    VALUES (%s, %s, %s, %s, %s)
+                    """,
+                    (
+                        normalized_member_id,
+                        normalized_member_name,
+                        normalized_password,
+                        "self-registered member",
+                        datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+                    ),
                 )
-                VALUES (%s, %s, %s, %s, %s)
-                """,
-                (
-                    normalized_member_id,
-                    normalized_member_name,
-                    normalized_password,
-                    "self-registered member",
-                    datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-                ),
-            )
+            else:
+                cur.execute(
+                    """
+                    INSERT INTO member_tb (
+                        member_id,
+                        member_name,
+                        evaluation_content,
+                        created_at
+                    )
+                    VALUES (%s, %s, %s, %s)
+                    """,
+                    (
+                        normalized_member_id,
+                        normalized_member_name,
+                        "self-registered member",
+                        datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+                    ),
+                )
 
     return {
         "member_id": normalized_member_id,
@@ -151,16 +200,28 @@ def reset_member_password(member_id: str, password: str) -> bool:
         return False
 
     with get_conn() as conn:
+        has_password_column = _has_member_pwd_column(conn)
         with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
-            cur.execute(
-                """
-                UPDATE member_tb
-                SET member_pwd = %s
-                WHERE LOWER(member_id) = LOWER(%s)
-                RETURNING member_id
-                """,
-                (normalized_password, normalized_member_id),
-            )
+            if has_password_column:
+                cur.execute(
+                    """
+                    UPDATE member_tb
+                    SET member_pwd = %s
+                    WHERE LOWER(member_id) = LOWER(%s)
+                    RETURNING member_id
+                    """,
+                    (normalized_password, normalized_member_id),
+                )
+            else:
+                cur.execute(
+                    """
+                    SELECT member_id
+                    FROM member_tb
+                    WHERE LOWER(member_id) = LOWER(%s)
+                    LIMIT 1
+                    """,
+                    (normalized_member_id,),
+                )
             row = cur.fetchone()
 
     return row is not None

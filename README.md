@@ -38,7 +38,7 @@ developer-competency-agent/
 AWS_REGION=ap-northeast-2
 AWS_ACCESS_KEY_ID=your-access-key-id
 AWS_SECRET_ACCESS_KEY=your-secret-access-key
-BEDROCK_MODEL_ID=anthropic.claude-sonnet-4-20250514-v1:0
+BEDROCK_MODEL_ID=global.anthropic.claude-opus-4-8
 ```
 
 > AWS IAM 계정에 `AmazonBedrockFullAccess` 권한이 필요합니다.  
@@ -160,7 +160,7 @@ PDF 추출 → Bedrock 호출 → JSON 파싱 → 스키마 검증
 | 단계 | 설명 |
 |------|------|
 | PDF 추출 | PyMuPDF로 지정 페이지 텍스트 추출 |
-| Bedrock 호출 | Claude Sonnet 4로 5지선다 문제 생성 |
+| Bedrock 호출 | Claude Opus로 5지선다 문제 생성 |
 | Rule Validation | 선택지 5개, 정답 범위, 해설 길이 등 규칙 검사 |
 | LLM-as-Judge | 원문 근거·단일정답·선택지 유효성 등 5개 항목 평가 |
 | Recovery | Rule/Judge 실패 시 최대 1회 재시도 |
@@ -205,7 +205,7 @@ frontend/index.html  →  브라우저로 열기
 |------|------|
 | 백엔드 | Python 3.12, FastAPI |
 | PDF 추출 | PyMuPDF |
-| LLM | Amazon Bedrock (Claude Sonnet 4) |
+| LLM | Amazon Bedrock (Claude Opus) |
 | AWS SDK | boto3 |
 | 실행 환경 | Docker / EC2 |
 | 프론트엔드 | HTML, CSS, JavaScript |

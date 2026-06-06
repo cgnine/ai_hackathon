@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 from collections import defaultdict
 from datetime import datetime
 from typing import Any
@@ -7,7 +8,7 @@ from typing import Any
 from fastapi import HTTPException
 from psycopg2.extras import RealDictCursor
 
-from backend.services import bedrock_client
+from backend.services import bedrock_client, question_parser
 from backend.services.db import get_conn
 
 
@@ -52,6 +53,26 @@ def _created_at(row: dict[str, Any]) -> str:
             time = f"{time}:00"
         return f"{date}T{time}"
     return row.get("exam_created_at") or row.get("created_at") or ""
+
+
+def _choices_from_row(row: dict[str, Any]) -> list[str]:
+    return [
+        choice
+        for choice in [
+            row.get("option_1"),
+            row.get("option_2"),
+            row.get("option_3"),
+            row.get("option_4"),
+            row.get("option_5"),
+        ]
+        if choice
+    ]
+
+
+def _choice_text(choices: list[str], number: int | None) -> str:
+    if number is None or number < 1 or number > len(choices):
+        return ""
+    return choices[number - 1]
 
 
 def _build_diagnosis(items: list[dict[str, Any]], summary: str | None) -> dict[str, Any]:
@@ -277,11 +298,12 @@ def _bedrock_analysis_commentary(summary: dict[str, Any], subject_stats: list[di
 
     system_prompt = (
         "당신은 KB 디지털 역량진단 CBT 학습 코치입니다. "
-        "응시자의 DB 기반 풀이 통계를 보고 한국어로 짧고 구체적인 총평을 작성합니다. "
-        "과장하지 말고, 점수와 취약 과목을 근거로 3~4문장만 출력하세요."
+        "응시자의 DB 기반 풀이 통계를 보고 한국어로 짧고 구체적인 AI총평을 작성합니다. "
+        "과장하지 말고, 점수와 취약 과목을 근거로 3~4문장만 출력하세요. "
+        "과목을 언급할 때는 subjectStats의 subjectName 값을 그대로 사용하세요."
     )
     user_prompt = (
-        "다음 JSON 통계를 바탕으로 총평을 작성하세요.\n"
+        "다음 JSON 통계를 바탕으로 AI총평을 작성하세요.\n"
         f"summary={summary}\n"
         f"subjectStats={subject_stats}\n"
         f"typeStats={type_stats}\n"
@@ -294,7 +316,102 @@ def _bedrock_analysis_commentary(summary: dict[str, Any], subject_stats: list[di
         return _fallback_analysis_commentary(summary, subject_stats)
 
 
-def get_analysis(member_id: str) -> dict[str, Any]:
+def _weakness_key(row: dict[str, Any]) -> tuple[str, str, str, str]:
+    subject_code = str(row["subject_code"])
+    subject_name = str(row["subject_name"] or row["subject_description"] or subject_code)
+    major_unit = str(row["major_unit"] or "미분류 단원")
+    return subject_code, subject_name, major_unit, _question_type(row)
+
+
+def _build_ai_recommendation_prompt(
+    member_name: str,
+    weakness: dict[str, Any],
+    examples: list[dict[str, Any]],
+) -> tuple[str, str]:
+    target_type = weakness["questionType"]
+    scenario_rule = (
+        "실무형 문제이므로 scenario를 1~3문장으로 작성하고, 실제 업무 상황 판단이 필요하도록 만드세요."
+        if target_type == "실무형"
+        else "이론형 문제이므로 scenario는 빈 문자열로 두고, 개념·정의·목적·차이를 묻는 질문으로 만드세요."
+    )
+    system_prompt = (
+        "당신은 KB 디지털 역량진단 CBT의 AI 맞춤형 문제 생성 Agent입니다. "
+        "사용자의 실제 오답 이력을 근거로 부족한 부분을 판단하고, 해당 약점을 보완할 5지선다 문제 1개를 생성합니다. "
+        "이론형과 실무형은 사용자의 취약 유형에 맞춰 분배합니다. "
+        "기존 문제를 복사하거나 보기만 바꾸지 말고, 같은 개념을 새 문항으로 재구성하세요. "
+        "정답은 반드시 하나여야 하며, 보기 5개는 모두 완전한 문장이어야 합니다. "
+        "JSON 객체 하나만 출력하세요."
+    )
+    payload = {
+        "memberName": member_name,
+        "weakness": weakness,
+        "wrongExamples": examples,
+    }
+    user_prompt = (
+        "다음 사용자의 오답 이력을 바탕으로 AI 맞춤형 추천문제 1개를 생성하세요.\n"
+        f"{json.dumps(payload, ensure_ascii=False)}\n\n"
+        "생성 규칙:\n"
+        f"- 대상 과목은 {weakness['subjectName']}입니다.\n"
+        f"- 대상 단원은 {weakness['majorUnit']}입니다.\n"
+        f"- 대상 유형은 {target_type}입니다.\n"
+        f"- {scenario_rule}\n"
+        "- question은 1문장으로 작성하세요.\n"
+        "- choices는 정확히 5개입니다.\n"
+        "- answer는 1~5 사이 정수입니다.\n"
+        "- explanation은 정답 근거와 오답이 틀린 핵심 이유를 짧게 설명하세요.\n"
+        "- reason은 사용자의 어떤 부분이 부족해 보여서 이 문제를 냈는지 한 줄로 작성하세요.\n"
+        "- source_summary에는 어떤 오답 이력을 근거로 삼았는지 요약하세요.\n\n"
+        "출력 JSON 형식:\n"
+        "{\n"
+        '  "reason": "AI Engineering의 모델 평가 단원에서 실무형 판단이 부족해 보여요.",\n'
+        '  "question_type": "이론형",\n'
+        '  "question": "문제 질문",\n'
+        '  "scenario": "",\n'
+        '  "choices": ["보기 1", "보기 2", "보기 3", "보기 4", "보기 5"],\n'
+        '  "answer": 1,\n'
+        '  "difficulty": "medium",\n'
+        '  "tags": ["태그"],\n'
+        '  "source_summary": "오답 이력 근거 요약",\n'
+        '  "explanation": "해설"\n'
+        "}"
+    )
+    return system_prompt, user_prompt
+
+
+def _normalize_ai_question(obj: dict[str, Any], weakness: dict[str, Any]) -> dict[str, Any]:
+    choices = obj.get("choices")
+    if not isinstance(choices, list):
+        raise ValueError("choices must be a list")
+    choices = [str(choice).strip() for choice in choices if str(choice or "").strip()]
+    if len(choices) != 5:
+        raise ValueError("choices must contain exactly 5 items")
+
+    answer = _to_int(obj.get("answer"))
+    if answer is None or answer < 1 or answer > 5:
+        raise ValueError("answer must be between 1 and 5")
+
+    question = str(obj.get("question") or "").strip()
+    if not question:
+        raise ValueError("question is required")
+
+    return {
+        "subjectCode": weakness["subjectCode"],
+        "subjectName": weakness["subjectName"],
+        "majorUnit": weakness["majorUnit"],
+        "minorUnit": weakness.get("minorUnit") or "-",
+        "questionType": str(obj.get("question_type") or weakness["questionType"]),
+        "questionText": question,
+        "questionScenario": str(obj.get("scenario") or "").strip(),
+        "choices": choices,
+        "answer": answer,
+        "difficulty": str(obj.get("difficulty") or "medium"),
+        "tags": obj.get("tags") if isinstance(obj.get("tags"), list) else [],
+        "sourceSummary": str(obj.get("source_summary") or "").strip(),
+        "explanation": str(obj.get("explanation") or "").strip(),
+    }
+
+
+def get_ai_recommendation(member_id: str) -> dict[str, Any]:
     normalized_member_id = member_id.strip()
     if not normalized_member_id:
         raise HTTPException(status_code=400, detail="member_id is required")
@@ -344,11 +461,157 @@ def get_analysis(member_id: str) -> dict[str, Any]:
                     ON q.question_id = h.question_id
                    AND q.subject_code = e.subject_code
                 WHERE e.member_id = %s
-                ORDER BY e.exam_date, e.exam_time, e.exam_id, h.exam_question_id
+                ORDER BY e.exam_date DESC, e.exam_time DESC, e.exam_id DESC, h.exam_question_id
+                LIMIT 120
                 """,
                 (normalized_member_id,),
             )
             rows = cur.fetchall()
+
+    if not rows:
+        return {
+            "status": "NO_HISTORY",
+            "message": "아직 풀이 기록이 없어 AI 맞춤형 추천문제를 만들지 않았습니다.",
+            "reason": "",
+            "weakness": None,
+            "question": None,
+        }
+
+    wrong_rows = [
+        row for row in rows
+        if _to_int(row["selected_number"]) != _to_int(row["answer_number"])
+    ]
+    if not wrong_rows:
+        return {
+            "status": "NO_WEAKNESS",
+            "message": "최근 풀이 기록에서 뚜렷한 오답 약점이 없어 AI 맞춤형 추천문제를 만들지 않았습니다.",
+            "reason": "",
+            "weakness": None,
+            "question": None,
+        }
+
+    grouped: dict[tuple[str, str, str, str], list[dict[str, Any]]] = defaultdict(list)
+    for row in wrong_rows:
+        grouped[_weakness_key(row)].append(row)
+
+    weak_key, weak_rows = max(
+        grouped.items(),
+        key=lambda item: (len(item[1]), item[1][0]["exam_date"] or "", item[1][0]["exam_time"] or ""),
+    )
+    subject_code, subject_name, major_unit, question_type = weak_key
+    minor_units = [
+        str(row["minor_unit"])
+        for row in weak_rows
+        if row.get("minor_unit")
+    ]
+    minor_unit = minor_units[0] if minor_units else "-"
+    weakness = {
+        "subjectCode": subject_code,
+        "subjectName": subject_name,
+        "majorUnit": major_unit,
+        "minorUnit": minor_unit,
+        "questionType": question_type,
+        "wrongCount": len(weak_rows),
+        "totalWrongCount": len(wrong_rows),
+    }
+    reason = f"{subject_name}의 {major_unit} 영역에서 {question_type} 오답이 반복되어 보강이 필요해 보여요."
+
+    examples = []
+    for row in weak_rows[:6]:
+        choices = _choices_from_row(row)
+        selected_number = _to_int(row["selected_number"])
+        answer_number = _to_int(row["answer_number"])
+        examples.append(
+            {
+                "question": _question_text(row),
+                "scenario": _question_scenario(row),
+                "choices": choices,
+                "selectedNumber": selected_number,
+                "selectedChoice": _choice_text(choices, selected_number),
+                "answerNumber": answer_number,
+                "answerChoice": _choice_text(choices, answer_number),
+                "explanation": str(row.get("explanation") or "")[:700],
+            }
+        )
+
+    system_prompt, user_prompt = _build_ai_recommendation_prompt(
+        member_name=str(member["member_name"]),
+        weakness=weakness,
+        examples=examples,
+    )
+
+    try:
+        raw = bedrock_client.invoke(system_prompt, user_prompt, max_tokens=1800)
+        parsed = question_parser.extract_json(raw)
+        question = _normalize_ai_question(parsed, weakness)
+        return {
+            "status": "READY",
+            "message": "AI 맞춤형 추천문제가 준비되었습니다.",
+            "reason": str(parsed.get("reason") or reason).strip(),
+            "weakness": weakness,
+            "question": question,
+        }
+    except Exception as exc:
+        return {
+            "status": "FAILED",
+            "message": "AI 맞춤형 추천문제를 생성하지 못했습니다. 잠시 후 다시 시도해주세요.",
+            "reason": reason,
+            "weakness": weakness,
+            "question": None,
+            "error": str(exc),
+        }
+
+
+def get_analysis(member_id: str, include_commentary: bool = True) -> dict[str, Any]:
+    normalized_member_id = member_id.strip()
+    if not normalized_member_id:
+        raise HTTPException(status_code=400, detail="member_id is required")
+
+    with get_conn() as conn:
+        with conn.cursor(cursor_factory=RealDictCursor) as cur:
+            cur.execute(
+                """
+                SELECT COALESCE(member_name, member_id) AS member_name
+                FROM member_tb
+                WHERE member_id = %s
+                LIMIT 1
+                """,
+                (normalized_member_id,),
+            )
+            member = cur.fetchone()
+            if member is None:
+                raise HTTPException(status_code=404, detail="Member not found")
+
+            cur.execute(
+                """
+                SELECT
+                    e.exam_id,
+                    s.subject_code,
+                    COALESCE(s.subject_name, s.subject_description, s.subject_code) AS subject_name,
+                    CASE
+                        WHEN COALESCE(BTRIM(q.question_content2), '') <> '' THEN '실무형'
+                        ELSE '이론형'
+                    END AS question_type,
+                    COALESCE(NULLIF(q.major_unit, ''), '미분류') AS unit,
+                    CASE
+                        WHEN h.selected_number::text ~ '^[0-9]+$'
+                         AND q.answer_number::text ~ '^[0-9]+$'
+                         AND h.selected_number::integer = q.answer_number::integer
+                        THEN TRUE ELSE FALSE
+                    END AS is_correct,
+                    COALESCE(e.created_at, e.exam_date || 'T' || COALESCE(e.exam_time, '00:00:00')) AS latest_exam_at
+                FROM exam_tb e
+                JOIN subject_tb s ON s.subject_code = e.subject_code
+                JOIN exam_history_tb h ON h.exam_id = e.exam_id
+                JOIN question_tb q
+                    ON q.question_id = h.question_id
+                   AND q.subject_code = e.subject_code
+                WHERE e.member_id = %s
+                ORDER BY e.exam_date, e.exam_time, e.exam_id, h.exam_question_id
+                """,
+                (normalized_member_id,),
+            )
+            analysis_rows = cur.fetchall()
 
             cur.execute(
                 """
@@ -363,17 +626,14 @@ def get_analysis(member_id: str) -> dict[str, Any]:
     subject_map: dict[str, dict[str, Any]] = {}
     type_map: dict[str, dict[str, Any]] = {}
     unit_map: dict[tuple[str, str], dict[str, Any]] = {}
-    answered_question_ids = set()
 
-    for row in rows:
+    for row in analysis_rows:
         subject_code = row["subject_code"]
-        subject_name = row["subject_name"] or row["subject_description"] or subject_code
-        selected = _to_int(row["selected_number"])
-        answer = _to_int(row["answer_number"])
-        correct = selected == answer
-        question_type = _question_type(row)
-        major_unit = row["major_unit"] or "미분류"
-        answered_question_ids.add(str(row["question_id"]))
+        subject_name = row["subject_name"] or subject_code
+        question_type = row["question_type"]
+        unit = row["unit"] or "미분류"
+        is_correct = bool(row["is_correct"])
+        latest_exam_at = row["latest_exam_at"] or ""
 
         subject = subject_map.setdefault(
             subject_code,
@@ -387,21 +647,21 @@ def get_analysis(member_id: str) -> dict[str, Any]:
             },
         )
         subject["answered"] += 1
-        subject["correct"] += 1 if correct else 0
-        subject["wrong"] += 0 if correct else 1
-        subject["latestExamAt"] = _created_at(row)
+        subject["correct"] += 1 if is_correct else 0
+        subject["wrong"] += 0 if is_correct else 1
+        if latest_exam_at and str(latest_exam_at) > str(subject["latestExamAt"]):
+            subject["latestExamAt"] = latest_exam_at
 
         type_stat = type_map.setdefault(question_type, {"type": question_type, "answered": 0, "correct": 0})
         type_stat["answered"] += 1
-        type_stat["correct"] += 1 if correct else 0
+        type_stat["correct"] += 1 if is_correct else 0
 
-        unit_key = (subject_code, major_unit)
         unit_stat = unit_map.setdefault(
-            unit_key,
-            {"subjectCode": subject_code, "subjectName": subject_name, "unit": major_unit, "answered": 0, "correct": 0},
+            (subject_code, unit),
+            {"subjectCode": subject_code, "subjectName": subject_name, "unit": unit, "answered": 0, "correct": 0},
         )
         unit_stat["answered"] += 1
-        unit_stat["correct"] += 1 if correct else 0
+        unit_stat["correct"] += 1 if is_correct else 0
 
     subject_stats = []
     for item in subject_map.values():
@@ -434,100 +694,19 @@ def get_analysis(member_id: str) -> dict[str, Any]:
         "averageScore": _score(correct_total, answered_total),
     }
 
-    recommendations = _recommended_questions(
-        member_id=normalized_member_id,
-        subject_stats=subject_stats,
-        unit_stats=unit_stats,
-        answered_question_ids=answered_question_ids,
-    )
-
     return {
         "summary": summary,
         "subjectStats": subject_stats,
         "typeStats": type_stats,
         "unitStats": unit_stats[:8],
-        "commentary": _bedrock_analysis_commentary(summary, subject_stats, type_stats),
-        "recommendations": recommendations,
+        "commentary": _bedrock_analysis_commentary(summary, subject_stats, type_stats) if include_commentary else [],
+        "recommendations": [],
     }
 
 
-def _recommended_questions(
-    member_id: str,
-    subject_stats: list[dict[str, Any]],
-    unit_stats: list[dict[str, Any]],
-    answered_question_ids: set[str],
-) -> list[dict[str, Any]]:
-    if not subject_stats:
-        return []
-
-    weak_subject = min(subject_stats, key=lambda item: (item["score"], -item["answered"]))
-    weak_units = [item["unit"] for item in unit_stats if item["subjectCode"] == weak_subject["subjectCode"]]
-    weak_unit = weak_units[0] if weak_units else None
-    exclude_ids = list(answered_question_ids)
-
-    conditions = ["q.subject_code = %s"]
-    params: list[Any] = [weak_subject["subjectCode"]]
-    if weak_unit:
-        conditions.append("q.major_unit = %s")
-        params.append(weak_unit)
-    if exclude_ids:
-        conditions.append("q.question_id <> ALL(%s)")
-        params.append(exclude_ids)
-
-    where = " AND ".join(conditions)
-    sql = f"""
-        SELECT
-            q.question_id,
-            q.subject_code,
-            s.subject_name,
-            q.major_unit,
-            q.minor_unit,
-            q.question_content,
-            q.question_content2,
-            q.option_1,
-            q.option_2,
-            q.option_3,
-            q.option_4,
-            q.option_5,
-            q.answer_number,
-            q.explanation
-        FROM question_tb q
-        JOIN subject_tb s ON s.subject_code = q.subject_code
-        WHERE {where}
-        ORDER BY RANDOM()
-        LIMIT 3
-    """
-
-    with get_conn() as conn:
-        with conn.cursor(cursor_factory=RealDictCursor) as cur:
-            cur.execute(sql, tuple(params))
-            rows = cur.fetchall()
-
-            if not rows and exclude_ids:
-                conditions = ["q.subject_code = %s"]
-                params = [weak_subject["subjectCode"]]
-                if weak_unit:
-                    conditions.append("q.major_unit = %s")
-                    params.append(weak_unit)
-                cur.execute(sql.replace(where, " AND ".join(conditions)), tuple(params))
-                rows = cur.fetchall()
-
-    return [
-        {
-            "questionId": row["question_id"],
-            "subjectCode": row["subject_code"],
-            "subjectName": row["subject_name"] or row["subject_code"],
-            "majorUnit": row["major_unit"] or "-",
-            "minorUnit": row["minor_unit"] or "-",
-            "questionType": _question_type(row),
-            "questionText": _question_text(row),
-            "questionScenario": _question_scenario(row),
-            "choices": [row["option_1"], row["option_2"], row["option_3"], row["option_4"], row["option_5"]],
-            "answer": _to_int(row["answer_number"]),
-            "explanation": row["explanation"] or "",
-        }
-        for row in rows
-    ]
+def get_analysis_commentary(member_id: str) -> dict[str, Any]:
+    analysis = get_analysis(member_id, include_commentary=True)
+    return {"commentary": analysis["commentary"]}
 
 
 def get_result(attempt_id: str, exam_question_ids: list[str] | None = None) -> dict[str, Any]:

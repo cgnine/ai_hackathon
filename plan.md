@@ -142,7 +142,7 @@ POST /generate 응답 Body:
   → PyMuPDF로 지정 페이지 텍스트 추출
 
 [Bedrock 호출 1차]
-  → claude-3-5-sonnet 또는 nova-pro로 문제 생성 요청
+  → Claude Opus로 문제 생성 요청
 
 [출력 파싱]
   → 응답에서 JSON 블록 추출

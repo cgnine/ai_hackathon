@@ -2,10 +2,12 @@ from __future__ import annotations
 
 import os
 from contextlib import contextmanager
+from threading import Lock
 from typing import Generator
 
 import psycopg2
 import psycopg2.extras
+from psycopg2.pool import ThreadedConnectionPool
 
 _DB_CONFIG = {
     "host": os.getenv("DB_HOST", "cgnine.site"),
@@ -25,10 +27,38 @@ _CHUNK_DB_CONFIG = {
     "connect_timeout": int(os.getenv("CHUNK_DB_CONNECT_TIMEOUT", os.getenv("DB_CONNECT_TIMEOUT", "5"))),
 }
 
+_DB_POOL_MIN = int(os.getenv("DB_POOL_MIN", "1"))
+_DB_POOL_MAX = int(os.getenv("DB_POOL_MAX", "8"))
+_CHUNK_DB_POOL_MIN = int(os.getenv("CHUNK_DB_POOL_MIN", os.getenv("DB_POOL_MIN", "1")))
+_CHUNK_DB_POOL_MAX = int(os.getenv("CHUNK_DB_POOL_MAX", os.getenv("DB_POOL_MAX", "8")))
+
+_pool_lock = Lock()
+_db_pool: ThreadedConnectionPool | None = None
+_chunk_db_pool: ThreadedConnectionPool | None = None
+
+
+def _get_db_pool() -> ThreadedConnectionPool:
+    global _db_pool
+    if _db_pool is None:
+        with _pool_lock:
+            if _db_pool is None:
+                _db_pool = ThreadedConnectionPool(_DB_POOL_MIN, _DB_POOL_MAX, **_DB_CONFIG)
+    return _db_pool
+
+
+def _get_chunk_db_pool() -> ThreadedConnectionPool:
+    global _chunk_db_pool
+    if _chunk_db_pool is None:
+        with _pool_lock:
+            if _chunk_db_pool is None:
+                _chunk_db_pool = ThreadedConnectionPool(_CHUNK_DB_POOL_MIN, _CHUNK_DB_POOL_MAX, **_CHUNK_DB_CONFIG)
+    return _chunk_db_pool
+
 
 @contextmanager
 def get_conn() -> Generator[psycopg2.extensions.connection, None, None]:
-    conn = psycopg2.connect(**_DB_CONFIG)
+    pool = _get_db_pool()
+    conn = pool.getconn()
     try:
         yield conn
         conn.commit()
@@ -36,12 +66,13 @@ def get_conn() -> Generator[psycopg2.extensions.connection, None, None]:
         conn.rollback()
         raise
     finally:
-        conn.close()
+        pool.putconn(conn, close=bool(conn.closed))
 
 
 @contextmanager
 def get_chunk_conn() -> Generator[psycopg2.extensions.connection, None, None]:
-    conn = psycopg2.connect(**_CHUNK_DB_CONFIG)
+    pool = _get_chunk_db_pool()
+    conn = pool.getconn()
     try:
         yield conn
         conn.commit()
@@ -49,7 +80,7 @@ def get_chunk_conn() -> Generator[psycopg2.extensions.connection, None, None]:
         conn.rollback()
         raise
     finally:
-        conn.close()
+        pool.putconn(conn, close=bool(conn.closed))
 
 
 def check_connection() -> bool:
