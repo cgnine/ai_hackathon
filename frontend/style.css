@@ -919,7 +919,7 @@ body[data-page="wrong"] .brand {
   min-height: 222px;
   padding: 0;
   overflow: hidden;
-  border: 2px solid #dbeafe;
+  border: 2px solid color-mix(in srgb, var(--wrong-card-accent, #9fb8f4) 54%, #ffffff);
   border-radius: 14px;
   background: #fff;
   color: #102033;
@@ -930,7 +930,7 @@ body[data-page="wrong"] .brand {
 
 .wrong-subject-card:hover,
 .wrong-subject-card:focus-visible {
-  border-color: color-mix(in srgb, var(--wrong-card-accent, #9fb8f4) 76%, #0f172a);
+  border-color: color-mix(in srgb, var(--wrong-card-accent, #9fb8f4) 74%, #1e40af);
   background: #fff;
   box-shadow: 0 16px 30px rgba(43, 58, 87, 0.1);
   transform: translateY(-5px);
