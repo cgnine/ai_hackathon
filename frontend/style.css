@@ -258,7 +258,11 @@ button:disabled {
 
 body[data-page="subjects"] .brand-logo,
 body[data-page="ai-recommend"] .brand-logo,
+body[data-page="analysis"] .brand-logo,
+body[data-page="exam-history"] .brand-logo,
 body[data-page="harness"] .brand-logo,
+body[data-page="mock"] .brand-logo,
+body[data-page="my-info"] .brand-logo,
 body[data-page="result"] .brand-logo,
 body[data-page="wrong-practice"] .brand-logo,
 body[data-page="wrong"] .brand-logo {
@@ -269,6 +273,11 @@ body[data-page="wrong"] .brand-logo {
 
 body[data-page="result"] .brand,
 body[data-page="ai-recommend"] .brand,
+body[data-page="analysis"] .brand,
+body[data-page="exam-history"] .brand,
+body[data-page="harness"] .brand,
+body[data-page="mock"] .brand,
+body[data-page="my-info"] .brand,
 body[data-page="wrong-practice"] .brand,
 body[data-page="wrong"] .brand {
   flex: 0 0 320px;
@@ -2175,10 +2184,10 @@ body[data-page="mock"] .choice-btn.selected {
   gap: 14px;
   margin-top: 42px;
   padding: 30px;
-  border: 1px solid var(--line);
+  border: 0;
   border-radius: var(--radius);
   background: var(--surface);
-  box-shadow: var(--shadow);
+  box-shadow: none;
   text-align: center;
 }
 
@@ -2192,6 +2201,31 @@ body[data-page="mock"] .choice-btn.selected {
 
 .review-complete-panel h2 {
   font-size: 1.35rem;
+}
+
+.review-complete-visual {
+  position: relative;
+  justify-self: center;
+  width: min(100%, 320px);
+}
+
+.review-complete-visual img {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+.review-complete-visual h2 {
+  position: absolute;
+  top: 14px;
+  left: 0;
+  right: 0;
+  margin: 0;
+  color: #f5b800;
+  font-size: 1.35rem;
+  font-weight: 900;
+  letter-spacing: 0;
+  text-shadow: none;
 }
 
 .review-complete-panel p:not(.eyebrow) {
@@ -2214,9 +2248,9 @@ body[data-page="mock"] .choice-btn.selected {
 .complete-actions {
   display: flex;
   justify-content: center;
-  gap: 10px;
+  gap: 22px;
   flex-wrap: wrap;
-  margin-top: 8px;
+  margin-top: 28px;
 }
 
 .result-hero {
@@ -4224,7 +4258,11 @@ body[data-page="mock"] .choice-btn.selected {
 
   body[data-page="subjects"] .brand-logo,
   body[data-page="ai-recommend"] .brand-logo,
+  body[data-page="analysis"] .brand-logo,
+  body[data-page="exam-history"] .brand-logo,
   body[data-page="harness"] .brand-logo,
+  body[data-page="mock"] .brand-logo,
+  body[data-page="my-info"] .brand-logo,
   body[data-page="result"] .brand-logo,
   body[data-page="wrong-practice"] .brand-logo,
   body[data-page="wrong"] .brand-logo {
@@ -4234,6 +4272,11 @@ body[data-page="mock"] .choice-btn.selected {
 
   body[data-page="result"] .brand,
   body[data-page="ai-recommend"] .brand,
+  body[data-page="analysis"] .brand,
+  body[data-page="exam-history"] .brand,
+  body[data-page="harness"] .brand,
+  body[data-page="mock"] .brand,
+  body[data-page="my-info"] .brand,
   body[data-page="wrong-practice"] .brand,
   body[data-page="wrong"] .brand {
     flex: 0 0 240px;
@@ -4416,7 +4459,11 @@ body[data-page="mock"] .choice-btn.selected {
 
   body[data-page="subjects"] .brand-logo,
   body[data-page="ai-recommend"] .brand-logo,
+  body[data-page="analysis"] .brand-logo,
+  body[data-page="exam-history"] .brand-logo,
   body[data-page="harness"] .brand-logo,
+  body[data-page="mock"] .brand-logo,
+  body[data-page="my-info"] .brand-logo,
   body[data-page="result"] .brand-logo,
   body[data-page="wrong-practice"] .brand-logo,
   body[data-page="wrong"] .brand-logo {
@@ -4426,6 +4473,11 @@ body[data-page="mock"] .choice-btn.selected {
 
   body[data-page="result"] .brand,
   body[data-page="ai-recommend"] .brand,
+  body[data-page="analysis"] .brand,
+  body[data-page="exam-history"] .brand,
+  body[data-page="harness"] .brand,
+  body[data-page="mock"] .brand,
+  body[data-page="my-info"] .brand,
   body[data-page="wrong-practice"] .brand,
   body[data-page="wrong"] .brand {
     flex: 0 0 190px;
