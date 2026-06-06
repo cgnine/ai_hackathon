@@ -684,6 +684,10 @@ def get_analysis(member_id: str, include_commentary: bool = True) -> dict[str, A
 
     answered_total = sum(item["answered"] for item in subject_stats)
     correct_total = sum(item["correct"] for item in subject_stats)
+    latest_exam_at = max(
+        (str(item.get("latestExamAt") or "") for item in subject_stats),
+        default="",
+    )
     summary = {
         "memberId": normalized_member_id,
         "memberName": member["member_name"],
@@ -692,6 +696,7 @@ def get_analysis(member_id: str, include_commentary: bool = True) -> dict[str, A
         "correctTotal": correct_total,
         "wrongTotal": answered_total - correct_total,
         "averageScore": _score(correct_total, answered_total),
+        "latestExamAt": latest_exam_at,
     }
 
     return {
@@ -847,6 +852,74 @@ def get_latest_result(profile_name: str | None = None) -> dict[str, Any]:
     if not row:
         raise HTTPException(status_code=404, detail="Latest result not found")
     return get_result(row["exam_id"])
+
+
+def get_exam_history(member_id: str, limit: int = 20) -> dict[str, Any]:
+    normalized_member_id = member_id.strip()
+    if not normalized_member_id:
+        raise HTTPException(status_code=400, detail="member_id is required")
+
+    safe_limit = max(1, min(limit, 100))
+    with get_conn() as conn:
+        with conn.cursor(cursor_factory=RealDictCursor) as cur:
+            cur.execute(
+                """
+                SELECT
+                    e.exam_id,
+                    e.exam_round,
+                    e.exam_date,
+                    e.exam_time,
+                    e.created_at AS exam_created_at,
+                    s.subject_code,
+                    COALESCE(s.subject_name, s.subject_description, s.subject_code) AS subject_name,
+                    COUNT(h.exam_question_id) AS total,
+                    COUNT(h.exam_question_id) FILTER (
+                        WHERE h.selected_number::text ~ '^[0-9]+$'
+                          AND q.answer_number::text ~ '^[0-9]+$'
+                          AND h.selected_number::integer = q.answer_number::integer
+                    ) AS correct_count
+                FROM exam_tb e
+                JOIN subject_tb s ON s.subject_code = e.subject_code
+                JOIN exam_history_tb h ON h.exam_id = e.exam_id
+                JOIN question_tb q
+                    ON q.question_id = h.question_id
+                   AND q.subject_code = e.subject_code
+                WHERE e.member_id = %s
+                GROUP BY
+                    e.exam_id, e.exam_round, e.exam_date, e.exam_time, e.created_at,
+                    s.subject_code, s.subject_name, s.subject_description
+                ORDER BY
+                    e.exam_date DESC NULLS LAST,
+                    e.exam_time DESC NULLS LAST,
+                    e.created_at DESC NULLS LAST,
+                    e.exam_id DESC
+                LIMIT %s
+                """,
+                (normalized_member_id, safe_limit),
+            )
+            rows = cur.fetchall()
+
+    items = []
+    for row in rows:
+        total = int(row["total"] or 0)
+        correct_count = int(row["correct_count"] or 0)
+        items.append(
+            {
+                "examId": row["exam_id"],
+                "roundTitle": f"{row['exam_round']}회차" if row["exam_round"] else "응시 결과",
+                "subjectCode": row["subject_code"],
+                "subjectName": row["subject_name"],
+                "total": total,
+                "correctCount": correct_count,
+                "wrongCount": total - correct_count,
+                "score": _score(correct_count, total),
+                "createdAt": _created_at(row),
+                "examDate": row["exam_date"],
+                "examTime": row["exam_time"],
+            }
+        )
+
+    return {"memberId": normalized_member_id, "items": items}
 
 
 def get_wrong_items(attempt_id: str) -> dict[str, Any]:

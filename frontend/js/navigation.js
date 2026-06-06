@@ -20,6 +20,50 @@ function showScreen(name) {
   window.scrollTo({ top: 0, behavior: "smooth" });
 }
 
+function profileInitial(name) {
+  return String(name || "U").trim().slice(0, 1).toUpperCase();
+}
+
+function formatProfileDate(value) {
+  if (!value) return "-";
+  const text = String(value);
+  const normalized = text.length === 8 && /^\d{8}$/.test(text)
+    ? `${text.slice(0, 4)}-${text.slice(4, 6)}-${text.slice(6, 8)}`
+    : text.replace("T", " ").slice(0, 16);
+  return normalized || "-";
+}
+
+async function loadProfileMenuSummary(target, latestExamTarget = null) {
+  const memberId = currentMemberId();
+  if (!memberId || !target) return;
+
+  target.innerHTML = `
+    <div class="profile-summary-tile"><span>총 응시</span><strong>-</strong></div>
+    <div class="profile-summary-tile"><span>평균 점수</span><strong>-</strong></div>
+  `;
+
+  try {
+    const response = await fetch(`${API_BASE}/results/analysis?member_id=${encodeURIComponent(memberId)}&include_commentary=false`);
+    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+    const data = await response.json();
+    const summary = data.summary || {};
+    if (latestExamTarget) {
+      latestExamTarget.textContent = formatProfileDate(summary.latestExamAt);
+    }
+    target.innerHTML = `
+      <div class="profile-summary-tile"><span>총 응시</span><strong>${summary.examCount || 0}회</strong></div>
+      <div class="profile-summary-tile"><span>평균 점수</span><strong>${summary.averageScore || 0}점</strong></div>
+      <div class="profile-summary-tile"><span>풀이 문항</span><strong>${summary.answeredTotal || 0}</strong></div>
+      <div class="profile-summary-tile"><span>오답</span><strong>${summary.wrongTotal || 0}</strong></div>
+    `;
+  } catch {
+    target.innerHTML = `
+      <div class="profile-summary-tile"><span>총 응시</span><strong>0회</strong></div>
+      <div class="profile-summary-tile"><span>평균 점수</span><strong>0점</strong></div>
+    `;
+  }
+}
+
 function renderProfileButton() {
   const topbar = document.querySelector(".topbar");
   const stats = document.querySelector(".top-stats");
@@ -27,22 +71,151 @@ function renderProfileButton() {
 
   const actions = document.createElement("div");
   const button = document.createElement("button");
+  const menu = document.createElement("div");
+  const header = document.createElement("div");
+  const summary = document.createElement("div");
+  const menuList = document.createElement("div");
   const logoutButton = document.createElement("button");
+  const memberName = currentMemberName() || state.profileName || profiles[0];
+  const memberId = currentMemberId();
 
   actions.className = "profile-actions";
   button.type = "button";
   button.className = "profile-button";
   button.id = "profileButton";
-  button.textContent = currentMemberName() || state.profileName || profiles[0];
-  button.addEventListener("click", () => showScreen("analysis"));
+  button.setAttribute("aria-haspopup", "true");
+  button.setAttribute("aria-expanded", "false");
+  button.innerHTML = `
+    <span class="profile-pill" aria-hidden="true">프로필</span>
+  `;
+
+  menu.className = "profile-menu";
+  menu.id = "profileMenu";
+  menu.hidden = true;
+  header.className = "profile-menu-head";
+  header.innerHTML = `
+    <span class="profile-avatar large">${profileInitial(memberName)}</span>
+    <div>
+      <strong>${memberName}</strong>
+      <p>사번 ${memberId || "-"}</p>
+      <small>마지막 응시 <em data-profile-latest-exam>-</em></small>
+    </div>
+  `;
+  summary.className = "profile-summary-card";
+  menuList.className = "profile-menu-list";
+  menuList.innerHTML = `
+    <a href="${PAGE_URLS.myInfo}">내정보</a>
+    <a href="${PAGE_URLS.examHistory}">응시내역</a>
+    <a href="${PAGE_URLS.analysis}">종합평가</a>
+  `;
 
   logoutButton.type = "button";
   logoutButton.className = "logout-button";
   logoutButton.textContent = "로그아웃";
   logoutButton.addEventListener("click", logout);
 
-  actions.append(button, logoutButton);
+  button.addEventListener("click", (event) => {
+    event.stopPropagation();
+    const nextOpen = menu.hidden;
+    menu.hidden = !nextOpen;
+    button.setAttribute("aria-expanded", String(nextOpen));
+    if (nextOpen) loadProfileMenuSummary(summary, menu.querySelector("[data-profile-latest-exam]"));
+  });
+
+  menu.addEventListener("click", (event) => event.stopPropagation());
+  document.addEventListener("click", () => {
+    if (menu.hidden) return;
+    menu.hidden = true;
+    button.setAttribute("aria-expanded", "false");
+  });
+
+  menu.append(header, summary, menuList, logoutButton);
+  actions.append(button, menu);
   topbar.insertBefore(actions, stats || null);
+}
+
+function renderMyExamHistory(items) {
+  if (!els.myExamHistoryList) return;
+
+  if (!items.length) {
+    els.myExamHistoryList.innerHTML = `
+      <div class="my-history-empty">
+        <strong>응시내역이 없습니다.</strong>
+        <p>시험을 응시하면 최근 결과가 여기에 표시됩니다.</p>
+      </div>
+    `;
+    return;
+  }
+
+  els.myExamHistoryList.innerHTML = items.map((item) => `
+    <article class="my-history-card">
+      <div>
+        <span class="my-history-date">${formatProfileDate(item.createdAt || item.examDate)}</span>
+        <h3>${item.subjectName || item.subjectCode || "시험 결과"}</h3>
+        <p>${item.roundTitle || "응시 결과"} · ${item.correctCount || 0}/${item.total || 0}문항 정답</p>
+      </div>
+      <div class="my-history-score">
+        <strong>${item.score || 0}점</strong>
+        <span>오답 ${item.wrongCount || 0}</span>
+      </div>
+      <button type="button" data-exam-id="${item.examId}">결과 보기</button>
+    </article>
+  `).join("");
+
+  els.myExamHistoryList.querySelectorAll("[data-exam-id]").forEach((button) => {
+    button.addEventListener("click", () => {
+      saveResultNavigation({
+        examId: button.dataset.examId,
+        examHistoryIds: []
+      });
+      window.location.href = PAGE_URLS.result;
+    });
+  });
+}
+
+async function loadMyExamHistory() {
+  if (!els.myExamHistoryList) return;
+
+  const memberId = currentMemberId();
+  if (!memberId) {
+    renderMyExamHistory([]);
+    return;
+  }
+
+  els.myExamHistoryList.innerHTML = `
+    <div class="my-history-empty">
+      <strong>응시내역을 불러오는 중입니다.</strong>
+      <p>잠시만 기다려주세요.</p>
+    </div>
+  `;
+
+  try {
+    const response = await fetch(`${API_BASE}/results/history?member_id=${encodeURIComponent(memberId)}&limit=10`);
+    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+    const data = await response.json();
+    renderMyExamHistory(data.items || []);
+  } catch (error) {
+    els.myExamHistoryList.innerHTML = `
+      <div class="my-history-empty error">
+        <strong>응시내역을 불러오지 못했습니다.</strong>
+        <p>${error.message}</p>
+      </div>
+    `;
+  }
+}
+
+function renderMyInfoPage() {
+  if (!els.myInfoName || !els.myInfoMemberId || !els.myInfoMetrics) return;
+  const memberName = currentMemberName() || state.profileName || "응시자";
+  const memberId = currentMemberId() || "-";
+  els.myInfoName.textContent = memberName;
+  if (els.myInfoAvatar) els.myInfoAvatar.textContent = profileInitial(memberName);
+  els.myInfoMemberId.textContent = memberId;
+  loadProfileMenuSummary(els.myInfoMetrics);
+}
+
+function renderExamHistoryPage() {
+  loadMyExamHistory();
 }
 
 function renderProfileOptions(filter = "") {

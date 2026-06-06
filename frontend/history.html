@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>응시내역 | KB 디지털역량진단 CBT</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body data-page="exam-history">
+  <header class="topbar">
+    <a class="brand" href="index.html" id="homeLink" aria-label="KB 디지털역량진단 CBT">
+      <img class="brand-logo" src="assets/brand/kb-diagnosis-logo.png" alt="KB 디지털역량진단 문제은행" />
+    </a>
+    <nav class="main-nav" aria-label="주요 메뉴">
+      <a class="nav-btn" href="subjects.html" data-screen="subjects">시험응시</a>
+      <a class="nav-btn" href="wrong.html" data-screen="wrong">오답노트</a>
+      <a class="nav-btn" href="harness.html" data-screen="harness">AI문제생성</a>
+    </nav>
+    <div class="top-stats" aria-label="학습 통계">
+      <span>Today <strong id="todayCount">0</strong></span>
+      <span>Wrong <strong id="wrongTopCount">0</strong></span>
+    </div>
+  </header>
+
+  <main class="page-shell">
+    <div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+    <section class="screen active" id="examHistoryScreen">
+      <div class="screen-head history-screen-head">
+        <p class="eyebrow">Exam History</p>
+        <h1>응시내역</h1>
+        <p>최근 응시한 시험 결과를 확인하고 상세 결과로 이동할 수 있습니다.</p>
+      </div>
+
+      <section class="my-history-panel exam-history-panel" aria-labelledby="myHistoryTitle">
+        <div class="my-history-head">
+          <div>
+            <p class="eyebrow">Recent Exams</p>
+            <h2 id="myHistoryTitle">최근 응시내역</h2>
+          </div>
+          <a href="profile.html">내정보로 돌아가기</a>
+        </div>
+        <div class="my-history-list" id="myExamHistoryList"></div>
+      </section>
+    </section>
+  </main>
+
+  <script src="app.js"></script>
+</body>
+</html>

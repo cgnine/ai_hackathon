@@ -54,6 +54,11 @@ async def get_latest_result(profile_name: str | None = None):
     return result_service.get_latest_result(profile_name)
 
 
+@router.get("/history")
+async def get_exam_history(member_id: str, limit: int = 20):
+    return result_service.get_exam_history(member_id, limit)
+
+
 @router.get("/analysis")
 async def get_analysis(member_id: str, include_commentary: bool = True):
     return result_service.get_analysis(member_id, include_commentary=include_commentary)

@@ -127,6 +127,8 @@ async function initPage() {
     initResultChat();
   }
   if (page === "analysis") renderAnalysisPage();
+  if (page === "my-info") renderMyInfoPage();
+  if (page === "exam-history") renderExamHistoryPage();
   if (page === "ai-recommend") renderAiRecommendPage();
   if (page === "wrong") {
     state.wrongSubjectId = null;
