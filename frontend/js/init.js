@@ -11,6 +11,17 @@ function bindOptional(element, eventName, handler) {
   if (element) element.addEventListener(eventName, handler);
 }
 
+function renderFooter() {
+  if (document.querySelector(".site-footer")) return;
+  const footer = document.createElement("footer");
+  footer.className = "site-footer";
+  footer.innerHTML = `
+    <strong>CGNINE</strong>
+    <span>2026 COPYRIGHT CGNINE. ALL RIGHTS RESERVED.</span>
+  `;
+  document.body.appendChild(footer);
+}
+
 async function loadSubjectsForPage(page, waitForSubjects) {
   const load = async () => {
     try {
@@ -36,6 +47,7 @@ async function loadSubjectsForPage(page, waitForSubjects) {
 }
 
 async function initPage() {
+  renderFooter();
   const page = document.body.dataset.page || "subjects";
   if (page === "subjects" && "scrollRestoration" in history) {
     history.scrollRestoration = "manual";

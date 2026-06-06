@@ -79,6 +79,8 @@ function renderAnalysisData(data, useCachedCommentary = false) {
   renderRadar(data.subjectStats || []);
   renderSubjectBars(data.subjectStats || []);
   renderSkillMetrics(data.summary || {}, data.typeStats || [], data.unitStats || []);
+  renderExamTrend(data.examTrend || []);
+  renderExamHighlights(data.examHighlights || {}, data.examTrend || []);
   renderRecommendation(data.subjectStats || [], data.unitStats || [], data.summary || {});
 
   const memberId = currentMemberId();
@@ -137,6 +139,8 @@ function renderAnalysisLoading() {
   els.radarChart.innerHTML = "<p class=\"item-sub\">DB 풀이 기록을 분석하고 있습니다.</p>";
   els.subjectBars.innerHTML = "<p class=\"item-sub\">과목별 점수를 계산 중입니다.</p>";
   els.skillMetrics.innerHTML = "";
+  if (els.examTrend) els.examTrend.innerHTML = "<p class=\"item-sub\">회차별 점수 그래프를 계산 중입니다.</p>";
+  if (els.examHighlights) els.examHighlights.innerHTML = "";
   els.analysisText.innerHTML = "<p>Bedrock AI총평을 준비하고 있습니다.</p>";
   els.recommendationCard.innerHTML = "<p class=\"item-sub\">추천 문제를 고르는 중입니다.</p>";
 }
@@ -145,6 +149,8 @@ function renderAnalysisEmpty(message) {
   els.radarChart.innerHTML = "<p class=\"item-sub\">표시할 풀이 기록이 없습니다.</p>";
   els.subjectBars.innerHTML = "";
   els.skillMetrics.innerHTML = "";
+  if (els.examTrend) els.examTrend.innerHTML = "";
+  if (els.examHighlights) els.examHighlights.innerHTML = "";
   els.analysisText.innerHTML = `<p>${message}</p>`;
   els.recommendationCard.innerHTML = "<p class=\"item-sub\">모의고사를 완료하면 AI 맞춤형 추천 문제 안내가 표시됩니다.</p>";
 }
@@ -230,6 +236,120 @@ function renderSkillMetrics(summary, typeStats, unitStats) {
       <div class="analysis-chip-list">${unitHtml}</div>
     </div>
   `;
+}
+
+function renderExamTrend(examTrend) {
+  if (!els.examTrend) return;
+  if (!examTrend.length) {
+    els.examTrend.innerHTML = "<p class=\"item-sub\">아직 회차별 점수 그래프를 만들 응시 기록이 없습니다.</p>";
+    return;
+  }
+
+  const palette = ["#5a401f", "#d89b00", "#4f8f46", "#1d4ed8", "#8b5cf6", "#be5a2a"];
+  const subjectColors = {};
+  Array.from(new Set(examTrend.map((item) => item.subjectName || item.subjectCode || "응시 결과")))
+    .forEach((name, index) => {
+      subjectColors[name] = palette[index % palette.length];
+    });
+  const width = 360;
+  const height = 210;
+  const padding = { top: 22, right: 22, bottom: 44, left: 42 };
+  const plotWidth = width - padding.left - padding.right;
+  const plotHeight = height - padding.top - padding.bottom;
+  const maxIndex = Math.max(examTrend.length - 1, 1);
+  const pointFor = (item, index) => {
+    const score = Math.max(0, Math.min(100, item.score || 0));
+    const x = padding.left + (plotWidth * index / maxIndex);
+    const y = padding.top + plotHeight - (plotHeight * score / 100);
+    return { x, y, score };
+  };
+  const points = examTrend.map(pointFor);
+  const path = points.map((point, index) => `${index === 0 ? "M" : "L"} ${point.x} ${point.y}`).join(" ");
+  const latest = examTrend[examTrend.length - 1];
+  const best = examTrend.reduce((acc, item) => (item.score || 0) > (acc.score || 0) ? item : acc, examTrend[0]);
+  const average = Math.round(examTrend.reduce((sum, item) => sum + (item.score || 0), 0) / examTrend.length);
+  const segments = points.slice(1).map((point, index) => {
+    const from = points[index];
+    const item = examTrend[index + 1];
+    const subjectName = item.subjectName || item.subjectCode || "응시 결과";
+    return `<line x1="${from.x}" y1="${from.y}" x2="${point.x}" y2="${point.y}" class="score-segment" style="stroke:${subjectColors[subjectName]}"></line>`;
+  }).join("");
+  const legend = Object.entries(subjectColors).map(([name, color]) => `
+    <span class="score-legend-item"><i style="background:${color}"></i>${name}</span>
+  `).join("");
+
+  els.examTrend.innerHTML = `
+    <svg viewBox="0 0 ${width} ${height}" role="img" aria-label="회차별 점수 선그래프">
+      <line x1="${padding.left}" y1="${padding.top}" x2="${padding.left}" y2="${padding.top + plotHeight}" class="score-axis" />
+      <line x1="${padding.left}" y1="${padding.top + plotHeight}" x2="${padding.left + plotWidth}" y2="${padding.top + plotHeight}" class="score-axis" />
+      <line x1="${padding.left}" y1="${padding.top + plotHeight * 0.25}" x2="${padding.left + plotWidth}" y2="${padding.top + plotHeight * 0.25}" class="score-grid" />
+      <line x1="${padding.left}" y1="${padding.top + plotHeight * 0.5}" x2="${padding.left + plotWidth}" y2="${padding.top + plotHeight * 0.5}" class="score-grid" />
+      <line x1="${padding.left}" y1="${padding.top + plotHeight * 0.75}" x2="${padding.left + plotWidth}" y2="${padding.top + plotHeight * 0.75}" class="score-grid" />
+      <text x="12" y="${padding.top + 5}" class="score-label">100</text>
+      <text x="18" y="${padding.top + plotHeight * 0.5 + 4}" class="score-label">50</text>
+      <text x="24" y="${padding.top + plotHeight + 4}" class="score-label">0</text>
+      <path d="${path}" class="score-line-shadow"></path>
+      ${segments}
+      ${points.map((point, index) => {
+        const item = examTrend[index];
+        const subjectName = item.subjectName || item.subjectCode || "응시 결과";
+        return `
+        <g class="score-point-group" tabindex="0">
+          <circle cx="${point.x}" cy="${point.y}" r="5" class="score-dot" style="fill:${subjectColors[subjectName]}"></circle>
+          <g class="score-tooltip" transform="translate(${Math.min(Math.max(point.x - 54, 6), width - 112)} ${Math.max(point.y - 48, 8)})">
+            <rect width="108" height="36" rx="7"></rect>
+            <text x="8" y="15">${subjectName}</text>
+            <text x="8" y="29">${item.score || 0}점 · ${item.correct || 0}/${item.answered || 0}</text>
+          </g>
+        </g>
+        <text x="${point.x}" y="${height - 20}" class="score-x-label">${index + 1}회</text>
+      `}).join("")}
+    </svg>
+    <div class="score-legend">${legend}</div>
+    <div class="score-line-summary">
+      <div><span>최근 점수</span><strong>${latest.score || 0}점</strong><small>${latest.subjectName || "응시 결과"}</small></div>
+      <div><span>최고 점수</span><strong>${best.score || 0}점</strong><small>${best.subjectName || "응시 결과"}</small></div>
+      <div><span>평균 흐름</span><strong>${average}점</strong><small>최근 ${examTrend.length}회 기준</small></div>
+    </div>
+  `;
+}
+
+function renderExamHighlights(highlights, examTrend) {
+  if (!els.examHighlights) return;
+  const best = highlights.bestExam || null;
+  const weakest = highlights.weakestExam || null;
+  const latest = examTrend.length ? examTrend[examTrend.length - 1] : null;
+
+  if (!best && !weakest && !latest) {
+    els.examHighlights.innerHTML = "<p class=\"item-sub\">응시 기록이 쌓이면 최고점과 보완 회차가 표시됩니다.</p>";
+    return;
+  }
+
+  const cards = [
+    best && {
+      label: "최고 점수",
+      title: `${best.score || 0}점`,
+      text: `${best.subjectName || "응시 결과"} · ${formatProfileDate(best.createdAt || best.examDate)}`
+    },
+    weakest && {
+      label: "보완 필요 회차",
+      title: `${weakest.score || 0}점`,
+      text: `${weakest.subjectName || "응시 결과"} · 오답 ${weakest.wrong || 0}문항`
+    },
+    latest && {
+      label: "최근 응시",
+      title: `${latest.score || 0}점`,
+      text: `${latest.subjectName || "응시 결과"} · ${latest.correct || 0}/${latest.answered || 0}`
+    }
+  ].filter(Boolean);
+
+  els.examHighlights.innerHTML = cards.map((card) => `
+    <div class="highlight-card">
+      <span>${card.label}</span>
+      <strong>${card.title}</strong>
+      <p>${card.text}</p>
+    </div>
+  `).join("");
 }
 
 function analysisSubjectNames(subjectStats = []) {
