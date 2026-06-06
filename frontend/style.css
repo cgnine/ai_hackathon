@@ -37,6 +37,10 @@ body[data-page="harness"] {
   background: #fff;
 }
 
+body[data-page="ai-recommend"] {
+  background: #fff;
+}
+
 body[data-page="wrong"] {
   background: #fff;
 }
@@ -256,6 +260,7 @@ body[data-page="subjects"] .brand-logo,
 body[data-page="ai-recommend"] .brand-logo,
 body[data-page="harness"] .brand-logo,
 body[data-page="result"] .brand-logo,
+body[data-page="wrong-practice"] .brand-logo,
 body[data-page="wrong"] .brand-logo {
   width: 320px;
   max-width: 320px;
@@ -264,6 +269,7 @@ body[data-page="wrong"] .brand-logo {
 
 body[data-page="result"] .brand,
 body[data-page="ai-recommend"] .brand,
+body[data-page="wrong-practice"] .brand,
 body[data-page="wrong"] .brand {
   flex: 0 0 320px;
 }
@@ -591,8 +597,8 @@ body[data-page="wrong"] .brand {
 
 .subject-page-title {
   display: grid;
-  gap: 14px;
-  margin: 28px auto 52px;
+  gap: 4px;
+  margin: 0 auto 8px;
   text-align: center;
 }
 
@@ -621,24 +627,58 @@ body[data-page="wrong"] .brand {
   line-height: 1.45;
 }
 
-.subject-start-btn {
-  justify-self: center;
-  min-height: 42px;
-  margin-top: 18px;
-  padding: 0 22px;
-  border: 0;
+.subject-guide-row {
+  position: relative;
+  display: grid;
+  width: min(100%, 1004px);
+  gap: 8px;
+  justify-items: center;
+  margin: 0 auto;
+  max-height: 318px;
+  overflow: hidden;
+}
+
+.subject-guide-image {
+  display: block;
+  width: min(300px, calc(100vw - 150px));
+  min-width: 180px;
+  height: auto;
+  margin: -18px 0 0;
   border-radius: 8px;
-  background: #3b82f6;
+}
+
+.subject-start-btn {
+  position: absolute;
+  right: 0;
+  bottom: 10px;
+  min-height: 40px;
+  padding: 0 22px;
+  border: 1px solid #d5a900;
+  border-radius: 8px;
+  background: #f5c400;
   color: #fff;
   font-size: 0.95rem;
   font-weight: 800;
-  box-shadow: 0 10px 22px rgba(59, 130, 246, 0.22);
+  white-space: nowrap;
+  box-shadow: 0 6px 14px rgba(23, 32, 42, 0.12);
 }
 
 .subject-start-btn:hover,
 .subject-start-btn:focus-visible {
-  background: #2563eb;
-  box-shadow: 0 14px 26px rgba(37, 99, 235, 0.28);
+  background: #eab900;
+  box-shadow: 0 8px 16px rgba(23, 32, 42, 0.14);
+}
+
+@media (max-width: 420px) {
+  .subject-guide-row {
+    max-height: 252px;
+  }
+
+  .subject-start-btn {
+    right: 0;
+    bottom: 10px;
+    padding: 0 16px;
+  }
 }
 
 #subjectsScreen .subject-grid {
@@ -3873,6 +3913,7 @@ body[data-page="mock"] .choice-btn.selected {
   body[data-page="ai-recommend"] .brand-logo,
   body[data-page="harness"] .brand-logo,
   body[data-page="result"] .brand-logo,
+  body[data-page="wrong-practice"] .brand-logo,
   body[data-page="wrong"] .brand-logo {
     width: 240px;
     max-width: 240px;
@@ -3880,6 +3921,7 @@ body[data-page="mock"] .choice-btn.selected {
 
   body[data-page="result"] .brand,
   body[data-page="ai-recommend"] .brand,
+  body[data-page="wrong-practice"] .brand,
   body[data-page="wrong"] .brand {
     flex: 0 0 240px;
   }
@@ -3895,7 +3937,23 @@ body[data-page="mock"] .choice-btn.selected {
     font-size: 0.8rem;
   }
 
-  .main-nav,
+  .main-nav {
+    width: 100%;
+  }
+
+  .nav-btn[data-screen="profile"]::after,
+  .nav-btn[data-screen="subjects"]::after {
+    content: "응시";
+  }
+
+  .nav-btn[data-screen="wrong"]::after {
+    content: "오답";
+  }
+
+  .nav-btn[data-screen="aiRecommend"]::after {
+    content: "AI추천";
+  }
+
   .top-stats {
     width: 100%;
   }
@@ -4022,6 +4080,7 @@ body[data-page="mock"] .choice-btn.selected {
   body[data-page="ai-recommend"] .brand-logo,
   body[data-page="harness"] .brand-logo,
   body[data-page="result"] .brand-logo,
+  body[data-page="wrong-practice"] .brand-logo,
   body[data-page="wrong"] .brand-logo {
     width: 190px;
     max-width: 190px;
@@ -4029,6 +4088,7 @@ body[data-page="mock"] .choice-btn.selected {
 
   body[data-page="result"] .brand,
   body[data-page="ai-recommend"] .brand,
+  body[data-page="wrong-practice"] .brand,
   body[data-page="wrong"] .brand {
     flex: 0 0 190px;
   }
