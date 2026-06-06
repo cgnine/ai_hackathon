@@ -169,6 +169,7 @@ const els = {
   mockQuestionType: $("mockQuestionType"),
   gradeMockBtn: $("gradeMockBtn"),
   resultScore: $("resultScore"),
+  resultScoreCardValue: $("resultScoreCardValue"),
   resultVerdict: $("resultVerdict"),
   resultHero: $("resultHero"),
   resultLoading: $("resultLoading"),

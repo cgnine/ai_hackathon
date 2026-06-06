@@ -35,19 +35,28 @@
       </section>
       <div id="resultContent" style="visibility: hidden;">
       <div class="result-hero" id="resultHero" style="visibility: hidden;">
-        <p class="eyebrow">Result</p>
-        <div class="score-row">
-          <h1 id="resultScore">-</h1>
-          <span class="verdict-badge neutral" id="resultVerdict">결과 없음</span>
+        <div class="result-title-row">
+          <p class="eyebrow">Result</p>
         </div>
-        <p id="resultSummary">표시할 응시 결과가 없습니다.</p>
+        <div class="score-row">
+          <h1 class="result-score-hidden" id="resultScore">-</h1>
+          <div class="result-score-card" aria-label="점수 카드">
+            <img src="assets/result/result-score-characters-ui63.png" alt="" aria-hidden="true" />
+            <strong id="resultScoreCardValue">-</strong>
+          </div>
+          <div class="result-summary-block">
+            <span class="verdict-badge neutral" id="resultVerdict">결과 없음</span>
+            <p id="resultSummary">표시할 응시 결과가 없습니다.</p>
+          </div>
+        </div>
         <p class="result-commentary" id="resultCommentary" style="display: none;"></p>
       </div>
 
       <section class="diagnosis-report" id="resultDiagnosis" aria-labelledby="diagnosisTitle" style="display: none;">
+        <p class="eyebrow report-eyebrow">Assessment Report</p>
         <div class="report-top">
           <article class="report-card">
-            <p id="diagnosisProgramTitle"><span>KB디지털역량진단</span><span class="nowrap">모의고사</span></p>
+            <p id="diagnosisProgramTitle"><span>2026 KB역량진단 모의고사</span></p>
             <p id="diagnosisSubject">Cloud Developer (Pro)</p>
             <h2>응시 결과</h2>
             <div class="level-seal">
@@ -65,7 +74,7 @@
                   <td id="diagnosisName">-</td>
                 </tr>
                 <tr>
-                  <th scope="row">검사일</th>
+                  <th scope="row">응시일</th>
                   <td id="diagnosisDate">-</td>
                 </tr>
                 <tr>
@@ -106,7 +115,7 @@
 
         <div class="report-bottom">
           <article class="report-section">
-            <h2>역량별 점수</h2>
+            <h2>영역별 점수</h2>
             <div class="diagnosis-chart" id="diagnosisChart"></div>
             <p class="chart-footnote">* 세부 결과에 제시된 점수들은 각 역량별 점수를 100점 만점으로 환산한 결과입니다.</p>
           </article>

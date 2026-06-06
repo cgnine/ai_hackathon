@@ -278,6 +278,11 @@ function appendApiResultItem(item, index, resultMeta) {
   els.resultList.appendChild(row);
 }
 
+function setResultScoreText(scoreText) {
+  if (els.resultScore) els.resultScore.textContent = scoreText;
+  if (els.resultScoreCardValue) els.resultScoreCardValue.textContent = scoreText;
+}
+
 function renderApiResultPage(result) {
   if (!els.resultList || !els.resultScore || !els.resultSummary) return;
 
@@ -288,15 +293,16 @@ function renderApiResultPage(result) {
   renderResultHeroAction(false);
   if (els.wrongReviewSection) els.wrongReviewSection.style.display = "";
   if (els.toggleAllExplanationsBtn) els.toggleAllExplanationsBtn.style.display = "inline-flex";
-  els.resultScore.textContent = `${result.score}점`;
+  setResultScoreText(`${result.score}점`);
   if (els.resultVerdict) {
     els.resultVerdict.textContent = passed ? "합격" : "불합격";
     els.resultVerdict.className = `verdict-badge ${passed ? "pass" : "fail"}`;
   }
-  els.resultSummary.textContent = `${result.subjectName} ${result.total}문항 중 ${result.correctCount}문항을 맞혔습니다. ${passed ? "합격 기준을 통과했습니다." : "합격 기준인 60점을 넘지 못했습니다."}`;
+  els.resultSummary.innerHTML = `${result.subjectName} ${result.total}문항 중 ${result.correctCount}문항을 맞혔습니다.<br>${passed ? "합격 기준을 통과했습니다." : "합격 기준인 60점을 넘지 못했습니다."}`;
   if (els.resultCommentary) {
-    els.resultCommentary.style.display = "";
-    els.resultCommentary.textContent = buildResultCommentary(result.score);
+    const commentary = buildResultCommentary(result.score);
+    els.resultCommentary.style.display = commentary ? "" : "none";
+    els.resultCommentary.textContent = commentary;
   }
   renderDiagnosis(normalizeDiagnosis(result.diagnosis, {
     profileName: result.profileName,
@@ -444,7 +450,7 @@ function renderDiagnosis(diagnosis) {
   els.resultDiagnosis.style.display = "grid";
   const level = getScoreLevel(diagnosis.score || 0);
   if (els.diagnosisProgramTitle) {
-    els.diagnosisProgramTitle.innerHTML = `<span>${new Date().getFullYear()} KB디지털역량진단</span><span class="nowrap">모의고사</span>`;
+    els.diagnosisProgramTitle.innerHTML = `<span>${new Date().getFullYear()} KB역량진단 모의고사</span>`;
   }
   if (els.diagnosisSubject) els.diagnosisSubject.textContent = diagnosis.subjectName || "응시 과목";
   if (els.diagnosisLevelName) els.diagnosisLevelName.textContent = level.name;
@@ -737,7 +743,7 @@ async function loadBackendResultPage() {
     : [];
 
   startResultLoading();
-  els.resultScore.textContent = "-";
+  setResultScoreText("-");
   if (els.resultVerdict) {
     els.resultVerdict.textContent = "결과 없음";
     els.resultVerdict.className = "verdict-badge neutral";
@@ -786,7 +792,7 @@ function renderResultEmptyState({
   latestApiResult = null;
   showResultContent();
   els.resultList.innerHTML = "";
-  els.resultScore.textContent = "-";
+  setResultScoreText("-");
   if (els.resultVerdict) {
     els.resultVerdict.textContent = "결과 없음";
     els.resultVerdict.className = "verdict-badge neutral";
@@ -823,7 +829,7 @@ function renderResultPage() {
     if (els.resultDiagnosis) els.resultDiagnosis.style.display = "none";
     if (els.wrongReviewSection) els.wrongReviewSection.style.display = "none";
     if (els.toggleAllExplanationsBtn) els.toggleAllExplanationsBtn.style.display = "none";
-    els.resultScore.textContent = "-";
+    setResultScoreText("-");
     if (els.resultVerdict) {
       els.resultVerdict.textContent = "결과 없음";
       els.resultVerdict.className = "verdict-badge neutral";
@@ -842,15 +848,16 @@ function renderResultPage() {
   renderResultHeroAction(false);
   if (els.wrongReviewSection) els.wrongReviewSection.style.display = "";
   if (els.toggleAllExplanationsBtn) els.toggleAllExplanationsBtn.style.display = "inline-flex";
-  els.resultScore.textContent = `${result.score}점`;
+  setResultScoreText(`${result.score}점`);
   if (els.resultVerdict) {
     els.resultVerdict.textContent = passed ? "합격" : "불합격";
     els.resultVerdict.className = `verdict-badge ${passed ? "pass" : "fail"}`;
   }
-  els.resultSummary.textContent = `${subject.name} ${result.total}문항 중 ${result.correctCount}문항을 맞혔습니다. ${passed ? "합격 기준을 통과했습니다." : "합격 기준인 60점을 넘지 못했습니다."}`;
+  els.resultSummary.innerHTML = `${subject.name} ${result.total}문항 중 ${result.correctCount}문항을 맞혔습니다.<br>${passed ? "합격 기준을 통과했습니다." : "합격 기준인 60점을 넘지 못했습니다."}`;
   if (els.resultCommentary) {
-    els.resultCommentary.style.display = "";
-    els.resultCommentary.textContent = buildResultCommentary(result.score);
+    const commentary = buildResultCommentary(result.score);
+    els.resultCommentary.style.display = commentary ? "" : "none";
+    els.resultCommentary.textContent = commentary;
   }
   renderDiagnosis(buildLocalDiagnosis(result, questions, subject));
   renderSaveWrongAllButton(result);
@@ -870,7 +877,7 @@ function buildResultCommentary(score) {
   if (score >= 75) return "핵심 개념은 잘 잡혀 있습니다. 틀린 문항의 세부 조건과 용어 구분을 다시 확인하면 더 높은 점수를 기대할 수 있습니다.";
   if (score > 60) return "합격권에는 들어왔지만 아직 취약한 영역이 남아 있습니다. 오답 해설을 기준으로 헷갈린 개념을 짧게 정리해보세요.";
   if (score >= 40) return "기본 개념은 일부 파악했지만 안정적인 합격에는 부족합니다. 정답보다 오답 선택 이유를 먼저 확인하는 방식으로 복습하는 것이 좋습니다.";
-  return "기초 개념부터 다시 다지는 단계입니다. 과목별 핵심 용어와 대표 사례를 먼저 정리한 뒤 같은 문제를 반복 풀이해보세요.";
+  return "";
 }
 
 function initResultChat() {
