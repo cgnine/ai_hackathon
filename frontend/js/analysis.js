@@ -4,18 +4,108 @@ function analysisScoreColor(score) {
   return "#d89b00";
 }
 
+const ANALYSIS_CACHE_TTL_MS = 5 * 60 * 1000;
+
+function analysisCacheKey(memberId, name) {
+  return `analysis:${name}:${memberId}`;
+}
+
+function readAnalysisCache(memberId, name) {
+  try {
+    const raw = localStorage.getItem(analysisCacheKey(memberId, name));
+    if (!raw) return null;
+    const cached = JSON.parse(raw);
+    if (!cached?.cachedAt || Date.now() - cached.cachedAt > ANALYSIS_CACHE_TTL_MS) {
+      localStorage.removeItem(analysisCacheKey(memberId, name));
+      return null;
+    }
+    return cached.data || null;
+  } catch {
+    return null;
+  }
+}
+
+function writeAnalysisCache(memberId, name, data) {
+  try {
+    localStorage.setItem(analysisCacheKey(memberId, name), JSON.stringify({
+      cachedAt: Date.now(),
+      data
+    }));
+  } catch {
+    // Cache failure should not block the page.
+  }
+}
+
+function clearAnalysisCache(memberId = currentMemberId()) {
+  if (!memberId) return;
+  localStorage.removeItem(analysisCacheKey(memberId, "stats"));
+  localStorage.removeItem(analysisCacheKey(memberId, "commentary"));
+}
+
 async function loadAnalysisData() {
   const memberId = currentMemberId();
   if (!memberId) {
     throw new Error("로그인 정보가 없습니다.");
   }
 
-  const response = await fetch(`${API_BASE}/results/analysis?member_id=${encodeURIComponent(memberId)}`);
+  const response = await fetch(`${API_BASE}/results/analysis?member_id=${encodeURIComponent(memberId)}&include_commentary=false`);
   if (!response.ok) {
     const data = await response.json().catch(() => ({}));
     throw new Error(data.detail || `HTTP ${response.status}`);
   }
-  return response.json();
+  const data = await response.json();
+  writeAnalysisCache(memberId, "stats", data);
+  return data;
+}
+
+async function loadAnalysisCommentary() {
+  const memberId = currentMemberId();
+  if (!memberId) {
+    throw new Error("로그인 정보가 없습니다.");
+  }
+
+  const response = await fetch(`${API_BASE}/results/analysis/commentary?member_id=${encodeURIComponent(memberId)}`);
+  if (!response.ok) {
+    const data = await response.json().catch(() => ({}));
+    throw new Error(data.detail || `HTTP ${response.status}`);
+  }
+  const data = await response.json();
+  writeAnalysisCache(memberId, "commentary", data);
+  return data;
+}
+
+function renderAnalysisData(data, useCachedCommentary = false) {
+  if (els.analysisName) els.analysisName.textContent = `${data.summary.memberName || currentMemberName() || "응시자"}님의 학습 분석`;
+  renderRadar(data.subjectStats || []);
+  renderSubjectBars(data.subjectStats || []);
+  renderSkillMetrics(data.summary || {}, data.typeStats || [], data.unitStats || []);
+  renderRecommendation(data.subjectStats || [], data.unitStats || [], data.summary || {});
+
+  const memberId = currentMemberId();
+  const cachedCommentary = useCachedCommentary && memberId
+    ? readAnalysisCache(memberId, "commentary")
+    : null;
+  if (cachedCommentary) {
+    renderAnalysisText(cachedCommentary.commentary || [], data.subjectStats || []);
+    return true;
+  }
+
+  els.analysisText.innerHTML = "<p>Bedrock AI총평을 준비하고 있습니다.</p>";
+  return false;
+}
+
+function refreshAnalysisCommentary(subjectStats, keepExistingOnError = false) {
+  loadAnalysisCommentary()
+    .then((commentaryData) => {
+      renderAnalysisText(commentaryData.commentary || [], subjectStats);
+    })
+    .catch((error) => {
+      if (keepExistingOnError) return;
+      const p = document.createElement("p");
+      p.textContent = `AI총평을 불러오지 못했습니다. (${error.message})`;
+      els.analysisText.innerHTML = "";
+      els.analysisText.appendChild(p);
+    });
 }
 
 async function renderAnalysisPage() {
@@ -24,15 +114,21 @@ async function renderAnalysisPage() {
   if (els.analysisName) els.analysisName.textContent = `${currentMemberName() || state.profileName || "응시자"}님의 학습 분석`;
   renderAnalysisLoading();
 
+  const memberId = currentMemberId();
+  const cachedData = memberId ? readAnalysisCache(memberId, "stats") : null;
+  if (cachedData) {
+    renderAnalysisData(cachedData, true);
+  }
+
   try {
     const data = await loadAnalysisData();
-    if (els.analysisName) els.analysisName.textContent = `${data.summary.memberName || currentMemberName() || "응시자"}님의 학습 분석`;
-    renderRadar(data.subjectStats || []);
-    renderSubjectBars(data.subjectStats || []);
-    renderSkillMetrics(data.summary || {}, data.typeStats || [], data.unitStats || []);
-    renderAnalysisText(data.commentary || []);
-    renderRecommendation(data.recommendations || []);
+    const hasCachedCommentary = renderAnalysisData(data, true);
+    refreshAnalysisCommentary(data.subjectStats || [], hasCachedCommentary);
   } catch (error) {
+    if (cachedData) {
+      showToast(`분석 데이터를 갱신하지 못했습니다. (${error.message})`);
+      return;
+    }
     renderAnalysisEmpty(`분석 데이터를 불러오지 못했습니다. (${error.message})`);
   }
 }
@@ -41,7 +137,7 @@ function renderAnalysisLoading() {
   els.radarChart.innerHTML = "<p class=\"item-sub\">DB 풀이 기록을 분석하고 있습니다.</p>";
   els.subjectBars.innerHTML = "<p class=\"item-sub\">과목별 점수를 계산 중입니다.</p>";
   els.skillMetrics.innerHTML = "";
-  els.analysisText.innerHTML = "<p>Bedrock 총평을 준비하고 있습니다.</p>";
+  els.analysisText.innerHTML = "<p>Bedrock AI총평을 준비하고 있습니다.</p>";
   els.recommendationCard.innerHTML = "<p class=\"item-sub\">추천 문제를 고르는 중입니다.</p>";
 }
 
@@ -50,7 +146,7 @@ function renderAnalysisEmpty(message) {
   els.subjectBars.innerHTML = "";
   els.skillMetrics.innerHTML = "";
   els.analysisText.innerHTML = `<p>${message}</p>`;
-  els.recommendationCard.innerHTML = "<p class=\"item-sub\">모의고사를 완료하면 맞춤형 추천 문제가 표시됩니다.</p>";
+  els.recommendationCard.innerHTML = "<p class=\"item-sub\">모의고사를 완료하면 AI 맞춤형 추천 문제 안내가 표시됩니다.</p>";
 }
 
 function renderRadar(scores) {
@@ -136,11 +232,72 @@ function renderSkillMetrics(summary, typeStats, unitStats) {
   `;
 }
 
-function renderAnalysisText(commentary) {
+function analysisSubjectNames(subjectStats = []) {
+  return Array.from(new Set(
+    subjectStats
+      .map((item) => String(item.subjectName || "").trim())
+      .filter(Boolean)
+  )).sort((a, b) => b.length - a.length);
+}
+
+function appendTextWithStrongSubjects(parent, text, subjectNames) {
+  const source = String(text || "");
+  if (!source || subjectNames.length === 0) {
+    parent.textContent = source;
+    return;
+  }
+
+  const lowerSource = source.toLocaleLowerCase();
+  const lowerSubjectNames = subjectNames.map((name) => ({
+    name,
+    lowerName: name.toLocaleLowerCase()
+  }));
+  let cursor = 0;
+
+  while (cursor < source.length) {
+    let matchIndex = -1;
+    let matchName = "";
+
+    lowerSubjectNames.forEach(({ name, lowerName }) => {
+      const found = lowerSource.indexOf(lowerName, cursor);
+      if (found === -1) return;
+      if (
+        matchIndex === -1 ||
+        found < matchIndex ||
+        (found === matchIndex && name.length > matchName.length)
+      ) {
+        matchIndex = found;
+        matchName = name;
+      }
+    });
+
+    if (matchIndex === -1) {
+      parent.appendChild(document.createTextNode(source.slice(cursor)));
+      break;
+    }
+
+    if (matchIndex > cursor) {
+      parent.appendChild(document.createTextNode(source.slice(cursor, matchIndex)));
+    }
+
+    const strong = document.createElement("strong");
+    strong.textContent = source.slice(matchIndex, matchIndex + matchName.length);
+    parent.appendChild(strong);
+    cursor = matchIndex + matchName.length;
+  }
+}
+
+function renderAnalysisText(commentary, subjectStats = []) {
   const lines = commentary.length
     ? commentary
-    : ["아직 총평을 만들 풀이 기록이 없습니다. 모의고사를 완료하면 Bedrock 기반 총평이 표시됩니다."];
-  els.analysisText.innerHTML = lines.map((line) => `<p>${line}</p>`).join("");
+    : ["아직 AI총평을 만들 풀이 기록이 없습니다. 모의고사를 완료하면 Bedrock 기반 AI총평이 표시됩니다."];
+  const subjectNames = analysisSubjectNames(subjectStats);
+  els.analysisText.innerHTML = "";
+  lines.forEach((line) => {
+    const p = document.createElement("p");
+    appendTextWithStrongSubjects(p, line, subjectNames);
+    els.analysisText.appendChild(p);
+  });
 }
 
 function explanationParagraphs(explanation) {
@@ -181,50 +338,43 @@ function renderRecommendationFeedback(target, question, selectedNumber) {
   target.append(head, body);
 }
 
-function renderRecommendation(recommendations) {
-  if (!recommendations.length) {
-    els.recommendationCard.innerHTML = "<p class=\"item-sub\">추천할 문제가 없습니다. 모의고사 기록이 쌓이면 취약 과목 기준으로 표시됩니다.</p>";
+function renderRecommendation(subjectStats, unitStats, summary = {}) {
+  const wrongTotal = summary.wrongTotal || 0;
+  if (!summary.answeredTotal) {
+    els.recommendationCard.innerHTML = "<p class=\"item-sub\">아직 풀이 기록이 없습니다. 모의고사를 완료하면 AI가 필요한 보완 문제를 안내합니다.</p>";
+    return;
+  }
+  if (!wrongTotal) {
+    els.recommendationCard.innerHTML = "<p class=\"item-sub\">최근 풀이에서 뚜렷한 오답 약점이 없습니다. AI 맞춤형 문제는 필요한 경우에만 생성합니다.</p>";
     return;
   }
 
+  const weakUnit = (unitStats || [])[0];
+  const weakSubject = weakUnit
+    || (subjectStats || []).slice().sort((a, b) => (a.score || 0) - (b.score || 0))[0];
+  const subjectName = weakSubject?.subjectName || "취약 과목";
+  const unit = weakUnit?.unit || weakSubject?.majorUnit || "오답이 반복된 영역";
+
   els.recommendationCard.innerHTML = "";
-  recommendations.forEach((question, questionIndex) => {
-    const card = document.createElement("article");
-    const scenario = String(question.questionScenario || "").trim();
-    card.className = "recommend-card";
-    card.innerHTML = `
-      <div class="recommend-card-head">
-        <strong>${question.subjectName} · ${question.majorUnit}</strong>
-        <span>${question.questionType}</span>
-      </div>
-      <p class="recommend-question">${question.questionText}</p>
-      ${scenario ? `<div class="question-scenario-box mock-scenario-box">${scenario}</div>` : ""}
-    `;
+  const card = document.createElement("article");
+  const head = document.createElement("div");
+  const title = document.createElement("strong");
+  const badge = document.createElement("span");
+  const note = document.createElement("p");
+  const action = document.createElement("a");
 
-    const choices = document.createElement("ol");
-    const feedback = document.createElement("div");
-    choices.className = "choices recommendation-choices";
-    feedback.className = "recommend-feedback";
+  card.className = "recommend-card ai-recommend-guide";
+  head.className = "recommend-card-head";
+  title.textContent = `${subjectName} · ${unit}`;
+  badge.textContent = "AI 분석";
+  note.className = "recommend-question";
+  note.textContent = `${subjectName}의 ${unit} 부분이 부족해 보여요. 실제 문제 풀이는 별도 탭에서 AI가 오답 이력을 보고 새 문제를 생성합니다.`;
+  action.className = "primary-btn";
+  action.href = "ai-recommend.html";
+  action.dataset.screen = "aiRecommend";
+  action.textContent = "AI 맞춤형 추천문제 풀기";
 
-    (question.choices || []).forEach((choice, index) => {
-      if (!choice) return;
-      const choiceNumber = index + 1;
-      const li = document.createElement("li");
-      const button = document.createElement("button");
-      button.type = "button";
-      button.className = "choice-btn";
-      button.innerHTML = `<span class="choice-num">${choiceNumber}</span><span>${choice}</span>`;
-      button.addEventListener("click", () => {
-        const correct = choiceNumber === question.answer;
-        choices.querySelectorAll(".choice-btn").forEach((item) => item.disabled = true);
-        button.classList.add(correct ? "correct" : "wrong");
-        renderRecommendationFeedback(feedback, question, choiceNumber);
-      });
-      li.appendChild(button);
-      choices.appendChild(li);
-    });
-
-    card.append(choices, feedback);
-    els.recommendationCard.appendChild(card);
-  });
+  head.append(title, badge);
+  card.append(head, note, action);
+  els.recommendationCard.appendChild(card);
 }
