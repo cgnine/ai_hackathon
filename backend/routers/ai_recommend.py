@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import logging
 
-from fastapi import APIRouter
+from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel, Field
 
 from backend.services import ai_recommend_service as svc
@@ -30,11 +30,19 @@ async def get_pool(member_id: str):
 async def fill_pool(request: FillRequest):
     try:
         return svc.fill_one(request.member_id)
+    except HTTPException:
+        raise
     except Exception:
         logger.exception("Failed to fill pool: member_id=%s", request.member_id)
-        raise
+        raise HTTPException(status_code=500, detail="AI_RECOMMEND_FILL_FAILED")
 
 
 @router.post("/answer")
 async def submit_answer(request: AnswerRequest):
-    return svc.submit_answer(request.question_id, request.member_id, request.selected_option_no)
+    try:
+        return svc.submit_answer(request.question_id, request.member_id, request.selected_option_no)
+    except HTTPException:
+        raise
+    except Exception:
+        logger.exception("Failed to submit recommendation answer: question_id=%s member_id=%s", request.question_id, request.member_id)
+        raise HTTPException(status_code=500, detail="AI_RECOMMEND_ANSWER_FAILED")

@@ -5,6 +5,7 @@ import logging
 from collections import defaultdict
 from typing import Any
 
+from botocore.exceptions import BotoCoreError, ClientError
 from fastapi import HTTPException
 from psycopg2.extras import RealDictCursor
 
@@ -99,11 +100,10 @@ def _pick_weak_area(
         r for r in exam_rows
         if _to_int(r["selected_number"]) != _to_int(r["answer_number"])
     ]
-    if not wrong_rows:
-        return None
+    target_rows = wrong_rows or exam_rows
 
     grouped: dict[str, list[dict[str, Any]]] = defaultdict(list)
-    for r in wrong_rows:
+    for r in target_rows:
         key = f"{r['subject_code']}|{r['major_unit'] or '미분류'}"
         grouped[key].append(r)
 
@@ -128,6 +128,7 @@ def _pick_weak_area(
         "minor_unit": minor_units[0] if minor_units else "-",
         "question_type": _question_type(sample),
         "examples": weak_rows[:5],
+        "based_on_wrong": bool(wrong_rows),
     }
 
 
@@ -164,7 +165,8 @@ def _build_prompt(member_name: str, target: dict[str, Any], difficulty: str) -> 
     user_prompt = (
         f"회원: {member_name}\n"
         f"과목: {target['subject_name']}, 단원: {target['major_unit']}, 유형: {target_type}, 난이도: {difficulty}\n"
-        f"틀린 문제 예시:\n{json.dumps(examples, ensure_ascii=False)}\n\n"
+        f"추천 근거: {'오답 이력' if target.get('based_on_wrong') else '최근 응시 이력'}\n"
+        f"참고 문제 예시:\n{json.dumps(examples, ensure_ascii=False)}\n\n"
         "위 정보를 바탕으로 해당 약점 영역의 5지선다 문제 1개를 JSON으로 생성하세요."
     )
     return system_prompt, user_prompt
@@ -238,7 +240,15 @@ def fill_one(member_id: str) -> dict[str, Any]:
     logger.info("Generating pool question: member=%s target=%s", normalized, target["weak_area_key"])
 
     system_prompt, user_prompt = _build_prompt(member_name, target, "medium")
-    raw = bedrock_client.invoke(system_prompt, user_prompt, max_tokens=1800)
+    try:
+        raw = bedrock_client.invoke(system_prompt, user_prompt, max_tokens=1800)
+    except ClientError as exc:
+        code = exc.response.get("Error", {}).get("Code", "BedrockClientError")
+        logger.exception("Bedrock recommendation generation failed: member=%s code=%s", normalized, code)
+        raise HTTPException(status_code=502, detail=f"BEDROCK_{code}") from exc
+    except BotoCoreError as exc:
+        logger.exception("Bedrock recommendation generation failed: member=%s", normalized)
+        raise HTTPException(status_code=502, detail="BEDROCK_CLIENT_ERROR") from exc
     parsed = _parse_bedrock_question(raw)
 
     saved = repo.save_pool_question(

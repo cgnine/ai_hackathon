@@ -10,9 +10,8 @@ const API_BASE = (() => {
     return "http://127.0.0.1:8000";
   }
 
-  // When the frontend is served from a custom local HTTP host/port,
-  // keep the same host and point to the backend port.
-  if (protocol === "http:" && port && port !== "80") {
+  // Deployed EC2 setup serves the backend on the same host's 8000 port.
+  if (protocol === "http:") {
     return `http://${hostname}:8000`;
   }
 
