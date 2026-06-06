@@ -143,6 +143,8 @@ function renderWrongNotes() {
     const total = subject.total ?? group.total;
     const roundCount = subject.roundCount ?? group.rounds.length;
     const visual = getWrongSubjectVisual(subject);
+    const subjectCode = subject.code || subject.subjectCode || group.subjectId;
+    const characterImages = getWrongSubjectCharacterImages(subjectCode);
     const card = document.createElement("button");
     card.type = "button";
     card.className = `subject-card wrong-subject-card ${visual.className}`;
@@ -150,13 +152,27 @@ function renderWrongNotes() {
     if (selectedGroup && group.subjectId === selectedGroup.subjectId) card.classList.add("active");
     card.innerHTML = `
       <span class="wrong-subject-visual" aria-hidden="true">
-        <span class="wrong-subject-code">${subject.code || subject.subjectCode || group.subjectId}</span>
+        <img class="wrong-subject-character" src="${characterImages.defaultSrc}" alt="" data-default-src="${characterImages.defaultSrc}" ${characterImages.hoverSrc ? `data-hover-src="${characterImages.hoverSrc}"` : ""} />
+        <span class="wrong-subject-code">${subjectCode}</span>
       </span>
       <span class="wrong-subject-info">
         <small>${roundCount ? `${roundCount}개 오답세트` : "저장된 세트 없음"}</small>
         <span class="wrong-subject-count">${total}개 문항 저장</span>
       </span>
     `;
+    const character = card.querySelector(".wrong-subject-character");
+    card.addEventListener("mouseenter", () => {
+      if (character?.dataset.hoverSrc) character.src = character.dataset.hoverSrc;
+    });
+    card.addEventListener("mouseleave", () => {
+      if (character?.dataset.defaultSrc) character.src = character.dataset.defaultSrc;
+    });
+    card.addEventListener("focus", () => {
+      if (character?.dataset.hoverSrc) character.src = character.dataset.hoverSrc;
+    });
+    card.addEventListener("blur", () => {
+      if (character?.dataset.defaultSrc) character.src = character.dataset.defaultSrc;
+    });
     card.addEventListener("click", () => {
       state.wrongSubjectId = group.subjectId;
       state.wrongOpenDateKey = null;
@@ -169,14 +185,14 @@ function renderWrongNotes() {
 
   if (!selectedGroup) {
     if (els.selectedWrongSubjectTitle) {
-      els.selectedWrongSubjectTitle.textContent = "날짜별 오답 세트";
+      setSelectedWrongSubjectTitle("날짜별 오답 세트");
     }
     return;
   }
 
   if (els.selectedWrongSubjectTitle) {
     const selectedSummary = subjectOptions.find((subject) => subject.id === selectedGroup.subjectId);
-    els.selectedWrongSubjectTitle.textContent = selectedSummary?.name || selectedGroup.subjectName;
+    setSelectedWrongSubjectTitle(selectedSummary?.name || selectedGroup.subjectName);
   }
 
   if (selectedGroup.rounds.length === 0) {
@@ -218,6 +234,53 @@ function renderWrongNotes() {
 
     els.wrongRoundList?.appendChild(section);
   });
+}
+
+function setSelectedWrongSubjectTitle(title) {
+  if (!els.selectedWrongSubjectTitle) return;
+  els.selectedWrongSubjectTitle.innerHTML = "";
+  const icon = document.createElement("img");
+  const label = document.createElement("span");
+  icon.className = "wrong-round-title-icon";
+  icon.src = "assets/subjects/wrong-round-title-ui23.png";
+  icon.alt = "";
+  label.className = "wrong-round-title-label";
+  label.textContent = title;
+  els.selectedWrongSubjectTitle.append(icon, label);
+}
+
+function getWrongSubjectCharacterImages(subjectCode) {
+  const code = String(subjectCode || "").toUpperCase();
+  const images = {
+    AI: {
+      defaultSrc: "assets/subjects/wrong-subject-rabbit-ui34.png",
+      hoverSrc: "assets/subjects/wrong-subject-ai-hover-ui35.png"
+    },
+    CA: {
+      defaultSrc: "assets/subjects/wrong-subject-ca-default-ui36.png",
+      hoverSrc: "assets/subjects/wrong-subject-ca-hover-ui37.png"
+    },
+    CD: {
+      defaultSrc: "assets/subjects/wrong-subject-cd-default-ui38.png",
+      hoverSrc: "assets/subjects/wrong-subject-cd-hover-ui39.png"
+    },
+    DE: {
+      defaultSrc: "assets/subjects/wrong-subject-de-default-ui40.png",
+      hoverSrc: "assets/subjects/wrong-subject-de-hover-ui41.png"
+    },
+    SW: {
+      defaultSrc: "assets/subjects/wrong-subject-sa-default-ui42.png",
+      hoverSrc: "assets/subjects/wrong-subject-sa-hover-ui43.png"
+    },
+    SA: {
+      defaultSrc: "assets/subjects/wrong-subject-sa-default-ui42.png",
+      hoverSrc: "assets/subjects/wrong-subject-sa-hover-ui43.png"
+    }
+  };
+  return images[code] || {
+    defaultSrc: "assets/subjects/wrong-subject-rabbit-ui34.png",
+    hoverSrc: ""
+  };
 }
 
 function getWrongSubjectName(subject) {

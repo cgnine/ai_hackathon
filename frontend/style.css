@@ -248,6 +248,20 @@ button:disabled {
   object-fit: contain;
 }
 
+body[data-page="subjects"] .brand-logo,
+body[data-page="harness"] .brand-logo,
+body[data-page="result"] .brand-logo,
+body[data-page="wrong"] .brand-logo {
+  width: 320px;
+  max-width: 320px;
+  flex: 0 0 auto;
+}
+
+body[data-page="result"] .brand,
+body[data-page="wrong"] .brand {
+  flex: 0 0 320px;
+}
+
 .brand-mark {
   display: grid;
   width: 38px;
@@ -704,7 +718,9 @@ button:disabled {
 .subject-title-row {
   display: grid;
   gap: 4px;
-  margin-left: 42px;
+  margin: 0 42px;
+  justify-items: center;
+  text-align: center;
 }
 
 .subject-course-card .subject-title-row strong {
@@ -727,6 +743,35 @@ button:disabled {
   max-width: 100%;
   max-height: 100%;
   object-fit: contain;
+}
+
+.subject-illustration img[src*="-ui16"] {
+  max-width: 176px;
+  max-height: 128px;
+}
+
+.subject-illustration img[src*="subject-ai-ui18"] {
+  max-width: 166px;
+  max-height: 150px;
+}
+
+.subject-illustration img[src*="subject-ca-ui19"],
+.subject-illustration img[src*="subject-cd-ui21"],
+.subject-illustration img[src*="subject-de-ui20"],
+.subject-illustration img[src*="subject-sa-ui22"] {
+  max-width: 166px;
+  max-height: 150px;
+}
+
+.subject-illustration img[src*="subject-de-ui20"],
+.subject-illustration img[src*="subject-sa-ui22"] {
+  max-width: 154px;
+  max-height: 138px;
+}
+
+.subject-illustration img[src*="subject-sa-ui22"] {
+  max-width: 128px;
+  max-height: 112px;
 }
 
 .subject-character-name {
@@ -842,6 +887,19 @@ button:disabled {
   display: none;
 }
 
+.wrong-round-title-icon {
+  display: inline-block;
+  width: 42px;
+  height: 42px;
+  object-fit: contain;
+  vertical-align: middle;
+}
+
+.wrong-round-title-label {
+  display: inline-block;
+  vertical-align: middle;
+}
+
 .wrong-subject-head span,
 .wrong-round-head span {
   color: var(--muted);
@@ -857,8 +915,8 @@ button:disabled {
 
 .wrong-subject-card {
   display: grid;
-  grid-template-rows: 82px 1fr;
-  min-height: 186px;
+  grid-template-rows: 150px 1fr;
+  min-height: 222px;
   padding: 0;
   overflow: hidden;
   border: 2px solid #dbeafe;
@@ -885,7 +943,10 @@ button:disabled {
 
 .wrong-subject-visual {
   display: grid;
+  grid-template-rows: 86px 34px;
   place-items: center;
+  gap: 8px;
+  padding: 10px;
   background: color-mix(in srgb, var(--wrong-card-accent, #9fb8f4) 32%, #ffffff);
 }
 
@@ -895,12 +956,27 @@ button:disabled {
   background: color-mix(in srgb, var(--wrong-card-accent, #9fb8f4) 44%, #ffffff);
 }
 
+.wrong-subject-character {
+  display: block;
+  width: 86px;
+  height: 86px;
+  object-fit: contain;
+}
+
 .wrong-subject-code {
+  display: inline-flex;
+  width: 68px;
+  height: 32px;
+  align-items: center;
+  justify-content: center;
   color: #1e3a8a;
-  font-size: 2.1rem;
+  font-size: 1.28rem;
   font-weight: 900;
   letter-spacing: 0;
   line-height: 1;
+  padding: 0;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.72);
 }
 
 .wrong-subject-info {
@@ -3274,12 +3350,14 @@ body[data-page="mock"] .choice-btn.selected {
   }
 
   .wrong-subject-card {
-    grid-template-rows: 72px 1fr;
-    min-height: 172px;
+    grid-template-rows: 138px 1fr;
+    min-height: 208px;
   }
 
   .wrong-subject-code {
-    font-size: 1.75rem;
+    width: 68px;
+    height: 32px;
+    font-size: 1.24rem;
   }
 
   .topbar {
@@ -3298,6 +3376,19 @@ body[data-page="mock"] .choice-btn.selected {
 
   .brand-logo {
     width: 132px;
+  }
+
+  body[data-page="subjects"] .brand-logo,
+  body[data-page="harness"] .brand-logo,
+  body[data-page="result"] .brand-logo,
+  body[data-page="wrong"] .brand-logo {
+    width: 240px;
+    max-width: 240px;
+  }
+
+  body[data-page="result"] .brand,
+  body[data-page="wrong"] .brand {
+    flex: 0 0 240px;
   }
 
   .profile-actions {
@@ -3412,6 +3503,19 @@ body[data-page="mock"] .choice-btn.selected {
 
   .brand-logo {
     width: 118px;
+  }
+
+  body[data-page="subjects"] .brand-logo,
+  body[data-page="harness"] .brand-logo,
+  body[data-page="result"] .brand-logo,
+  body[data-page="wrong"] .brand-logo {
+    width: 190px;
+    max-width: 190px;
+  }
+
+  body[data-page="result"] .brand,
+  body[data-page="wrong"] .brand {
+    flex: 0 0 190px;
   }
 
   .top-stats {

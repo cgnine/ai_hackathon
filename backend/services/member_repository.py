@@ -20,7 +20,7 @@ class LoginResult(TypedDict):
 
 
 def normalize_member_id(member_id: str) -> str:
-    return member_id.strip().upper()
+    return member_id.strip()
 
 
 def get_member(member_id: str) -> Optional[MemberInfo]:
@@ -34,7 +34,7 @@ def get_member(member_id: str) -> Optional[MemberInfo]:
                 """
                 SELECT member_id, COALESCE(member_name, member_id) AS member_name
                 FROM member_tb
-                WHERE member_id = %s
+                WHERE LOWER(member_id) = LOWER(%s)
                 LIMIT 1
                 """,
                 (normalized_member_id,),
@@ -68,7 +68,7 @@ def authenticate_member(member_id: str, password: str) -> LoginResult:
                     COALESCE(member_name, member_id) AS member_name,
                     member_pwd
                 FROM member_tb
-                WHERE member_id = %s
+                WHERE LOWER(member_id) = LOWER(%s)
                 LIMIT 1
                 """,
                 (normalized_member_id,),
@@ -109,7 +109,7 @@ def create_member(member_id: str, member_name: str, password: str) -> Optional[M
                 """
                 SELECT member_id
                 FROM member_tb
-                WHERE member_id = %s
+                WHERE LOWER(member_id) = LOWER(%s)
                 LIMIT 1
                 """,
                 (normalized_member_id,),
@@ -156,7 +156,7 @@ def reset_member_password(member_id: str, password: str) -> bool:
                 """
                 UPDATE member_tb
                 SET member_pwd = %s
-                WHERE member_id = %s
+                WHERE LOWER(member_id) = LOWER(%s)
                 RETURNING member_id
                 """,
                 (normalized_password, normalized_member_id),

@@ -216,7 +216,7 @@ function getSubjectVisual(subject) {
       description: "SW개발 지식과 관련 분야의 기술을 기반으로 분석과 설계를 수행합니다.",
       jobs: "응용SW 엔지니어, SW개발 관리자, 조직 관리자",
       stack: "ERD, 흐름도, 설계 및 디자인 패턴, DDD, 소프트웨어 테스트",
-      image: "assets/subjects/sian.png",
+      image: "assets/subjects/subject-sa-ui22-transparent.png",
       className: "subject-theme-sian"
     },
     CD: {
@@ -225,7 +225,7 @@ function getSubjectVisual(subject) {
       description: "클라우드 환경에서 애플리케이션 시스템을 프로비저닝, 운영 및 관리합니다.",
       jobs: "DevOps 엔지니어, 시스템 관리자, SW개발자",
       stack: "Docker, Kubernetes, CI/CD, AWS CodePipeline, AWS Lambda",
-      image: "assets/subjects/clode.png",
+      image: "assets/subjects/subject-cd-ui21-transparent.png",
       className: "subject-theme-clode"
     },
     CA: {
@@ -234,7 +234,7 @@ function getSubjectVisual(subject) {
       description: "클라우드를 기반으로 최적화된 솔루션을 설계하고 전략을 수립합니다.",
       jobs: "클라우드 아키텍트, 컨설턴트, 시스템 엔지니어",
       stack: "가상화, 자동화, AWS RDS, API Gateway, Azure SQL Database, RTO/RPO",
-      image: "assets/subjects/carite.png",
+      image: "assets/subjects/subject-ca-ui19-transparent.png",
       className: "subject-theme-carite"
     },
     DE: {
@@ -243,7 +243,7 @@ function getSubjectVisual(subject) {
       description: "데이터 수집, 저장, 처리와 데이터 파이프라인을 설계합니다.",
       jobs: "데이터 엔지니어, 백엔드 개발자, 데이터 관리자",
       stack: "SQL, Python, Pandas, NumPy, Matplotlib, Seaborn, 데이터 파이프라인",
-      image: "assets/subjects/derin.png",
+      image: "assets/subjects/subject-de-ui20-transparent.png",
       className: "subject-theme-derin"
     },
     AI: {
@@ -252,7 +252,7 @@ function getSubjectVisual(subject) {
       description: "데이터 처리와 AI 모델링으로 실무의 AI 활용 역량을 진단합니다.",
       jobs: "AI 엔지니어, 머신러닝 엔지니어, 데이터 과학자",
       stack: "MLflow, Scikit-learn, TensorFlow, XGBoost, LightGBM",
-      image: "assets/subjects/arin.png",
+      image: "assets/subjects/subject-ai-ui18-transparent.png",
       className: "subject-theme-arin"
     }
   };
