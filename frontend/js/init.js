@@ -11,6 +11,30 @@ function bindOptional(element, eventName, handler) {
   if (element) element.addEventListener(eventName, handler);
 }
 
+async function loadSubjectsForPage(page, waitForSubjects) {
+  const load = async () => {
+    try {
+      await loadAvailableSubjects();
+      if (!state.subjectId || !subjects.some((subject) => subject.id === state.subjectId)) {
+        state.subjectId = subjects[0]?.id || state.subjectId;
+      }
+      if (subjects.length) ensureSampleWrongNotes();
+      saveState();
+      renderTopStats();
+      if (page === "wrong") renderWrongNotes();
+    } catch (error) {
+      showToast(`DB 과목 목록을 불러오지 못했습니다. (${error.message})`);
+    }
+  };
+
+  if (waitForSubjects) {
+    await load();
+    return;
+  }
+
+  load();
+}
+
 async function initPage() {
   const page = document.body.dataset.page || "subjects";
   if (page === "subjects" && "scrollRestoration" in history) {
@@ -71,6 +95,7 @@ async function initPage() {
   bindOptional(els.generateBtn, "click", runHarness);
   bindOptional(els.toggleAllExplanationsBtn, "click", toggleAllResultExplanations);
   bindOptional(els.saveWrongAllBtn, "click", saveAllWrongApiResultItems);
+  initAiRecommendActions();
 
   const memberId = currentMemberId();
   if (memberId) {
@@ -79,18 +104,17 @@ async function initPage() {
     state.profileName = profiles[0];
   }
   state.questionCount = 20;
-  try {
-    await loadAvailableSubjects();
-  } catch (error) {
-    showToast(`DB 과목 목록을 불러오지 못했습니다. (${error.message})`);
+  const waitForSubjects = page === "subjects" || page === "mock";
+  if (waitForSubjects) {
+    await loadSubjectsForPage(page, true);
   }
   if (page === "subjects") {
     state.subjectId = null;
     saveState();
-  } else if (!state.subjectId || !subjects.some((subject) => subject.id === state.subjectId)) {
+  } else if (waitForSubjects && (!state.subjectId || !subjects.some((subject) => subject.id === state.subjectId))) {
     state.subjectId = subjects[0]?.id || null;
   }
-  ensureSampleWrongNotes();
+  if (waitForSubjects && subjects.length) ensureSampleWrongNotes();
   if (page === "profile") initProfilePage();
   if (page === "subjects") {
     renderSubjects();
@@ -103,6 +127,7 @@ async function initPage() {
     initResultChat();
   }
   if (page === "analysis") renderAnalysisPage();
+  if (page === "ai-recommend") renderAiRecommendPage();
   if (page === "wrong") {
     state.wrongSubjectId = null;
     state.wrongOpenDateKey = null;

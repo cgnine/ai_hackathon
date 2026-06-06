@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>AI 맞춤형 추천문제 | KB 개발자 역량평가 CBT</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body data-page="ai-recommend">
+  <header class="topbar">
+    <a class="brand" href="index.html" id="homeLink" aria-label="KB 개발자 역량평가 CBT">
+      <img class="brand-logo" src="assets/brand/kb-diagnosis-logo.png" alt="KB 디지털 역량진단 문제풀이" />
+    </a>
+    <nav class="main-nav" aria-label="주요 메뉴">
+      <a class="nav-btn" href="index.html" data-screen="profile">시험응시</a>
+      <a class="nav-btn" href="wrong.html" data-screen="wrong">오답노트</a>
+      <a class="nav-btn active" href="ai-recommend.html" data-screen="aiRecommend">AI 맞춤형 추천문제</a>
+      <a class="nav-btn" href="harness.html" data-screen="harness">AI문제생성</a>
+    </nav>
+    <div class="top-stats" aria-label="학습 통계">
+      <span>Today <strong id="todayCount">0</strong></span>
+      <span>Wrong <strong id="wrongTopCount">0</strong></span>
+    </div>
+  </header>
+
+  <main class="page-shell">
+    <div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+    <section class="screen active" id="aiRecommendScreen">
+      <div class="screen-head">
+        <p class="eyebrow">Agentic Practice</p>
+        <h1>AI 맞춤형 추천문제</h1>
+        <p>오답 이력을 분석해 약점 영역 문제를 최대 5개 준비합니다. 정답을 맞추면 새 문제로 교체됩니다.</p>
+      </div>
+
+      <!-- 풀 상태 헤더 -->
+      <div class="ai-pool-header">
+        <div id="aiPoolStatusMsg" class="ai-pool-status-msg"></div>
+      </div>
+
+      <!-- 풀 카드 목록 (JS가 동적으로 채움) -->
+      <div class="ai-pool-list" id="aiPoolList" aria-live="polite"></div>
+
+      <!-- 숨겨진 레거시 IDs (state.js 참조용, 실제 사용 안 함) -->
+      <div hidden>
+        <div id="aiRecommendStatus"></div>
+        <p id="aiRecommendReason"></p>
+        <article id="aiRecommendQuestionCard">
+          <strong id="aiRecommendMeta"></strong>
+          <p id="aiRecommendQuestion"></p>
+          <div id="aiRecommendScenario"></div>
+          <ol id="aiRecommendChoices"></ol>
+          <div id="aiRecommendFeedback"></div>
+        </article>
+      </div>
+    </section>
+  </main>
+
+  <script src="app.js"></script>
+</body>
+</html>
