@@ -12,12 +12,23 @@ function bindOptional(element, eventName, handler) {
 }
 
 function renderFooter() {
-  if (document.querySelector(".site-footer")) return;
+  if (document.querySelector(".main-footer")) return;
+  const footerPages = new Set(["harness", "ai-recommend", "wrong", "wrong-practice", "subjects", "mock", "result"]);
+  const page = document.body.dataset.page || "";
+  if (!footerPages.has(page)) return;
+
   const footer = document.createElement("footer");
-  footer.className = "site-footer";
+  footer.className = "main-footer";
   footer.innerHTML = `
-    <strong>CGNINE</strong>
-    <span>2026 COPYRIGHT CGNINE. ALL RIGHTS RESERVED.</span>
+    <div class="main-footer-inner">
+      <strong class="main-footer-logo">KB Masters</strong>
+      <div class="main-footer-info">
+        <p>대표 : CGNINE</p>
+        <p>주소 : 서울특별시 중구 수표동 47-1 청계IT타워 9층</p>
+        <p>TEL : 02-6936-8547&nbsp;&nbsp;&nbsp; Email : contact@kbmasters.co.kr</p>
+      </div>
+    </div>
+    <div class="main-footer-copy">© CGNINE. All Rights Reserved.</div>
   `;
   document.body.appendChild(footer);
 }
@@ -47,7 +58,6 @@ async function loadSubjectsForPage(page, waitForSubjects) {
 }
 
 async function initPage() {
-  renderFooter();
   const page = document.body.dataset.page || "subjects";
   if (page === "subjects" && "scrollRestoration" in history) {
     history.scrollRestoration = "manual";
@@ -68,12 +78,14 @@ async function initPage() {
     return;
   }
 
+  renderFooter();
+
   if (!requireLogin(page)) return;
 
   bindScreenLinks();
   bindOptional(els.homeLink, "click", (event) => {
     event.preventDefault();
-    showScreen("profile");
+    window.location.href = PAGE_URLS.subjects || "subjects.html";
   });
   bindOptional(els.profileSearch, "focus", () => {
     els.profileOptions?.classList.add("open");

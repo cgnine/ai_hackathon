@@ -408,5 +408,5 @@ function logout() {
   clearExamSessionState();
   state.profileName = "";
   saveState();
-  window.location.href = loginUrl();
+  window.location.href = "index.html";
 }

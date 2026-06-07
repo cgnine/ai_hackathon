@@ -69,7 +69,7 @@ function renderProfileButton() {
   const stats = document.querySelector(".top-stats");
   if (!topbar || document.getElementById("profileButton")) return;
 
-  const actions = document.createElement("div");
+  const actions = document.querySelector("[data-profile-slot]") || document.createElement("div");
   const button = document.createElement("button");
   const menu = document.createElement("div");
   const header = document.createElement("div");
@@ -80,13 +80,16 @@ function renderProfileButton() {
   const memberId = currentMemberId();
 
   actions.className = "profile-actions";
+  actions.dataset.profileSlot = "true";
   button.type = "button";
   button.className = "profile-button";
   button.id = "profileButton";
   button.setAttribute("aria-haspopup", "true");
   button.setAttribute("aria-expanded", "false");
   button.innerHTML = `
-    <span class="profile-pill" aria-hidden="true">프로필</span>
+    <span class="profile-image-wrap" aria-hidden="true">
+      <img src="assets/brand/profile-avatar.png" alt="" />
+    </span>
   `;
 
   menu.className = "profile-menu";
@@ -130,8 +133,8 @@ function renderProfileButton() {
   });
 
   menu.append(header, summary, menuList, logoutButton);
-  actions.append(button, menu);
-  topbar.insertBefore(actions, stats || null);
+  actions.replaceChildren(button, menu);
+  if (!actions.parentElement) topbar.insertBefore(actions, stats || null);
 }
 
 function renderMyExamHistory(items) {

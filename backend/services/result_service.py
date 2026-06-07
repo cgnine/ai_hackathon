@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import json
 from collections import defaultdict
-from datetime import datetime
+from datetime import datetime, timedelta
 from typing import Any
 
 from fastapi import HTTPException
@@ -964,6 +964,54 @@ def get_exam_history(member_id: str, limit: int = 20) -> dict[str, Any]:
         )
 
     return {"memberId": normalized_member_id, "items": items}
+
+
+def get_monthly_ranking(limit: int = 5) -> dict[str, Any]:
+    safe_limit = max(1, min(limit, 20))
+    now = datetime.now()
+    month_start = now.replace(day=1)
+    next_month = (month_start.replace(day=28) + timedelta(days=4)).replace(day=1)
+    start_date = month_start.strftime("%Y%m%d")
+    end_date = (next_month - timedelta(days=1)).strftime("%Y%m%d")
+
+    with get_conn() as conn:
+        with conn.cursor(cursor_factory=RealDictCursor) as cur:
+            cur.execute(
+                """
+                SELECT
+                    e.member_id,
+                    COALESCE(m.member_name, e.member_id) AS member_name,
+                    ROUND(AVG(e.exam_score::numeric), 1) AS average_score,
+                    COUNT(*) AS exam_count
+                FROM exam_tb e
+                LEFT JOIN member_tb m ON m.member_id = e.member_id
+                WHERE e.exam_date BETWEEN %s AND %s
+                  AND e.exam_score IS NOT NULL
+                  AND e.exam_score::text ~ '^[0-9]+(\\.[0-9]+)?$'
+                GROUP BY e.member_id, COALESCE(m.member_name, e.member_id)
+                ORDER BY AVG(e.exam_score::numeric) DESC, COUNT(*) DESC, e.member_id ASC
+                LIMIT %s
+                """,
+                (start_date, end_date, safe_limit),
+            )
+            rows = cur.fetchall()
+
+    return {
+        "month": now.month,
+        "monthLabel": f"{now.month}월",
+        "startDate": start_date,
+        "endDate": end_date,
+        "items": [
+            {
+                "rank": index,
+                "memberId": row["member_id"],
+                "memberName": row["member_name"],
+                "averageScore": float(row["average_score"] or 0),
+                "examCount": int(row["exam_count"] or 0),
+            }
+            for index, row in enumerate(rows, start=1)
+        ],
+    }
 
 
 def get_wrong_items(attempt_id: str) -> dict[str, Any]:

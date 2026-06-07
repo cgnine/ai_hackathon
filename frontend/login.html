@@ -1,13 +1,45 @@
 <!DOCTYPE html>
 <html lang="ko">
+
 <head>
   <meta charset="UTF-8" />
-  <meta http-equiv="refresh" content="0; url=index.html" />
-  <title>Redirecting...</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>KB Masters</title>
+  <link rel="stylesheet" href="style.css" />
 </head>
-<body>
-  <script>
-    window.location.replace("index.html");
-  </script>
+
+<body class="login-body" data-page="login">
+  <a class="auth-logo-link" href="index.html" aria-label="KB Masters 메인으로 이동">
+    <img src="assets/brand/kb-masters-logo.png" alt="KB MASTERS" />
+  </a>
+  <main class="login-shell">
+    <section class="login-panel" aria-label="로그인">
+      <div class="login-brand">
+        <div>
+          <strong>로그인</strong>
+        </div>
+      </div>
+      <form class="login-form" id="loginForm">
+        <label class="field-label" for="memberIdInput">사번</label>
+        <input id="memberIdInput" class="login-input" name="member_id" type="text" autocomplete="username"
+          placeholder="d230251" required />
+
+        <label class="field-label" for="passwordInput">비밀번호</label>
+        <input id="passwordInput" class="login-input" name="password" type="password" autocomplete="current-password"
+          placeholder="비밀번호" required />
+
+        <div class="login-links" aria-label="계정 메뉴">
+          <a href="signup.html">회원가입</a>
+          <a href="reset-password.html" id="resetPasswordLink">비밀번호 재설정</a>
+        </div>
+
+        <button class="primary-btn login-submit" id="loginSubmitBtn" type="submit">로그인</button>
+        <p class="login-message" id="loginMessage" role="status" aria-live="polite"></p>
+      </form>
+    </section>
+  </main>
+
+  <script src="app.js"></script>
 </body>
+
 </html>

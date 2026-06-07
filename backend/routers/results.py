@@ -59,6 +59,11 @@ async def get_exam_history(member_id: str, limit: int = 20):
     return result_service.get_exam_history(member_id, limit)
 
 
+@router.get("/ranking/monthly")
+async def get_monthly_ranking(limit: int = 5):
+    return result_service.get_monthly_ranking(limit)
+
+
 @router.get("/analysis")
 async def get_analysis(member_id: str, include_commentary: bool = True):
     return result_service.get_analysis(member_id, include_commentary=include_commentary)

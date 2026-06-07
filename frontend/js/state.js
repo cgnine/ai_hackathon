@@ -8,7 +8,7 @@ const profiles = [
 ];
 
 const PAGE_URLS = {
-  login: "index.html",
+  login: "login.html",
   signup: "signup.html",
   resetPassword: "reset-password.html",
   profile: "subjects.html",
