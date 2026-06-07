@@ -89,6 +89,16 @@ async def get_result(attempt_id: str, history_ids: str | None = None):
     return result_service.get_result(attempt_id, exam_question_ids or None)
 
 
+@router.post("/{attempt_id}/commentary")
+async def generate_result_commentary(attempt_id: str, history_ids: str | None = None):
+    exam_question_ids = [
+        history_id.strip()
+        for history_id in (history_ids or "").split(",")
+        if history_id.strip()
+    ]
+    return result_service.generate_result_commentary(attempt_id, exam_question_ids or None)
+
+
 @router.get("/{attempt_id}/wrong")
 async def get_wrong_items(attempt_id: str):
     return result_service.get_wrong_items(attempt_id)

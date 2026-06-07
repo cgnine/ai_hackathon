@@ -459,9 +459,63 @@ function renderDiagnosis(diagnosis) {
   if (els.diagnosisName) els.diagnosisName.textContent = diagnosis.profileName || "응시자";
   if (els.diagnosisDate) els.diagnosisDate.textContent = formatFullDate(diagnosis.createdAt || new Date().toISOString());
   if (els.diagnosisCourse) els.diagnosisCourse.textContent = diagnosis.subjectName || "-";
-  els.diagnosisSummary.textContent = diagnosis.summary || "영역별 점수를 기준으로 강점과 약점을 확인하세요.";
+  renderDiagnosisComments(diagnosis, axes);
   renderDiagnosisRadar(diagnosis.radarAxes?.length ? diagnosis.radarAxes : axes);
   renderDiagnosisBars(axes);
+}
+
+function renderDiagnosisComments(diagnosis, axes) {
+  if (!els.diagnosisSummary) return;
+  const aiCommentary = diagnosis?.commentary;
+  if (aiCommentary?.overall && aiCommentary?.strength && aiCommentary?.weakness && aiCommentary?.strategy) {
+    renderDiagnosisCommentCards([
+      ["종합 진단", aiCommentary.overall],
+      ["강점 분석", aiCommentary.strength],
+      ["보완 포인트", aiCommentary.weakness],
+      ["다음 학습 전략", aiCommentary.strategy],
+    ]);
+    return;
+  }
+
+  const rows = Array.isArray(axes) ? axes.filter((axis) => axis && axis.total !== 0) : [];
+  const strongest = rows.reduce((best, axis) => (!best || axis.score > best.score ? axis : best), null);
+  const weakest = rows.reduce((low, axis) => (!low || axis.score < low.score ? axis : low), null);
+  const score = Number(diagnosis?.score || 0);
+  const summary = diagnosis?.summary || "영역별 점수를 기준으로 현재 수준과 보완 방향을 확인하세요.";
+  const strength = strongest
+    ? `${strongest.name} 영역이 ${strongest.score}점으로 가장 안정적입니다. 이 영역의 풀이 감각은 유지하면서 실수를 줄이는 데 집중하세요.`
+    : "응시 데이터가 쌓이면 상대적으로 안정적인 영역을 확인할 수 있습니다.";
+  const weakness = weakest
+    ? `${weakest.name} 영역이 ${weakest.score}점으로 우선 보완이 필요합니다. 오답 해설을 기준으로 개념과 적용 흐름을 다시 정리하세요.`
+    : "보완이 필요한 영역은 추가 응시 후 더 정확하게 진단할 수 있습니다.";
+  const strategy = score >= 80
+    ? "고난도 사례형 문제와 시간 제한 풀이로 실전 안정성을 높이는 전략을 추천합니다."
+    : score >= 60
+      ? "틀린 문제를 유형별로 묶어 재풀이하고, 비슷한 조건의 문제를 한 번 더 풀어보는 전략을 추천합니다."
+      : "핵심 용어와 기본 개념을 먼저 정리한 뒤, 짧은 단위로 반복 풀이하는 전략을 추천합니다.";
+
+  const comments = [
+    ["종합 진단", summary],
+    ["강점 분석", strength],
+    ["보완 포인트", weakness],
+    ["다음 학습 전략", strategy],
+  ];
+
+  renderDiagnosisCommentCards(comments);
+}
+
+function renderDiagnosisCommentCards(comments) {
+  els.diagnosisSummary.innerHTML = "";
+  comments.forEach(([title, text]) => {
+    const card = document.createElement("article");
+    const heading = document.createElement("strong");
+    const body = document.createElement("p");
+    card.className = "comment-card";
+    heading.textContent = title;
+    body.textContent = text;
+    card.append(heading, body);
+    els.diagnosisSummary.appendChild(card);
+  });
 }
 
 function renderDiagnosisRadar(axes) {
@@ -610,7 +664,8 @@ function normalizeDiagnosis(diagnosis, meta = {}) {
     return {
       ...meta,
       axes: [],
-      summary: diagnosis?.summary || ""
+      summary: diagnosis?.summary || "",
+      commentary: diagnosis?.commentary || null
     };
   }
 
@@ -627,7 +682,8 @@ function normalizeDiagnosis(diagnosis, meta = {}) {
       { ...theory, comment: buildAxisComment(theory) },
       { ...practical, comment: buildAxisComment(practical) }
     ],
-    summary: diagnosis?.summary || buildDiagnosisSummary([theory, practical])
+    summary: diagnosis?.summary || buildDiagnosisSummary([theory, practical]),
+    commentary: diagnosis?.commentary || null
   };
 }
 

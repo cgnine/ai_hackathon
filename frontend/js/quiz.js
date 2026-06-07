@@ -154,7 +154,7 @@ function renderMockProgress() {
   renderQuestionGrid(els.mockQuestionGrid, questions, state.mockAnswers, state.index, moveMock);
 }
 
-async function gradeMock() {
+async function gradeMock(useBedrockCommentary = false) {
   const questions = currentQuestions();
   if (questions.length === 0) {
     showToast("채점할 DB 문제가 없습니다.");
@@ -196,6 +196,16 @@ async function gradeMock() {
   } catch (error) {
     showToast(`응시 결과 저장에 실패했습니다. (${error.message})`);
     return;
+  }
+
+  if (useBedrockCommentary) {
+    try {
+      showToast("AI 코멘트를 생성하는 중입니다.");
+      await generateResultCommentary(attemptId, examHistoryIds);
+      showToast("AI 코멘트를 저장했습니다.");
+    } catch (error) {
+      showToast(`AI 코멘트 생성에 실패했습니다. (${error.message})`);
+    }
   }
 
   state.lastResult = {

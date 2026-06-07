@@ -43,6 +43,115 @@ def _parse_bedrock_commentary(text: str) -> list[str]:
     return cleaned[:4]
 
 
+RESULT_COMMENTARY_SYSTEM_PROMPT = """
+너는 개발자 역량평가 결과를 분석하는 전문 학습 코치다.
+응시 결과 데이터를 근거로 수험자에게 제공할 결과 코멘트를 작성한다.
+입력 데이터에 없는 사실은 추측하지 않는다.
+사용자를 비난하지 않고, 실무적이며 바로 실행 가능한 학습 방향을 제안한다.
+""".strip()
+
+
+RESULT_COMMENTARY_USER_PROMPT_TEMPLATE = """
+아래 응시 결과 데이터를 바탕으로 결과 코멘트를 작성하라.
+
+작성 항목:
+1. 종합 진단
+2. 강점 분석
+3. 보완 포인트
+4. 다음 학습 전략
+
+작성 규칙:
+- 각 항목은 1~2문장으로 작성한다.
+- 총점, 합격 여부, 영역별 점수, 오답 정보를 근거로 작성한다.
+- 가능한 경우 영역명과 점수를 언급한다.
+- 같은 표현을 반복하지 않는다.
+- 한국어로 자연스럽게 작성한다.
+- 줄바꿈은 사용하지 않는다.
+
+길이 제한:
+- overall은 공백 포함 160자 이내로 작성한다.
+- strength는 공백 포함 140자 이내로 작성한다.
+- weakness는 공백 포함 160자 이내로 작성한다.
+- strategy는 공백 포함 180자 이내로 작성한다.
+
+출력 규칙:
+- 반드시 JSON만 출력한다.
+- 마크다운 코드블록을 사용하지 않는다.
+- JSON key는 반드시 overall, strength, weakness, strategy만 사용한다.
+- 각 value는 문자열이어야 한다.
+
+출력 형식:
+{
+  "overall": "종합 진단 내용",
+  "strength": "강점 분석 내용",
+  "weakness": "보완 포인트 내용",
+  "strategy": "다음 학습 전략 내용"
+}
+
+응시 결과 데이터:
+{result_data}
+""".strip()
+
+
+def _extract_json_object(text: str) -> dict[str, Any]:
+    decoder = json.JSONDecoder()
+    stripped = str(text or "").strip()
+    for index, char in enumerate(stripped):
+        if char != "{":
+            continue
+        try:
+            parsed, _ = decoder.raw_decode(stripped[index:])
+        except json.JSONDecodeError:
+            continue
+        if isinstance(parsed, dict):
+            return parsed
+    raise ValueError("JSON object was not found in the model response")
+
+
+def _validate_result_commentary(payload: dict[str, Any]) -> dict[str, str]:
+    required = ("overall", "strength", "weakness", "strategy")
+    missing = [key for key in required if key not in payload]
+    if missing:
+        raise ValueError(f"Missing required keys: {', '.join(missing)}")
+    limits = {
+        "overall": 200,
+        "strength": 180,
+        "weakness": 200,
+        "strategy": 220,
+    }
+    return {
+        key: _truncate_commentary_text(str(payload[key]), limits[key])
+        for key in required
+    }
+
+
+def _truncate_commentary_text(value: str, limit: int) -> str:
+    text = " ".join(str(value or "").split())
+    if len(text) <= limit:
+        return text
+    return text[: max(0, limit - 1)].rstrip() + "…"
+
+
+def _parse_diagnosis_content(value: Any) -> tuple[str | None, dict[str, str] | None]:
+    if not value:
+        return None, None
+    if isinstance(value, dict):
+        payload = value
+    else:
+        text = str(value).strip()
+        if not text:
+            return None, None
+        try:
+            payload = json.loads(text)
+        except json.JSONDecodeError:
+            return text, None
+
+    if isinstance(payload, dict) and {"overall", "strength", "weakness", "strategy"}.issubset(payload):
+        commentary = _validate_result_commentary(payload)
+        return commentary["overall"], commentary
+    return str(value), None
+
+
 def _created_at(row: dict[str, Any]) -> str:
     exam_date = str(row.get("exam_date") or "").strip()
     exam_time = str(row.get("exam_time") or "").strip()
@@ -75,7 +184,8 @@ def _choice_text(choices: list[str], number: int | None) -> str:
     return choices[number - 1]
 
 
-def _build_diagnosis(items: list[dict[str, Any]], summary: str | None) -> dict[str, Any]:
+def _build_diagnosis(items: list[dict[str, Any]], diagnosis_content: str | None) -> dict[str, Any]:
+    summary, commentary = _parse_diagnosis_content(diagnosis_content)
     buckets: dict[str, list[dict[str, Any]]] = defaultdict(list)
     for item in items:
         buckets[item["questionType"] or "이론형"].append(item)
@@ -115,6 +225,7 @@ def _build_diagnosis(items: list[dict[str, Any]], summary: str | None) -> dict[s
         "axes": axes,
         "radarAxes": radar_axes,
         "summary": summary or "진단 내용이 아직 없습니다.",
+        "commentary": commentary,
     }
 
 
@@ -756,6 +867,164 @@ def get_analysis(member_id: str, include_commentary: bool = True) -> dict[str, A
 def get_analysis_commentary(member_id: str) -> dict[str, Any]:
     analysis = get_analysis(member_id, include_commentary=True)
     return {"commentary": analysis["commentary"]}
+
+
+def _build_result_commentary_prompt_data(
+    attempt_id: str,
+    exam_question_ids: list[str] | None = None,
+) -> dict[str, Any]:
+    history_filter = ""
+    params: list[Any] = [attempt_id]
+    if exam_question_ids:
+        history_filter = "AND h.exam_question_id = ANY(%s)"
+        params.append(exam_question_ids)
+
+    with get_conn() as conn:
+        with conn.cursor(cursor_factory=RealDictCursor) as cur:
+            cur.execute(
+                f"""
+                SELECT
+                    e.exam_id,
+                    e.member_id,
+                    COALESCE(m.member_name, e.member_id) AS member_name,
+                    e.subject_code,
+                    COALESCE(s.subject_name, s.subject_description, e.subject_code) AS subject_name,
+                    e.exam_date,
+                    e.exam_round,
+                    e.exam_score,
+                    h.exam_question_id,
+                    h.question_id,
+                    h.selected_number,
+                    h.answer_number,
+                    h.is_correct,
+                    COALESCE(NULLIF(TRIM(q.major_unit), ''), '미분류') AS area_name,
+                    q.question_content,
+                    q.question_content2,
+                    q.explanation
+                FROM exam_tb e
+                JOIN member_tb m ON m.member_id = e.member_id
+                JOIN subject_tb s ON s.subject_code = e.subject_code
+                JOIN exam_history_tb h ON h.exam_id = e.exam_id
+                JOIN question_tb q
+                    ON q.question_id = h.question_id
+                   AND q.subject_code = e.subject_code
+                WHERE e.exam_id = %s
+                  {history_filter}
+                ORDER BY h.exam_question_id
+                """,
+                tuple(params),
+            )
+            rows = [dict(row) for row in cur.fetchall()]
+
+    if not rows:
+        raise HTTPException(status_code=404, detail="Result not found")
+
+    first = rows[0]
+    total_count = len(rows)
+    correct_count = sum(1 for row in rows if str(row.get("is_correct") or "").upper() == "Y")
+    wrong_count = total_count - correct_count
+    score = _to_int(first.get("exam_score"))
+    if score is None:
+        score = _score(correct_count, total_count)
+
+    grouped: dict[str, list[dict[str, Any]]] = defaultdict(list)
+    for row in rows:
+        grouped[str(row.get("area_name") or "미분류")].append(row)
+
+    area_scores = []
+    for area_name, area_rows in grouped.items():
+        area_total = len(area_rows)
+        area_correct = sum(1 for row in area_rows if str(row.get("is_correct") or "").upper() == "Y")
+        area_wrong = area_total - area_correct
+        area_scores.append(
+            {
+                "areaName": area_name,
+                "totalCount": area_total,
+                "correctCount": area_correct,
+                "wrongCount": area_wrong,
+                "score": _score(area_correct, area_total),
+            }
+        )
+    area_scores.sort(key=lambda item: (item["score"], -item["wrongCount"], item["areaName"]))
+
+    wrong_questions = []
+    for row in rows:
+        if str(row.get("is_correct") or "").upper() != "N":
+            continue
+        question_parts = [
+            str(row.get("question_content") or "").strip(),
+            str(row.get("question_content2") or "").strip(),
+        ]
+        wrong_questions.append(
+            {
+                "areaName": row.get("area_name") or "미분류",
+                "question": " ".join(part for part in question_parts if part)[:500],
+                "selectedAnswer": row.get("selected_number"),
+                "correctAnswer": row.get("answer_number"),
+                "explanation": str(row.get("explanation") or "").strip()[:700],
+            }
+        )
+
+    return {
+        "examId": first["exam_id"],
+        "memberId": first["member_id"],
+        "memberName": first["member_name"],
+        "subjectCode": first["subject_code"],
+        "subjectName": first["subject_name"],
+        "examDate": first["exam_date"],
+        "examRound": first["exam_round"],
+        "score": score,
+        "passScore": 60,
+        "passStatus": "합격" if score >= 60 else "불합격",
+        "totalCount": total_count,
+        "correctCount": correct_count,
+        "wrongCount": wrong_count,
+        "areaScores": area_scores,
+        "wrongQuestions": wrong_questions[:8],
+    }
+
+
+def generate_result_commentary(
+    attempt_id: str,
+    exam_question_ids: list[str] | None = None,
+) -> dict[str, Any]:
+    result_data = _build_result_commentary_prompt_data(attempt_id, exam_question_ids)
+    user_prompt = RESULT_COMMENTARY_USER_PROMPT_TEMPLATE.replace(
+        "{result_data}",
+        json.dumps(result_data, ensure_ascii=False, indent=2),
+    )
+
+    try:
+        raw = bedrock_client.invoke(
+            RESULT_COMMENTARY_SYSTEM_PROMPT,
+            user_prompt,
+            max_tokens=1200,
+        )
+        commentary = _validate_result_commentary(_extract_json_object(raw))
+    except Exception as exc:
+        raise HTTPException(status_code=502, detail=f"Failed to generate result commentary: {exc}") from exc
+
+    diagnosis_content = json.dumps(commentary, ensure_ascii=False)
+    with get_conn() as conn:
+        with conn.cursor(cursor_factory=RealDictCursor) as cur:
+            cur.execute(
+                """
+                UPDATE exam_tb
+                SET diagnosis_content = %s
+                WHERE exam_id = %s
+                  AND member_id = %s
+                RETURNING exam_id
+                """,
+                (diagnosis_content, attempt_id, result_data["memberId"]),
+            )
+            if cur.fetchone() is None:
+                raise HTTPException(status_code=404, detail="Result not found")
+
+    return {
+        "examId": attempt_id,
+        "memberId": result_data["memberId"],
+        "diagnosisContent": commentary,
+    }
 
 
 def get_result(attempt_id: str, exam_question_ids: list[str] | None = None) -> dict[str, Any]:

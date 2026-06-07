@@ -110,3 +110,19 @@ async function saveMockExamResult(subject, questions, answers) {
   }
   return data;
 }
+
+async function generateResultCommentary(examId, examHistoryIds = []) {
+  const historyQuery = Array.isArray(examHistoryIds) && examHistoryIds.length
+    ? `?history_ids=${encodeURIComponent(examHistoryIds.join(","))}`
+    : "";
+  const response = await fetch(`${API_BASE}/results/${encodeURIComponent(examId)}/commentary${historyQuery}`, {
+    method: "POST"
+  });
+
+  if (!response.ok) {
+    const data = await response.json().catch(() => ({}));
+    throw new Error(data.detail || `HTTP ${response.status}`);
+  }
+
+  return response.json();
+}

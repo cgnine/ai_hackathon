@@ -2035,6 +2035,22 @@ body[data-page="my-info"] .screen-head,
   box-shadow: 0 -8px 18px rgba(255, 255, 255, 0.92);
 }
 
+.mock-grade-actions {
+  position: sticky;
+  bottom: 0;
+  z-index: 2;
+  display: grid;
+  gap: 8px;
+  margin-top: 12px;
+  padding-top: 8px;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0), #fff 28%);
+}
+
+.side-panel .mock-grade-actions .full {
+  position: static;
+  margin-top: 0;
+}
+
 .side-summary {
   padding: 16px 0;
   border-bottom: 1px solid var(--line);
@@ -3149,6 +3165,48 @@ body[data-page="mock"] .choice-btn.selected {
   line-height: 1.65;
 }
 
+.comment-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.comment-card {
+  display: grid;
+  gap: 8px;
+  min-height: 126px;
+  align-content: start;
+  padding: 16px;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  background: #f8fafc;
+}
+
+.comment-card strong {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: #1e3a8a;
+  font-size: 0.94rem;
+  font-weight: 800;
+}
+
+.comment-card strong::before {
+  content: "";
+  display: inline-block;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #ffcc00;
+}
+
+.comment-card p {
+  margin: 0;
+  color: #64748b;
+  font-size: 0.9rem;
+  line-height: 1.62;
+}
+
 .report-bottom {
   display: grid;
   grid-template-columns: minmax(0, 1fr);
@@ -3225,6 +3283,14 @@ body[data-page="mock"] .choice-btn.selected {
   border-bottom: 1px solid var(--line);
 }
 
+.wrong-review-head > div:first-child {
+  display: block;
+}
+
+.wrong-review-head .eyebrow {
+  color: #ffcc00;
+}
+
 .wrong-review-head .secondary-btn {
   align-items: center;
   min-height: 42px;
@@ -3250,6 +3316,7 @@ body[data-page="mock"] .choice-btn.selected {
   justify-content: flex-end;
   gap: 10px;
   flex-wrap: wrap;
+  margin-left: auto;
 }
 
 .wrong-review-head h2 {
@@ -4855,6 +4922,10 @@ body[data-page="mock"] .choice-btn.selected {
 }
 
 @media (max-width: 720px) {
+  .comment-grid {
+    grid-template-columns: 1fr;
+  }
+
   .auth-logo-link {
     position: static;
     width: min(72vw, 240px);
