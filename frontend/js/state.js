@@ -214,6 +214,8 @@ const els = {
   subjectBars: $("subjectBars"),
   analysisText: $("analysisText"),
   skillMetrics: $("skillMetrics"),
+  examTrend: $("examTrend"),
+  examHighlights: $("examHighlights"),
   recommendationCard: $("recommendationCard"),
   aiRecommendStatus: $("aiRecommendStatus"),
   aiRecommendReason: $("aiRecommendReason"),

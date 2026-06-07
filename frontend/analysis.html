@@ -33,6 +33,11 @@
         <p>풀이 기록을 기준으로 과목별 강점과 보완점을 시각화합니다.</p>
       </div>
 
+      <section class="analysis-card analysis-commentary-panel">
+        <h2>AI총평</h2>
+        <div class="analysis-text" id="analysisText"></div>
+      </section>
+
       <div class="analysis-layout">
         <section class="analysis-card radar-panel">
           <h2>과목별 실력 사각형</h2>
@@ -50,8 +55,13 @@
         </section>
 
         <section class="analysis-card">
-          <h2>AI총평</h2>
-          <div class="analysis-text" id="analysisText"></div>
+          <h2>회차별 점수 그래프</h2>
+          <div class="score-line-chart" id="examTrend"></div>
+        </section>
+
+        <section class="analysis-card">
+          <h2>응시 하이라이트</h2>
+          <div class="exam-highlights" id="examHighlights"></div>
         </section>
       </div>
 

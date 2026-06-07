@@ -586,6 +586,10 @@ def get_analysis(member_id: str, include_commentary: bool = True) -> dict[str, A
                 """
                 SELECT
                     e.exam_id,
+                    e.exam_round,
+                    e.exam_date,
+                    e.exam_time,
+                    e.created_at AS exam_created_at,
                     s.subject_code,
                     COALESCE(s.subject_name, s.subject_description, s.subject_code) AS subject_name,
                     CASE
@@ -626,14 +630,35 @@ def get_analysis(member_id: str, include_commentary: bool = True) -> dict[str, A
     subject_map: dict[str, dict[str, Any]] = {}
     type_map: dict[str, dict[str, Any]] = {}
     unit_map: dict[tuple[str, str], dict[str, Any]] = {}
+    exam_map: dict[str, dict[str, Any]] = {}
 
     for row in analysis_rows:
+        exam_id = row["exam_id"]
         subject_code = row["subject_code"]
         subject_name = row["subject_name"] or subject_code
         question_type = row["question_type"]
         unit = row["unit"] or "미분류"
         is_correct = bool(row["is_correct"])
         latest_exam_at = row["latest_exam_at"] or ""
+
+        exam = exam_map.setdefault(
+            exam_id,
+            {
+                "examId": exam_id,
+                "roundTitle": f"{row['exam_round']}회차" if row.get("exam_round") else "응시 결과",
+                "subjectCode": subject_code,
+                "subjectName": subject_name,
+                "answered": 0,
+                "correct": 0,
+                "wrong": 0,
+                "examDate": row.get("exam_date"),
+                "examTime": row.get("exam_time"),
+                "createdAt": _created_at(row),
+            },
+        )
+        exam["answered"] += 1
+        exam["correct"] += 1 if is_correct else 0
+        exam["wrong"] += 0 if is_correct else 1
 
         subject = subject_map.setdefault(
             subject_code,
@@ -682,6 +707,20 @@ def get_analysis(member_id: str, include_commentary: bool = True) -> dict[str, A
         unit_stats.append(item)
     unit_stats.sort(key=lambda item: (item["score"], -item["answered"]))
 
+    exam_stats = []
+    for item in exam_map.values():
+        item["score"] = _score(item["correct"], item["answered"])
+        exam_stats.append(item)
+    exam_stats.sort(key=lambda item: str(item.get("createdAt") or ""))
+    recent_exam_stats = exam_stats[-8:]
+    previous_score = None
+    for item in recent_exam_stats:
+        item["scoreDelta"] = None if previous_score is None else item["score"] - previous_score
+        previous_score = item["score"]
+
+    best_exam = max(exam_stats, key=lambda item: item["score"], default=None)
+    weakest_exam = min(exam_stats, key=lambda item: item["score"], default=None)
+
     answered_total = sum(item["answered"] for item in subject_stats)
     correct_total = sum(item["correct"] for item in subject_stats)
     latest_exam_at = max(
@@ -704,6 +743,11 @@ def get_analysis(member_id: str, include_commentary: bool = True) -> dict[str, A
         "subjectStats": subject_stats,
         "typeStats": type_stats,
         "unitStats": unit_stats[:8],
+        "examTrend": recent_exam_stats,
+        "examHighlights": {
+            "bestExam": best_exam,
+            "weakestExam": weakest_exam,
+        },
         "commentary": _bedrock_analysis_commentary(summary, subject_stats, type_stats) if include_commentary else [],
         "recommendations": [],
     }
