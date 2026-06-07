@@ -22,6 +22,15 @@
   padding: 0;
 }
 
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
 body {
   min-height: 100vh;
   background: linear-gradient(180deg, #fffdf4 0%, #f7f1df 100%);
@@ -326,6 +335,16 @@ body[data-page="wrong"] .brand {
 .nav-btn.active,
 .nav-btn:hover {
   background: #dbeafe;
+  color: #1d4ed8;
+}
+
+body[data-page="subjects"] .nav-btn {
+  color: #1d4ed8;
+}
+
+body[data-page="subjects"] .nav-btn.active,
+body[data-page="subjects"] .nav-btn:hover {
+  background: #fff3bf;
   color: #1d4ed8;
 }
 
@@ -920,7 +939,7 @@ body[data-page="my-info"] .screen-head,
 .subject-page-title {
   display: grid;
   gap: 4px;
-  margin: 0 auto 8px;
+  margin: -10px auto 14px;
   text-align: center;
 }
 
@@ -956,7 +975,7 @@ body[data-page="my-info"] .screen-head,
   gap: 8px;
   justify-items: center;
   margin: 0 auto;
-  max-height: 318px;
+  max-height: 306px;
   overflow: hidden;
 }
 
@@ -965,7 +984,7 @@ body[data-page="my-info"] .screen-head,
   width: min(300px, calc(100vw - 150px));
   min-width: 180px;
   height: auto;
-  margin: -18px 0 0;
+  margin: -30px 0 0;
   border-radius: 8px;
 }
 
@@ -993,7 +1012,7 @@ body[data-page="my-info"] .screen-head,
 
 @media (max-width: 420px) {
   .subject-guide-row {
-    max-height: 252px;
+    max-height: 240px;
   }
 
   .subject-start-btn {
@@ -2206,7 +2225,7 @@ body[data-page="mock"] .choice-btn.selected {
 .review-complete-visual {
   position: relative;
   justify-self: center;
-  width: min(100%, 320px);
+  width: min(100%, 420px);
 }
 
 .review-complete-visual img {
@@ -2215,17 +2234,25 @@ body[data-page="mock"] .choice-btn.selected {
   height: auto;
 }
 
-.review-complete-visual h2 {
+.review-complete-copy {
   position: absolute;
-  top: 14px;
-  left: 0;
-  right: 0;
-  margin: 0;
-  color: #f5b800;
-  font-size: 1.35rem;
+  top: 42%;
+  left: 18%;
+  display: grid;
+  width: 62%;
+  gap: 0;
+  color: #2b3440;
+  text-align: center;
+  transform: rotate(-6deg);
+}
+
+.review-complete-copy strong {
+  color: #17202a;
+  font-size: clamp(1.45rem, 3.5vw, 2.25rem);
   font-weight: 900;
+  line-height: 1;
   letter-spacing: 0;
-  text-shadow: none;
+  white-space: nowrap;
 }
 
 .review-complete-panel p:not(.eyebrow) {
@@ -2250,7 +2277,20 @@ body[data-page="mock"] .choice-btn.selected {
   justify-content: center;
   gap: 22px;
   flex-wrap: wrap;
-  margin-top: 28px;
+  margin-top: 34px;
+}
+
+.complete-actions #reviewRestartBtn {
+  border-color: #d5a900;
+  background: #f5c400;
+  color: #fff;
+  box-shadow: 0 6px 14px rgba(23, 32, 42, 0.12);
+}
+
+.complete-actions #reviewRestartBtn:hover,
+.complete-actions #reviewRestartBtn:focus-visible {
+  background: #eab900;
+  box-shadow: 0 8px 16px rgba(23, 32, 42, 0.14);
 }
 
 .result-hero {

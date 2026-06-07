@@ -238,6 +238,7 @@ const els = {
   wrongReviewLoading: $("wrongReviewLoading"),
   wrongReviewLoadingBar: $("wrongReviewLoadingBar"),
   reviewCompletePanel: $("reviewCompletePanel"),
+  reviewCompleteScore: $("reviewCompleteScore"),
   reviewCompleteSummary: $("reviewCompleteSummary"),
   reviewBackBtn: $("reviewBackBtn"),
   reviewRestartBtn: $("reviewRestartBtn"),

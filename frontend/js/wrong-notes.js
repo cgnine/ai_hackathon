@@ -899,6 +899,9 @@ function renderWrongReviewComplete(set) {
   if (els.reviewCompleteSummary) {
     els.reviewCompleteSummary.textContent = `총 ${set.notes.length}문항 중 ${correctCount}문항을 다시 맞혔습니다.`;
   }
+  if (els.reviewCompleteScore) {
+    els.reviewCompleteScore.textContent = `${correctCount}문항 / 총 ${set.notes.length}문항`;
+  }
   if (els.reviewCompletePanel) els.reviewCompletePanel.hidden = false;
   showWrongPracticeScreen();
 }

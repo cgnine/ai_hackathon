@@ -57,10 +57,12 @@
 
       <article class="review-complete-panel" id="reviewCompletePanel" hidden>
         <div class="review-complete-visual">
-          <img src="assets/subjects/wrong-review-complete.png" alt="" aria-hidden="true" />
-          <h2>오답 리뷰 완료</h2>
+          <img src="assets/subjects/wrong-review-result-card.png" alt="" aria-hidden="true" />
+          <div class="review-complete-copy">
+            <strong id="reviewCompleteScore">0문항 / 총 0문항</strong>
+          </div>
         </div>
-        <p id="reviewCompleteSummary">총 0문항 중 0문항을 다시 맞혔습니다.</p>
+        <p id="reviewCompleteSummary" class="sr-only">총 0문항 중 0문항을 다시 맞혔습니다.</p>
         <div class="complete-actions">
           <button class="secondary-btn" id="reviewBackBtn" type="button">오답노트로 돌아가기</button>
           <button class="primary-btn" id="reviewRestartBtn" type="button">다시 풀기</button>
