@@ -387,10 +387,15 @@ body[data-page="wrong"] .brand {
   font-weight: 800;
 }
 
-.nav-btn.active,
 .nav-btn:hover {
   background: #fff3bf;
   color: #60a5fa;
+}
+
+/* Keep active state visible but avoid using the hover background to prevent transient flicker */
+.nav-btn.active {
+  background: transparent;
+  color: #1e3a8a; /* darker navy for active */
 }
 
 body[data-page="subjects"] .nav-btn {
