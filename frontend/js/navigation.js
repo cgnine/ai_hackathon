@@ -173,7 +173,6 @@ function renderMyExamHistory(items) {
       </div>
       <div class="my-history-score">
         <strong>${item.score || 0}점</strong>
-        <span>오답 ${item.wrongCount || 0}</span>
       </div>
       <button type="button" data-exam-id="${item.examId}" class="result-btn" aria-label="진단리포트">
         <svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true" focusable="false">
@@ -364,7 +363,6 @@ function renderExamHistoryList(items = [], page = 1, pageSize = 8) {
             </div>
             <div class="my-history-score">
               <strong>${item.score || item.totalScore || 0}점</strong>
-              <span>오답 ${item.wrongCount || item.incorrect || 0}</span>
             </div>
             <button type="button" data-exam-id="${item.examId || item.id || ''}" class="result-btn" aria-label="진단리포트">
               <svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true" focusable="false">
@@ -378,13 +376,11 @@ function renderExamHistoryList(items = [], page = 1, pageSize = 8) {
       return `
         <article class="my-history-card">
           <div>
-            <span class="my-history-date">${formatProfileDate(item.createdAt || item.examDate)}</span>
             <h3>${item.subjectName || item.subjectCode || '시험 결과'}</h3>
-            <p>${item.roundTitle || '응시 결과'} · ${item.correctCount || item.correct || 0}/${item.total || 0}문항 정답</p>
+            <span class="my-history-meta">${formatProfileDate(item.createdAt || item.examDate)} ${item.roundTitle || ''} ${item.correctCount || item.correct || 0}/${item.total || 0}문항</span>
           </div>
           <div class="my-history-score">
             <strong>${item.score || item.totalScore || 0}점</strong>
-            <span>오답 ${item.wrongCount || item.incorrect || 0}</span>
           </div>
           <button type="button" data-exam-id="${item.examId || item.id || ''}" class="result-btn" aria-label="진단리포트">
             <svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true" focusable="false">
@@ -426,22 +422,23 @@ async function loadMyInfoMetrics(target) {
   target.innerHTML = renderMyInfoMetricCards();
   if (!memberId) return;
 
-  try {
-    const response = await fetch(`${API_BASE}/results/analysis?member_id=${encodeURIComponent(memberId)}&include_commentary=false`);
-    if (!response.ok) throw new Error(`HTTP ${response.status}`);
-    const data = await response.json();
-    target.innerHTML = renderMyInfoMetricCards(data.summary || {});
-  } catch {
-    target.innerHTML = renderMyInfoMetricCards();
-  }
-}
-
-function renderMyInfoMetricCards(summary = {}) {
-  const averageScore = Number(summary.averageScore || 0);
-  const examCount = Number(summary.examCount || 0);
-  const answeredTotal = Number(summary.answeredTotal || 0);
-  const wrongTotal = Number(summary.wrongTotal || 0);
-  const topScore = Number(summary.top10Score || 85);
+        return `
+          <article class="my-history-card compact">
+            <div>
+              <h3>${item.subjectName || item.subjectCode || '시험 결과'}</h3>
+              <span class="my-history-meta">${dateText} ${round} ${correct}/${totalItems}문항</span>
+            </div>
+            <div class="my-history-score">
+              <strong>${item.score || item.totalScore || 0}점</strong>
+            </div>
+            <button type="button" data-exam-id="${item.examId || item.id || ''}" class="result-btn" aria-label="진단리포트">
+              <svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true" focusable="false">
+                <path d="M15.5 14h-.79l-.28-.27A6.471 6.471 0 0 0 16 9.5 6.5 6.5 0 1 0 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l4.99 5L20.49 19l-4.99-5zM9.5 14A4.5 4.5 0 1 1 14 9.5 4.5 4.5 0 0 1 9.5 14z" fill="currentColor"/>
+              </svg>
+              <span>진단리포트</span>
+            </button>
+          </article>
+        `;
   const topGap = Math.max(0, topScore - averageScore);
   const predictedRank = summary.predictedRank || 12;
 

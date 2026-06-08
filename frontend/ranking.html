@@ -1,0 +1,245 @@
+<!DOCTYPE html>
+<html lang="ko">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>AI랭킹 | KB Masters</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+
+<body data-page="ranking">
+  <header class="topbar">
+    <a class="brand" href="subjects.html" id="homeLink" aria-label="시험응시 화면으로 이동">
+      <img class="brand-logo" src="assets/brand/kb-masters-logo.png" alt="KB MASTERS" />
+    </a>
+    <nav class="main-nav" aria-label="주요 메뉴">
+      <a class="nav-btn" href="index.html" data-screen="profile">시험응시</a>
+      <a class="nav-btn" href="wrong.html" data-screen="wrong">오답노트</a>
+      <a class="nav-btn" href="ai-recommend.html" data-screen="aiRecommend">AI 맞춤형 추천문제</a>
+      <a class="nav-btn" href="harness.html" data-screen="harness">AI문제생성</a>
+      <a class="nav-btn active" href="ranking.html">AI랭킹</a>
+    </nav>
+    <div class="profile-actions" data-profile-slot aria-label="profile"></div>
+    <div class="top-stats" aria-label="학습 통계">
+      <span>Today <strong id="todayCount">0</strong></span>
+      <span>Wrong <strong id="wrongTopCount">0</strong></span>
+    </div>
+  </header>
+
+  <main class="page-shell ranking-page">
+    <div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+    <section class="ranking-hero">
+      <p class="eyebrow">AI Ranking</p>
+      <h1>랭킹</h1>
+      <p>다른 사용자들과 실력을 비교하고 AI가 다음 성장 방향을 추천해드려요.</p>
+    </section>
+
+    <section class="ranking-dashboard" aria-label="AI랭킹 대시보드">
+      <article class="ranking-card ranking-podium-card">
+        <div class="ranking-card-head">
+          <h2>TOP 3</h2>
+        </div>
+        <div class="ranking-podium" id="topRankingPodium">
+          <div class="podium-user second">
+            <span class="podium-medal">2</span>
+            <span class="podium-avatar">?</span>
+            <strong>-</strong>
+            <em>AI Expert</em>
+            <b>-</b>
+          </div>
+          <div class="podium-user first">
+            <span class="podium-medal">1</span>
+            <span class="podium-avatar">?</span>
+            <strong>-</strong>
+            <em>AI Master</em>
+            <b>-</b>
+          </div>
+          <div class="podium-user third">
+            <span class="podium-medal">3</span>
+            <span class="podium-avatar">?</span>
+            <strong>-</strong>
+            <em>AI Expert</em>
+            <b>-</b>
+          </div>
+        </div>
+      </article>
+
+      <article class="ranking-card ranking-coach-card">
+        <div class="ranking-card-head">
+          <h2>AI 코칭</h2>
+          <span class="ranking-spark">✧</span>
+        </div>
+        <div class="coach-score">
+          <div>
+            <span>현재 순위</span>
+            <strong>23<small>위</small></strong>
+            <p>상위 23%</p>
+          </div>
+          <p>Cloud 과목이 강점입니다.<br />SW 과목을 5점 향상하면 TOP10 진입이 가능합니다.</p>
+        </div>
+        <div class="coach-section">
+          <h3>강점 / 취약 영역</h3>
+          <div class="ranking-tags">
+            <span class="tag-good">강점 Cloud</span>
+            <span class="tag-bad">취약 SW</span>
+          </div>
+        </div>
+        <div class="coach-section">
+          <h3>추천 학습</h3>
+          <ul class="ranking-task-list">
+            <li><span>SW 실무 문제 집중 학습</span><strong>+3점 예상</strong></li>
+            <li><span>Cloud 개념 문제 학습</span><strong>+2점 예상</strong></li>
+          </ul>
+        </div>
+        <a class="ranking-primary-btn" href="ai-recommend.html">AI 추천 문제 풀기 <span>→</span></a>
+      </article>
+
+      <article class="ranking-card ranking-goal-card">
+        <div class="ranking-card-head">
+          <h2>AI 추격 목표 추천</h2>
+        </div>
+        <div class="goal-panel">
+          <div class="goal-info">
+            <h3>내 정보</h3>
+            <p><span>내 순위</span><strong>28위</strong></p>
+            <p><span>내 점수</span><strong>78점</strong></p>
+            <hr />
+            <p><span>20위 점수</span><strong>81점</strong></p>
+            <p><span>10위 점수</span><strong>85점</strong></p>
+          </div>
+          <div class="goal-ring">
+            <span>20위 진입까지</span>
+            <strong>+3점 필요</strong>
+          </div>
+        </div>
+        <div class="ranking-ai-note">
+          <strong>AI 분석 결과</strong>
+          <p>현재 AI 과목 4점, Cloud 과목 3점만 향상하면 20위 진입이 가능합니다.</p>
+          <div class="ranking-tags">
+            <span>AI +2점</span>
+            <span>Cloud +1점</span>
+          </div>
+        </div>
+      </article>
+
+      <article class="ranking-card ranking-rival-card">
+        <div class="ranking-card-head">
+          <h2>AI 라이벌 추천</h2>
+        </div>
+        <div class="rival-layout">
+          <div class="rival-profile">
+            <span class="podium-avatar">?</span>
+            <strong>김OO</strong>
+            <p>유사도 92%</p>
+          </div>
+          <div class="rival-radar" aria-hidden="true">
+            <span>AI</span>
+            <span>SW</span>
+            <span>Cloud</span>
+            <span>CA</span>
+            <span>DB</span>
+          </div>
+        </div>
+        <table class="rival-table">
+          <thead>
+            <tr>
+              <th></th>
+              <th>AI</th>
+              <th>중급</th>
+              <th>Cloud</th>
+              <th>CA</th>
+              <th>DB</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <th>나</th>
+              <td>90</td>
+              <td>60</td>
+              <td>70</td>
+              <td>72</td>
+              <td>65</td>
+            </tr>
+            <tr>
+              <th>김OO</th>
+              <td>88</td>
+              <td>63</td>
+              <td>72</td>
+              <td>72</td>
+              <td>68</td>
+            </tr>
+          </tbody>
+        </table>
+        <button class="ranking-secondary-btn" type="button">상세 비교하기 <span>→</span></button>
+      </article>
+
+      <article class="ranking-card ranking-table-card" id="rankingSection">
+        <div class="ranking-card-head">
+          <h2>전체 랭킹</h2>
+          <span id="monthlyRankingTitle">랭킹</span>
+        </div>
+        <ol class="ranking-list" id="monthlyRankingList">
+          <li class="ranking-placeholder">
+            <span class="ranking-rank">1</span>
+            <span class="ranking-name">&nbsp;</span>
+            <strong>&nbsp;</strong>
+          </li>
+          <li class="ranking-placeholder">
+            <span class="ranking-rank">2</span>
+            <span class="ranking-name">&nbsp;</span>
+            <strong>&nbsp;</strong>
+          </li>
+          <li class="ranking-placeholder">
+            <span class="ranking-rank">3</span>
+            <span class="ranking-name">&nbsp;</span>
+            <strong>&nbsp;</strong>
+          </li>
+          <li class="ranking-placeholder">
+            <span class="ranking-rank">4</span>
+            <span class="ranking-name">&nbsp;</span>
+            <strong>&nbsp;</strong>
+          </li>
+          <li class="ranking-placeholder">
+            <span class="ranking-rank">5</span>
+            <span class="ranking-name">&nbsp;</span>
+            <strong>&nbsp;</strong>
+          </li>
+        </ol>
+        <button class="ranking-more-btn" type="button">더보기 <span>→</span></button>
+      </article>
+
+      <article class="ranking-card ranking-learning-card">
+        <div class="ranking-card-head">
+          <h2>AI 학습 추천</h2>
+          <small>TOP10 학습자들의 공통 학습 패턴</small>
+        </div>
+        <ul class="learning-list">
+          <li>
+            <span class="learning-icon">◇</span>
+            <div><strong>Cloud 문제 200문제 이상 풀이</strong><p>다양한 유형의 Cloud 문제를 충분히 학습해요.</p></div>
+          </li>
+          <li>
+            <span class="learning-icon">□</span>
+            <div><strong>오답노트 3회 이상 복습</strong><p>오답을 분석하고 주기적으로 복습해요.</p></div>
+          </li>
+          <li>
+            <span class="learning-icon">☆</span>
+            <div><strong>실무형 문제 비중 60% 이상</strong><p>실제 업무와 유사한 문제로 감각을 키워요.</p></div>
+          </li>
+          <li>
+            <span class="learning-icon">◇</span>
+            <div><strong>꾸준한 학습 습관 유지</strong><p>주 4회 이상 학습으로 균형을 유지해요.</p></div>
+          </li>
+        </ul>
+        <a class="ranking-primary-btn" href="ai-recommend.html">추천 학습 시작하기 <span>→</span></a>
+      </article>
+    </section>
+  </main>
+
+  <script src="app.js"></script>
+  <script src="js/main.js"></script>
+</body>
+
+</html>

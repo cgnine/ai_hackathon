@@ -1645,7 +1645,7 @@ body[data-page="subjects"] .nav-btn:hover {
 
 .account-sidebar a:hover,
 .account-sidebar button:hover {
-  background: #f3f7fb;
+  background: #fff3bf; /* match topbar hover */
   color: #0b72f0;
 }
 
@@ -1932,17 +1932,23 @@ body[data-page="my-info"] .screen-head,
 .my-history-card h3 {
   margin-top: 4px;
   color: var(--ink);
-  font-size: 1rem;
+  font-size: 1.02rem;
+  font-weight: 600;
+  display: inline-block;
+  margin-right: 8px;
 }
-
+.my-history-meta,
 .my-history-card p,
 .my-history-date,
 .my-history-score span,
 .my-history-empty p {
   color: var(--muted);
-  font-size: 0.82rem;
-  font-weight: 800;
+  font-size: 0.78rem;
+  font-weight: 400;
+  display: inline-block;
+  vertical-align: middle;
 }
+.my-history-meta { margin-left: 6px; }
 
 .my-history-score {
   min-width: 76px;
