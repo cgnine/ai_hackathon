@@ -4928,9 +4928,9 @@ body[data-page="mock"] .choice-btn.selected {
   font-size: 1.1rem;
 }
 
-/* Make analysis headings navy and add a yellow circular marker like result commentary */
 .analysis-card h2 {
-  color: #0b72f0; /* navy-like blue */
+  /* Use a darker navy (남색) per design request */
+  color: #0b2545;
   position: relative;
   padding-left: 18px;
 }
