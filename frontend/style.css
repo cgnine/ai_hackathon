@@ -4929,8 +4929,8 @@ body[data-page="mock"] .choice-btn.selected {
 }
 
 .analysis-card h2 {
-  /* Use a darker navy (남색) per design request */
-  color: #0b2545;
+  /* Match result comment strong color (남색) */
+  color: #1e3a8a;
   position: relative;
   padding-left: 18px;
 }
