@@ -13,7 +13,7 @@ function bindOptional(element, eventName, handler) {
 
 function renderFooter() {
   if (document.querySelector(".main-footer")) return;
-  const footerPages = new Set(["harness", "ai-recommend", "wrong", "wrong-practice", "subjects", "mock", "result"]);
+  const footerPages = new Set(["harness", "ai-recommend", "wrong", "wrong-practice", "subjects", "mock", "result", "ranking"]);
   const page = document.body.dataset.page || "";
   if (!footerPages.has(page)) return;
 

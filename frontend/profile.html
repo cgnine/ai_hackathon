@@ -16,6 +16,7 @@
       <a class="nav-btn" href="wrong.html" data-screen="wrong">오답노트</a>
       <a class="nav-btn" href="ai-recommend.html" data-screen="aiRecommend">AI 맞춤형 추천문제</a>
       <a class="nav-btn" href="harness.html" data-screen="harness">AI문제생성</a>
+      <a class="nav-btn" href="ranking.html">AI랭킹</a>
     </nav>
     <div class="profile-actions" data-profile-slot aria-label="profile"></div>
     <div class="top-stats" aria-label="학습 통계">
@@ -28,27 +29,28 @@
     <div class="toast" id="toast" role="status" aria-live="polite"></div>
 
     <section class="screen active" id="myInfoScreen">
-      <div class="screen-head">
-        <p class="eyebrow">My Profile</p>
-        <h1>내정보</h1>
-        <p>응시자 정보와 학습 요약을 확인합니다.</p>
-      </div>
+      <div class="account-layout">
+        <aside class="account-sidebar" aria-label="계정 메뉴">
+          <strong>내 정보</strong>
+          <nav>
+            <a class="active" href="profile.html">내정보</a>
+            <a href="history.html">응시내역</a>
+            <a href="analysis.html">종합평가</a>
+            <button type="button" onclick="logout()">로그아웃</button>
+          </nav>
+        </aside>
 
-      <section class="my-info-panel">
-        <div class="my-info-main">
-          <span class="profile-avatar large" id="myInfoAvatar">P</span>
-          <div>
-            <h2 id="myInfoName">응시자</h2>
-            <p>사번 <strong id="myInfoMemberId">-</strong></p>
+        <section class="my-info-panel account-content">
+          <div class="my-info-main">
+            <span class="profile-avatar large" id="myInfoAvatar">P</span>
+            <div>
+              <h2 id="myInfoName">응시자</h2>
+              <p>사번 <strong id="myInfoMemberId">-</strong></p>
+            </div>
           </div>
-        </div>
-        <div class="profile-summary-card my-info-metrics" id="myInfoMetrics"></div>
-        <div class="profile-menu-list my-info-menu">
-          <a href="history.html">응시내역</a>
-          <a href="analysis.html">종합평가</a>
-          <a href="subjects.html">새 시험 응시</a>
-        </div>
-      </section>
+          <div class="my-info-score-grid" id="myInfoMetrics"></div>
+        </section>
+      </div>
     </section>
   </main>
 
