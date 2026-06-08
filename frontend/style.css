@@ -571,7 +571,7 @@ body[data-page="subjects"] .nav-btn:hover {
 .profile-menu-head em {
   color: var(--ink);
   font-style: normal;
-  font-weight: 800;
+  font-weight: 400; /* make last-exam datetime normal weight */
 }
 
 .profile-summary-card {
