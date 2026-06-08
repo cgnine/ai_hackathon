@@ -6061,6 +6061,15 @@ body[data-page="mock"] .choice-btn.selected {
     display: block;
   }
 
+  /* Unbold the small <em> used for '마지막 응시' timestamp in profile popup */
+  .profile-menu small em,
+  .profile-summary-card small em,
+  .account-sidebar small em {
+    font-weight: 400;
+    font-style: normal;
+    color: inherit;
+  }
+
   .top-stats {
     width: 100%;
   }
