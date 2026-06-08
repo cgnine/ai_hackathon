@@ -11,6 +11,53 @@ function bindOptional(element, eventName, handler) {
   if (element) element.addEventListener(eventName, handler);
 }
 
+function initMobileMenu() {
+  const topbar = document.querySelector(".topbar");
+  const nav = document.querySelector(".main-nav");
+  if (!topbar || !nav || document.getElementById("mobileMenuBtn")) return;
+
+  const button = document.createElement("button");
+  const overlay = document.createElement("div");
+
+  button.type = "button";
+  button.id = "mobileMenuBtn";
+  button.className = "mobile-menu-btn";
+  button.setAttribute("aria-label", "메뉴 열기");
+  button.setAttribute("aria-expanded", "false");
+  button.innerHTML = "<span></span><span></span><span></span>";
+
+  overlay.className = "mobile-menu-overlay";
+  overlay.hidden = true;
+
+  const closeMenu = () => {
+    document.body.classList.remove("mobile-menu-open");
+    button.setAttribute("aria-expanded", "false");
+    overlay.hidden = true;
+  };
+
+  const openMenu = () => {
+    document.body.classList.add("mobile-menu-open");
+    button.setAttribute("aria-expanded", "true");
+    overlay.hidden = false;
+  };
+
+  button.addEventListener("click", () => {
+    if (document.body.classList.contains("mobile-menu-open")) {
+      closeMenu();
+    } else {
+      openMenu();
+    }
+  });
+  overlay.addEventListener("click", closeMenu);
+  nav.querySelectorAll("a").forEach((link) => link.addEventListener("click", closeMenu));
+  document.addEventListener("keydown", (event) => {
+    if (event.key === "Escape") closeMenu();
+  });
+
+  topbar.insertBefore(button, nav);
+  document.body.appendChild(overlay);
+}
+
 function renderFooter() {
   if (document.querySelector(".main-footer")) return;
   const footerPages = new Set(["harness", "ai-recommend", "wrong", "wrong-practice", "subjects", "mock", "result"]);
@@ -82,6 +129,7 @@ async function initPage() {
 
   if (!requireLogin(page)) return;
 
+  initMobileMenu();
   bindScreenLinks();
   bindOptional(els.homeLink, "click", (event) => {
     event.preventDefault();

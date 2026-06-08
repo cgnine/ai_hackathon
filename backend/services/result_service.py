@@ -1167,16 +1167,63 @@ def get_latest_result(profile_name: str | None = None) -> dict[str, Any]:
     return get_result(row["exam_id"])
 
 
-def get_exam_history(member_id: str, limit: int = 20) -> dict[str, Any]:
+def get_exam_history(
+    member_id: str,
+    page: int = 1,
+    page_size: int = 10,
+    subject_code: str | None = None,
+) -> dict[str, Any]:
     normalized_member_id = member_id.strip()
     if not normalized_member_id:
         raise HTTPException(status_code=400, detail="member_id is required")
 
-    safe_limit = max(1, min(limit, 100))
+    safe_page = max(1, page)
+    safe_page_size = max(1, min(page_size, 50))
+    offset = (safe_page - 1) * safe_page_size
+    normalized_subject_code = (subject_code or "").strip()
+    subject_filter = "AND e.subject_code = %s" if normalized_subject_code else ""
+    filter_params: list[Any] = [normalized_member_id]
+    if normalized_subject_code:
+        filter_params.append(normalized_subject_code)
+
     with get_conn() as conn:
         with conn.cursor(cursor_factory=RealDictCursor) as cur:
             cur.execute(
                 """
+                SELECT
+                    s.subject_code,
+                    COALESCE(s.subject_name, s.subject_description, s.subject_code) AS subject_name,
+                    COUNT(e.exam_id) AS exam_count
+                FROM exam_tb e
+                JOIN subject_tb s ON s.subject_code = e.subject_code
+                WHERE e.member_id = %s
+                GROUP BY s.subject_code, s.subject_name, s.subject_description
+                ORDER BY s.subject_code
+                """,
+                (normalized_member_id,),
+            )
+            subject_filters = [
+                {
+                    "subjectCode": row["subject_code"],
+                    "subjectName": row["subject_name"],
+                    "count": int(row["exam_count"] or 0),
+                }
+                for row in cur.fetchall()
+            ]
+
+            cur.execute(
+                f"""
+                SELECT COUNT(*) AS total_count
+                FROM exam_tb e
+                WHERE e.member_id = %s
+                  {subject_filter}
+                """,
+                tuple(filter_params),
+            )
+            total_count = int(cur.fetchone()["total_count"] or 0)
+
+            cur.execute(
+                f"""
                 SELECT
                     e.exam_id,
                     e.exam_round,
@@ -1198,6 +1245,7 @@ def get_exam_history(member_id: str, limit: int = 20) -> dict[str, Any]:
                     ON q.question_id = h.question_id
                    AND q.subject_code = e.subject_code
                 WHERE e.member_id = %s
+                  {subject_filter}
                 GROUP BY
                     e.exam_id, e.exam_round, e.exam_date, e.exam_time, e.created_at,
                     s.subject_code, s.subject_name, s.subject_description
@@ -1207,8 +1255,9 @@ def get_exam_history(member_id: str, limit: int = 20) -> dict[str, Any]:
                     e.created_at DESC NULLS LAST,
                     e.exam_id DESC
                 LIMIT %s
+                OFFSET %s
                 """,
-                (normalized_member_id, safe_limit),
+                tuple(filter_params + [safe_page_size, offset]),
             )
             rows = cur.fetchall()
 
@@ -1232,7 +1281,17 @@ def get_exam_history(member_id: str, limit: int = 20) -> dict[str, Any]:
             }
         )
 
-    return {"memberId": normalized_member_id, "items": items}
+    total_pages = max(1, (total_count + safe_page_size - 1) // safe_page_size)
+    return {
+        "memberId": normalized_member_id,
+        "items": items,
+        "page": safe_page,
+        "pageSize": safe_page_size,
+        "total": total_count,
+        "totalPages": total_pages,
+        "subjectCode": normalized_subject_code or None,
+        "subjectFilters": subject_filters,
+    }
 
 
 def get_monthly_ranking(limit: int = 5) -> dict[str, Any]:

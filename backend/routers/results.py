@@ -55,8 +55,13 @@ async def get_latest_result(profile_name: str | None = None):
 
 
 @router.get("/history")
-async def get_exam_history(member_id: str, limit: int = 20):
-    return result_service.get_exam_history(member_id, limit)
+async def get_exam_history(
+    member_id: str,
+    page: int = 1,
+    page_size: int = 10,
+    subject_code: str | None = None,
+):
+    return result_service.get_exam_history(member_id, page, page_size, subject_code)
 
 
 @router.get("/ranking/monthly")

@@ -137,8 +137,46 @@ function renderProfileButton() {
   if (!actions.parentElement) topbar.insertBefore(actions, stats || null);
 }
 
-function renderMyExamHistory(items) {
+const examHistoryState = {
+  selectedSubjectCode: "all",
+  page: 1,
+  pageSize: 10
+};
+
+function renderHistorySubjectTabs(subjectFilters = [], total = 0, selectedSubjectCode = "all") {
+  if (!els.historySubjectTabs) return;
+
+  if (!subjectFilters.length) {
+    els.historySubjectTabs.innerHTML = "";
+    return;
+  }
+
+  const tabItems = [
+    { code: "all", name: "전체", count: total },
+    ...subjectFilters.map((subject) => ({
+      code: subject.subjectCode,
+      name: subject.subjectName || subject.subjectCode || "기타",
+      count: subject.count || 0
+    }))
+  ];
+
+  els.historySubjectTabs.innerHTML = tabItems.map((subject) => `
+    <button type="button" class="${subject.code === selectedSubjectCode ? "active" : ""}" data-subject-code="${subject.code}">
+      <span>${subject.name}</span>
+      <strong>${subject.count}</strong>
+    </button>
+  `).join("");
+
+  els.historySubjectTabs.querySelectorAll("[data-subject-code]").forEach((button) => {
+    button.addEventListener("click", () => {
+      loadMyExamHistory(1, button.dataset.subjectCode || "all");
+    });
+  });
+}
+
+function renderMyExamHistory(items, selectedSubjectCode = "all", meta = {}) {
   if (!els.myExamHistoryList) return;
+  renderHistorySubjectTabs(meta.subjectFilters || [], meta.totalAll || meta.total || 0, selectedSubjectCode);
 
   if (!items.length) {
     els.myExamHistoryList.innerHTML = `
@@ -174,9 +212,38 @@ function renderMyExamHistory(items) {
       window.location.href = PAGE_URLS.result;
     });
   });
+
+  renderExamHistoryPagination(meta.page || 1, meta.totalPages || 1);
 }
 
-async function loadMyExamHistory() {
+function renderExamHistoryPagination(page, totalPages) {
+  if (!els.myExamHistoryPagination) return;
+  if (totalPages <= 1) {
+    els.myExamHistoryPagination.innerHTML = "";
+    return;
+  }
+
+  const start = Math.max(1, page - 2);
+  const end = Math.min(totalPages, start + 4);
+  const pages = Array.from({ length: end - start + 1 }, (_, index) => start + index);
+
+  els.myExamHistoryPagination.innerHTML = `
+    <button type="button" ${page <= 1 ? "disabled" : ""} data-page="${page - 1}">이전</button>
+    ${pages.map((pageNumber) => `
+      <button type="button" class="${pageNumber === page ? "active" : ""}" data-page="${pageNumber}">${pageNumber}</button>
+    `).join("")}
+    <button type="button" ${page >= totalPages ? "disabled" : ""} data-page="${page + 1}">다음</button>
+  `;
+
+  els.myExamHistoryPagination.querySelectorAll("[data-page]").forEach((button) => {
+    button.addEventListener("click", () => {
+      const nextPage = Number(button.dataset.page || "1");
+      if (!button.disabled && nextPage) loadMyExamHistory(nextPage, examHistoryState.selectedSubjectCode);
+    });
+  });
+}
+
+async function loadMyExamHistory(page = examHistoryState.page, subjectCode = examHistoryState.selectedSubjectCode) {
   if (!els.myExamHistoryList) return;
 
   const memberId = currentMemberId();
@@ -185,18 +252,30 @@ async function loadMyExamHistory() {
     return;
   }
 
+  examHistoryState.page = Math.max(1, Number(page) || 1);
+  examHistoryState.selectedSubjectCode = subjectCode || "all";
   els.myExamHistoryList.innerHTML = `
     <div class="my-history-empty">
       <strong>응시내역을 불러오는 중입니다.</strong>
       <p>잠시만 기다려주세요.</p>
     </div>
   `;
+  if (els.myExamHistoryPagination) els.myExamHistoryPagination.innerHTML = "";
 
   try {
-    const response = await fetch(`${API_BASE}/results/history?member_id=${encodeURIComponent(memberId)}&limit=10`);
+    const params = new URLSearchParams({
+      member_id: memberId,
+      page: String(examHistoryState.page),
+      page_size: String(examHistoryState.pageSize)
+    });
+    if (examHistoryState.selectedSubjectCode !== "all") {
+      params.set("subject_code", examHistoryState.selectedSubjectCode);
+    }
+    const response = await fetch(`${API_BASE}/results/history?${params.toString()}`);
     if (!response.ok) throw new Error(`HTTP ${response.status}`);
     const data = await response.json();
-    renderMyExamHistory(data.items || []);
+    const totalAll = (data.subjectFilters || []).reduce((sum, item) => sum + (item.count || 0), 0);
+    renderMyExamHistory(data.items || [], examHistoryState.selectedSubjectCode, { ...data, totalAll });
   } catch (error) {
     els.myExamHistoryList.innerHTML = `
       <div class="my-history-empty error">

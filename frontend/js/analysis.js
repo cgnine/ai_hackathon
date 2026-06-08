@@ -80,7 +80,6 @@ function renderAnalysisData(data, useCachedCommentary = false) {
   renderSubjectBars(data.subjectStats || []);
   renderSkillMetrics(data.summary || {}, data.typeStats || [], data.unitStats || []);
   renderExamTrend(data.examTrend || []);
-  renderExamHighlights(data.examHighlights || {}, data.examTrend || []);
   renderRecommendation(data.subjectStats || [], data.unitStats || [], data.summary || {});
 
   const memberId = currentMemberId();
@@ -140,7 +139,6 @@ function renderAnalysisLoading() {
   els.subjectBars.innerHTML = "<p class=\"item-sub\">과목별 점수를 계산 중입니다.</p>";
   els.skillMetrics.innerHTML = "";
   if (els.examTrend) els.examTrend.innerHTML = "<p class=\"item-sub\">회차별 점수 그래프를 계산 중입니다.</p>";
-  if (els.examHighlights) els.examHighlights.innerHTML = "";
   els.analysisText.innerHTML = "<p>Bedrock AI총평을 준비하고 있습니다.</p>";
   els.recommendationCard.innerHTML = "<p class=\"item-sub\">추천 문제를 고르는 중입니다.</p>";
 }
@@ -150,7 +148,6 @@ function renderAnalysisEmpty(message) {
   els.subjectBars.innerHTML = "";
   els.skillMetrics.innerHTML = "";
   if (els.examTrend) els.examTrend.innerHTML = "";
-  if (els.examHighlights) els.examHighlights.innerHTML = "";
   els.analysisText.innerHTML = `<p>${message}</p>`;
   els.recommendationCard.innerHTML = "<p class=\"item-sub\">모의고사를 완료하면 AI 맞춤형 추천 문제 안내가 표시됩니다.</p>";
 }
@@ -312,44 +309,6 @@ function renderExamTrend(examTrend) {
       <div><span>평균 흐름</span><strong>${average}점</strong><small>최근 ${examTrend.length}회 기준</small></div>
     </div>
   `;
-}
-
-function renderExamHighlights(highlights, examTrend) {
-  if (!els.examHighlights) return;
-  const best = highlights.bestExam || null;
-  const weakest = highlights.weakestExam || null;
-  const latest = examTrend.length ? examTrend[examTrend.length - 1] : null;
-
-  if (!best && !weakest && !latest) {
-    els.examHighlights.innerHTML = "<p class=\"item-sub\">응시 기록이 쌓이면 최고점과 보완 회차가 표시됩니다.</p>";
-    return;
-  }
-
-  const cards = [
-    best && {
-      label: "최고 점수",
-      title: `${best.score || 0}점`,
-      text: `${best.subjectName || "응시 결과"} · ${formatProfileDate(best.createdAt || best.examDate)}`
-    },
-    weakest && {
-      label: "보완 필요 회차",
-      title: `${weakest.score || 0}점`,
-      text: `${weakest.subjectName || "응시 결과"} · 오답 ${weakest.wrong || 0}문항`
-    },
-    latest && {
-      label: "최근 응시",
-      title: `${latest.score || 0}점`,
-      text: `${latest.subjectName || "응시 결과"} · ${latest.correct || 0}/${latest.answered || 0}`
-    }
-  ].filter(Boolean);
-
-  els.examHighlights.innerHTML = cards.map((card) => `
-    <div class="highlight-card">
-      <span>${card.label}</span>
-      <strong>${card.title}</strong>
-      <p>${card.text}</p>
-    </div>
-  `).join("");
 }
 
 function analysisSubjectNames(subjectStats = []) {
