@@ -4944,6 +4944,18 @@ body[data-page="mock"] .choice-btn.selected {
   height: auto;
 }
 
+/* Reduce size of the 회차별 점수 그래프 area to make the chart smaller */
+.score-line-chart {
+  min-height: 140px;
+  max-height: 200px;
+  display: block;
+}
+.score-line-chart svg {
+  width: 100%;
+  height: auto;
+  max-height: 180px;
+}
+
 .radar-grid {
   fill: rgba(255, 204, 0, 0.08);
   stroke: var(--line);
