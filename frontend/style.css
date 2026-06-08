@@ -4928,6 +4928,25 @@ body[data-page="mock"] .choice-btn.selected {
   font-size: 1.1rem;
 }
 
+/* Make analysis headings navy and add a yellow circular marker like result commentary */
+.analysis-card h2 {
+  color: #0b72f0; /* navy-like blue */
+  position: relative;
+  padding-left: 18px;
+}
+.analysis-card h2::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 10px;
+  height: 10px;
+  background: #ffcc00; /* yellow marker */
+  border-radius: 50%;
+  box-shadow: 0 1px 0 rgba(0,0,0,0.06) inset;
+}
+
 .analysis-commentary-panel {
   margin-bottom: 16px;
   border-color: rgba(90, 64, 31, 0.18);
