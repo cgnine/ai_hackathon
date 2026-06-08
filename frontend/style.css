@@ -1628,7 +1628,7 @@ body[data-page="subjects"] .nav-btn:hover {
   color: #111827;
   font: inherit;
   font-size: 0.95rem;
-  font-weight: 400; /* make sidebar menu text non-bold */
+  font-weight: 600; /* restored original sidebar menu weight */
   letter-spacing: 0;
   text-align: left;
   text-decoration: none;
@@ -1638,7 +1638,7 @@ body[data-page="subjects"] .nav-btn:hover {
 .account-sidebar a.active {
   background: #fff3bf; /* match hover background */
   color: #0b72f0;
-  font-weight: 400; /* keep active item non-bold per request */
+  font-weight: 800;
 }
 
 .account-sidebar a:hover,
