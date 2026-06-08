@@ -1600,8 +1600,8 @@ body[data-page="subjects"] .nav-btn:hover {
   top: 92px;
   display: grid;
   gap: 16px;
-  min-height: 420px;
-  padding: 28px 24px;
+  min-height: 260px; /* reduced vertical length */
+  padding: 16px 16px; /* reduced padding to save vertical space */
   border: 1px solid #dbe4ef;
   border-radius: 8px;
   background: #fff;
