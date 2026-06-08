@@ -526,7 +526,7 @@ body[data-page="subjects"] .nav-btn:hover {
 .profile-menu-head {
   display: grid;
   gap: 18px;
-  padding: 20px 20px 0;
+  padding: 20px 20px 12px; /* add bottom padding to separate from summary */
   border-bottom: 0;
   margin-bottom: 0;
 }
@@ -576,7 +576,7 @@ body[data-page="subjects"] .nav-btn:hover {
 
 .profile-summary-card {
   display: block;
-  padding: 8px 20px 18px;
+  padding: 18px 20px 18px; /* increase top padding for more vertical gap */
   border-bottom: 0; /* removed divider per design */
 }
 
@@ -775,8 +775,8 @@ body[data-page="subjects"] .nav-btn:hover {
 
 .profile-menu-list a:hover,
 .profile-menu .logout-button:hover {
-  background: #eff6ff;
-  color: #1d4ed8;
+  background: #fff7cf; /* pale yellow on hover */
+  color: #4a3b12; /* darker yellow-brown for contrast */
 }
 
 .logout-button {
