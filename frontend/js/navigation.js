@@ -491,6 +491,9 @@ async function loadMyInfoMetrics(target) {
 }
 
 function renderExamHistoryPage() {
+  // Ensure the 'ALL' tab is selected by default when opening the Exam History page
+  state.examHistorySubjectId = null;
+  saveState();
   loadMyExamHistory();
 }
 
