@@ -4946,14 +4946,18 @@ body[data-page="mock"] .choice-btn.selected {
 
 /* Reduce size of the 회차별 점수 그래프 area to make the chart smaller */
 .score-line-chart {
-  min-height: 140px;
-  max-height: 200px;
+  min-height: 180px; /* slightly larger */
+  max-height: 300px;
   display: block;
+  padding-bottom: 16px; /* allow space for legend/boxes */
+  overflow: visible; /* prevent clipping of child elements */
 }
 .score-line-chart svg {
-  width: 100%;
+  width: 95%;
   height: auto;
-  max-height: 180px;
+  max-height: 240px;
+  display: block;
+  margin: 0 auto;
 }
 
 .radar-grid {
