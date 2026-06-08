@@ -4912,8 +4912,8 @@ body[data-page="mock"] .choice-btn.selected {
 
 .analysis-layout {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 16px;
+  grid-template-columns: 1fr; /* each card uses its own row */
+  gap: 18px;
 }
 
 .analysis-card {
