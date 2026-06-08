@@ -4949,8 +4949,8 @@ body[data-page="mock"] .choice-btn.selected {
 
 .analysis-commentary-panel {
   margin-bottom: 16px;
-  border-color: rgba(90, 64, 31, 0.18);
-  background: linear-gradient(135deg, #fff8dc, #ffffff);
+  border-color: rgba(90, 100, 110, 0.12);
+  background: linear-gradient(135deg, #e8eef6, #ffffff); /* blue-gray like result page */
 }
 
 .radar-chart {
@@ -4966,16 +4966,16 @@ body[data-page="mock"] .choice-btn.selected {
 
 /* Reduce size of the 회차별 점수 그래프 area to make the chart smaller */
 .score-line-chart {
-  min-height: 180px; /* slightly larger */
-  max-height: 300px;
+  min-height: 260px; /* increase to give chart and bottom boxes room */
+  max-height: 420px;
   display: block;
-  padding-bottom: 16px; /* allow space for legend/boxes */
+  padding-bottom: 72px; /* allow ample space for bottom score/average boxes */
   overflow: visible; /* prevent clipping of child elements */
 }
 .score-line-chart svg {
   width: 95%;
   height: auto;
-  max-height: 240px;
+  max-height: 360px;
   display: block;
   margin: 0 auto;
 }
@@ -5051,7 +5051,7 @@ body[data-page="mock"] .choice-btn.selected {
   padding: 14px;
   border: 1px solid var(--line);
   border-radius: var(--radius);
-  background: #f8fafc;
+  background: #e8eef6; /* blue-gray metric boxes */
 }
 
 .metric span,
@@ -5095,7 +5095,7 @@ body[data-page="mock"] .choice-btn.selected {
 .mini-stat {
   padding: 12px;
   border-radius: var(--radius);
-  background: #f8fafc;
+  background: #e8eef6;
 }
 
 .mini-stat span,
