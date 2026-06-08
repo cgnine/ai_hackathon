@@ -577,7 +577,7 @@ body[data-page="subjects"] .nav-btn:hover {
 .profile-summary-card {
   display: block;
   padding: 8px 20px 18px;
-  border-bottom: 1px solid #e5eaf0;
+  border-bottom: 0; /* removed divider per design */
 }
 
 .profile-insight-summary {
@@ -766,7 +766,7 @@ body[data-page="subjects"] .nav-btn:hover {
   align-items: center;
   padding: 0 20px;
   border-radius: 0;
-  border-top: 1px solid #e5eaf0;
+  border-top: 0; /* remove top border between items */
   color: var(--ink);
   font-size: 0.92rem;
   font-weight: 700;
