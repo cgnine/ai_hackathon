@@ -12,6 +12,9 @@ function bindOptional(element, eventName, handler) {
 }
 
 function initMobileMenu() {
+  const page = document.body.dataset.page || "";
+  if (page === "main" || page === "login" || page === "signup" || page === "reset-password") return;
+
   const topbar = document.querySelector(".topbar");
   const nav = document.querySelector(".main-nav");
   if (!topbar || !nav || document.getElementById("mobileMenuBtn")) return;

@@ -366,6 +366,11 @@ body[data-page="wrong"] .brand {
   flex: 1;
 }
 
+body[data-page="main"] .main-nav,
+body[data-page="login"] .main-nav {
+  display: none;
+}
+
 .mobile-menu-btn,
 .mobile-menu-overlay {
   display: none;
@@ -4988,7 +4993,7 @@ body[data-page="mock"] .choice-btn.selected {
 
   .topbar {
     position: sticky;
-    z-index: 2000;
+    z-index: 3200;
     flex-wrap: nowrap;
     gap: 8px 12px;
     min-height: 0;
@@ -5068,7 +5073,7 @@ body[data-page="mock"] .choice-btn.selected {
 
   .profile-menu {
     right: 0;
-    z-index: 3000;
+    z-index: 3400;
     width: min(300px, calc(100vw - 24px));
   }
 
@@ -5234,7 +5239,7 @@ body[data-page="mock"] .choice-btn.selected {
   .mobile-menu-overlay {
     position: fixed;
     inset: 0;
-    z-index: 2500;
+    z-index: 3000;
     display: block;
     background: rgba(23, 32, 42, 0.35);
   }
@@ -5247,7 +5252,7 @@ body[data-page="mock"] .choice-btn.selected {
     position: fixed;
     top: 0;
     right: 0;
-    z-index: 2600;
+    z-index: 3300;
     display: flex;
     width: min(78vw, 300px);
     height: 100vh;
@@ -5315,6 +5320,11 @@ body[data-page="mock"] .choice-btn.selected {
     box-shadow: none;
     transform: none;
     transition: none;
+  }
+
+  body[data-page="main"] .main-nav,
+  body[data-page="login"] .main-nav {
+    display: none;
   }
 }
 
