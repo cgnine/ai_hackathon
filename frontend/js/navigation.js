@@ -490,6 +490,73 @@ async function loadMyInfoMetrics(target) {
   `;
 }
 
+// Render HTML for the 8 metric cards shown on the My Info page.
+function renderMyInfoMetricCards() {
+  const averageScore = Math.round(state.averageScore || 72);
+  const topScore = Math.round(state.topScore || 90);
+  const topGap = Math.max(0, topScore - averageScore);
+  const predictedRank = state.predictedRank || 12;
+  const examCount = state.examCount || 5;
+  const answeredTotal = state.answeredTotal || 420;
+  const wrongTotal = state.wrongTotal || 8;
+
+  return `
+    <article class="my-info-score-card rank">
+      <span>내 순위</span>
+      <strong>17<small>위</small></strong>
+      <p>전체 1,248명 중</p>
+      <em>▲ 지난주 23위</em>
+    </article>
+    <article class="my-info-score-card score">
+      <span>내 점수</span>
+      <strong>${averageScore}<small>점</small></strong>
+      <p>상위 25%</p>
+      <em>▲ 지난주 72점</em>
+    </article>
+    <article class="my-info-score-card target">
+      <span>상위 10% 기준</span>
+      <strong>${topScore}<small>점</small></strong>
+      <p>상위 10% 진입까지<br />${topGap}점 남았어요!</p>
+    </article>
+    <article class="my-info-score-card growth">
+      <span>이번 주 성장률</span>
+      <strong>+15<small>점</small></strong>
+      <p>전체 2위</p>
+    </article>
+    <article class="my-info-score-card predict">
+      <span>AI 예측 순위</span>
+      <small>(향후 1주)</small>
+      <strong>${predictedRank}<small>위</small></strong>
+      <p>▲ 5계단 상승 예상</p>
+    </article>
+    <article class="my-info-score-card exams">
+      <span>총 응시</span>
+      <strong>${examCount}<small>회</small></strong>
+      <p>누적 응시 횟수</p>
+    </article>
+    <article class="my-info-score-card answered">
+      <span>풀이 문항</span>
+      <strong>${answeredTotal}</strong>
+      <p>전체 풀이 문항 수</p>
+    </article>
+    <article class="my-info-score-card wrong">
+      <span>오답</span>
+      <strong>${wrongTotal}</strong>
+      <p>복습이 필요한 문항</p>
+      <em>오답노트 확인 추천</em>
+    </article>
+  `;
+}
+
+function renderMyInfoPage() {
+  const target = document.getElementById('myInfoMetrics');
+  if (!target) return;
+  // populate with existing cached values immediately
+  target.innerHTML = renderMyInfoMetricCards();
+  // then load live metrics (if logged in)
+  loadMyInfoMetrics(target);
+}
+
 function renderExamHistoryPage() {
   // Ensure the 'ALL' tab is selected by default when opening the Exam History page
   state.examHistorySubjectId = null;
