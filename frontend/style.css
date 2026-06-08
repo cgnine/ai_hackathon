@@ -2359,7 +2359,8 @@ body[data-page="my-info"] .screen-head,
 
 .choice-btn {
   display: grid;
-  grid-template-columns: 34px 1fr;
+  grid-template-columns: 34px 1fr auto;
+  column-gap: 10px;
   align-items: center;
   width: 100%;
   min-height: 58px;
@@ -2410,6 +2411,24 @@ body[data-page="mock"] .choice-btn.selected {
   background: #edf2f7;
   color: var(--muted);
   font-weight: 900;
+}
+
+.choice-answer-mark {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 46px;
+  padding: 4px 8px;
+  border-radius: 999px;
+  background: #dcfce7;
+  color: #166534;
+  font-size: 0.78rem;
+  font-weight: 900;
+  line-height: 1;
+}
+
+.choice-answer-mark[hidden] {
+  display: none;
 }
 
 .answer-actions {
