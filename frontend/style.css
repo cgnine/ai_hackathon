@@ -1613,15 +1613,15 @@ body[data-page="subjects"] .nav-btn:hover {
 
 .account-sidebar nav {
   display: grid;
-  gap: 8px;
+  gap: 4px; /* reduced vertical spacing between menu items */
 }
 
 .account-sidebar a,
 .account-sidebar button {
   display: flex;
-  min-height: 48px;
+  min-height: 40px; /* slightly reduced height */
   align-items: center;
-  padding: 0 16px;
+  padding: 0 12px; /* slightly less horizontal padding */
   border: 0;
   border-radius: 6px;
   background: transparent;
