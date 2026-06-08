@@ -22,6 +22,12 @@
   padding: 0;
 }
 
+/* Prevent layout shift when navigating between pages (keep vertical scrollbar stable) */
+html {
+  overflow-y: scroll;
+  scrollbar-gutter: stable;
+}
+
 .sr-only {
   position: absolute;
   width: 1px;
