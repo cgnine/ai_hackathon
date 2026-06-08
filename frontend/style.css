@@ -4920,6 +4920,7 @@ body[data-page="mock"] .choice-btn.selected {
   border-radius: var(--radius);
   background: var(--surface);
   box-shadow: var(--shadow);
+  overflow: visible; /* allow charts/legends to extend without clipping */
 }
 
 .analysis-card h2 {
@@ -4958,6 +4959,11 @@ body[data-page="mock"] .choice-btn.selected {
   max-height: 240px;
   display: block;
   margin: 0 auto;
+}
+
+.exam-highlights {
+  padding-top: 8px;
+  clear: both;
 }
 
 .radar-grid {
