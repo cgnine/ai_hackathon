@@ -5071,16 +5071,16 @@ body[data-page="mock"] .choice-btn.selected {
 
 /* Reduce size of the 회차별 점수 그래프 area to make the chart smaller */
 .score-line-chart {
-  min-height: 260px; /* increase to give chart and bottom boxes room */
-  max-height: 420px;
-  display: block;
-  padding-bottom: 72px; /* allow ample space for bottom score/average boxes */
-  overflow: visible; /* prevent clipping of child elements */
+  display: grid;
+  gap: 14px;
+  min-height: 0;
+  max-height: none;
+  padding-bottom: 0;
+  overflow: visible;
 }
 .score-line-chart svg {
-  width: 95%;
+  width: 100%;
   height: auto;
-  max-height: 360px;
   display: block;
   margin: 0 auto;
 }
@@ -6111,10 +6111,6 @@ body[data-page="mock"] .choice-btn.selected {
 
   .profile-menu {
     right: 0;
-<<<<<<< HEAD
-    z-index: 3400;
-    width: min(300px, calc(100vw - 24px));
-=======
     z-index: 3000;
     width: min(320px, calc(100vw - 24px));
   }
@@ -6130,7 +6126,6 @@ body[data-page="mock"] .choice-btn.selected {
     font-weight: 400;
     font-style: normal;
     color: inherit;
->>>>>>> df6077d47ae525ceea7354193ec79dc860e94869
   }
 
   .top-stats {
