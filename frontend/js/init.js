@@ -13,7 +13,7 @@ function bindOptional(element, eventName, handler) {
 
 function renderFooter() {
   if (document.querySelector(".main-footer")) return;
-  const footerPages = new Set(["harness", "ai-recommend", "wrong", "wrong-practice", "subjects", "mock", "result"]);
+  const footerPages = new Set(["harness", "ai-recommend", "wrong", "wrong-practice", "subjects", "mock", "result", "ranking"]);
   const page = document.body.dataset.page || "";
   if (!footerPages.has(page)) return;
 
@@ -165,6 +165,29 @@ async function initPage() {
 
   renderProfileButton();
   renderTopStats();
+  // Ensure top nav reflects the current page when loading static pages
+  (function setActiveTopNav() {
+    const pageName = document.body.dataset.page || "";
+    const pageFileMap = {
+      main: "index.html",
+      subjects: "subjects.html",
+      "my-info": "profile.html",
+      "exam-history": "history.html",
+      analysis: "analysis.html",
+      wrong: "wrong.html",
+      "wrong-practice": "wrong-practice.html",
+      result: "result.html",
+      ranking: "ranking.html",
+      "ai-recommend": "ai-recommend.html",
+      harness: "harness.html",
+      mock: "mock.html",
+    };
+    const targetFile = pageFileMap[pageName];
+    if (!targetFile) return;
+    document.querySelectorAll(".main-nav .nav-btn").forEach((btn) => {
+      btn.classList.toggle("active", (btn.getAttribute("href") || "").includes(targetFile));
+    });
+  })();
 }
 
 function scrollSubjectsToTop() {
