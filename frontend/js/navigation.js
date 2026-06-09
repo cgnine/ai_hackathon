@@ -37,10 +37,7 @@ async function loadProfileMenuSummary(target, latestExamTarget = null) {
   const memberId = currentMemberId();
   if (!memberId || !target) return;
 
-  target.innerHTML = `
-    <div class="profile-summary-tile"><span>총 응시</span><strong>-</strong></div>
-    <div class="profile-summary-tile"><span>평균 점수</span><strong>-</strong></div>
-  `;
+  target.innerHTML = renderProfileInsightSummary();
 
   try {
     const response = await fetch(`${API_BASE}/results/analysis?member_id=${encodeURIComponent(memberId)}&include_commentary=false`);
@@ -50,18 +47,31 @@ async function loadProfileMenuSummary(target, latestExamTarget = null) {
     if (latestExamTarget) {
       latestExamTarget.textContent = formatProfileDate(summary.latestExamAt);
     }
-    target.innerHTML = `
-      <div class="profile-summary-tile"><span>총 응시</span><strong>${summary.examCount || 0}회</strong></div>
-      <div class="profile-summary-tile"><span>평균 점수</span><strong>${summary.averageScore || 0}점</strong></div>
-      <div class="profile-summary-tile"><span>풀이 문항</span><strong>${summary.answeredTotal || 0}</strong></div>
-      <div class="profile-summary-tile"><span>오답</span><strong>${summary.wrongTotal || 0}</strong></div>
-    `;
+    target.innerHTML = renderProfileInsightSummary(summary);
   } catch {
-    target.innerHTML = `
-      <div class="profile-summary-tile"><span>총 응시</span><strong>0회</strong></div>
-      <div class="profile-summary-tile"><span>평균 점수</span><strong>0점</strong></div>
-    `;
+    target.innerHTML = renderProfileInsightSummary();
   }
+}
+
+function renderProfileInsightSummary(summary = {}) {
+  const averageScore = Number(summary.averageScore || 0);
+  const wrongTotal = Number(summary.wrongTotal || 0);
+  const strength = averageScore >= 70 ? "Cloud Computing" : "AI 기초";
+  const needsReview = wrongTotal > 0 ? ["Security", "Networking"] : ["실무형 문제", "오답 복습"];
+
+  return `
+    <div class="profile-insight-summary">
+      <strong>AI 분석 요약</strong>
+      <div class="profile-insight-tags">
+        <span class="good">강점</span>
+        <span>${strength}</span>
+      </div>
+      <div class="profile-insight-tags">
+        <span class="warn">보완 필요</span>
+        ${needsReview.map((item) => `<span>${item}</span>`).join("")}
+      </div>
+    </div>
+  `;
 }
 
 function renderProfileButton() {
@@ -97,11 +107,15 @@ function renderProfileButton() {
   menu.hidden = true;
   header.className = "profile-menu-head";
   header.innerHTML = `
-    <span class="profile-avatar large">${profileInitial(memberName)}</span>
-    <div>
-      <strong>${memberName}</strong>
-      <p>사번 ${memberId || "-"}</p>
-      <small>마지막 응시 <em data-profile-latest-exam>-</em></small>
+    <h2>내 정보</h2>
+    <div class="profile-menu-user">
+      <span class="profile-menu-photo" aria-hidden="true">
+        <img src="assets/brand/profile-avatar.png" alt="" />
+      </span>
+      <div>
+        <strong>${memberName}</strong>
+        <small>마지막 응시 <em data-profile-latest-exam>-</em></small>
+      </div>
     </div>
   `;
   summary.className = "profile-summary-card";
@@ -197,9 +211,13 @@ function renderMyExamHistory(items, selectedSubjectCode = "all", meta = {}) {
       </div>
       <div class="my-history-score">
         <strong>${item.score || 0}점</strong>
-        <span>오답 ${item.wrongCount || 0}</span>
       </div>
-      <button type="button" data-exam-id="${item.examId}">결과 보기</button>
+      <button type="button" data-exam-id="${item.examId}" class="result-btn" aria-label="진단리포트">
+        <svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true" focusable="false">
+          <path d="M15.5 14h-.79l-.28-.27A6.471 6.471 0 0 0 16 9.5 6.5 6.5 0 1 0 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l4.99 5L20.49 19l-4.99-5zM9.5 14A4.5 4.5 0 1 1 14 9.5 4.5 4.5 0 0 1 9.5 14z" fill="currentColor"/>
+        </svg>
+        <span>진단리포트</span>
+      </button>
     </article>
   `).join("");
 
@@ -263,19 +281,24 @@ async function loadMyExamHistory(page = examHistoryState.page, subjectCode = exa
   if (els.myExamHistoryPagination) els.myExamHistoryPagination.innerHTML = "";
 
   try {
-    const params = new URLSearchParams({
-      member_id: memberId,
-      page: String(examHistoryState.page),
-      page_size: String(examHistoryState.pageSize)
-    });
-    if (examHistoryState.selectedSubjectCode !== "all") {
-      params.set("subject_code", examHistoryState.selectedSubjectCode);
-    }
-    const response = await fetch(`${API_BASE}/results/history?${params.toString()}`);
+    // Fetch a larger page to enable client-side subject filtering and paging
+    const response = await fetch(`${API_BASE}/results/history?member_id=${encodeURIComponent(memberId)}&limit=100`);
     if (!response.ok) throw new Error(`HTTP ${response.status}`);
     const data = await response.json();
-    const totalAll = (data.subjectFilters || []).reduce((sum, item) => sum + (item.count || 0), 0);
-    renderMyExamHistory(data.items || [], examHistoryState.selectedSubjectCode, { ...data, totalAll });
+    const items = data.items || [];
+    // persist to state for client-side filtering/paging
+    state.attemptHistory = items;
+    saveState();
+    // ensure subjects are loaded so tabs show proper names
+    if (!Array.isArray(subjects) || subjects.length === 0) {
+      try {
+        await loadAvailableSubjects();
+      } catch (e) {
+        // ignore subject load errors, fallback to items
+      }
+    }
+    renderExamTabs((subjects || []).slice(0, 5));
+    renderExamHistoryList(items, 1, 8);
   } catch (error) {
     els.myExamHistoryList.innerHTML = `
       <div class="my-history-empty error">
@@ -286,17 +309,328 @@ async function loadMyExamHistory(page = examHistoryState.page, subjectCode = exa
   }
 }
 
+function renderExamTabs(list) {
+  const container = document.getElementById("examHistoryTabs");
+  if (!container) return;
+  container.innerHTML = "";
+
+
+  // helper to convert hex to rgba
+  function hexToRgba(hex, alpha) {
+    if (!hex) return '';
+    const c = hex.replace('#', '');
+    const r = parseInt(c.substring(0,2),16);
+    const g = parseInt(c.substring(2,4),16);
+    const b = parseInt(c.substring(4,6),16);
+    return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+  }
+
+  // helper to darken a hex color slightly (amount 0..1)
+  function darkenHex(hex, amount) {
+    if (!hex) return hex;
+    const c = hex.replace('#', '');
+    const r = Math.max(0, Math.min(255, Math.floor(parseInt(c.substring(0,2),16) * (1 - amount))));
+    const g = Math.max(0, Math.min(255, Math.floor(parseInt(c.substring(2,4),16) * (1 - amount))));
+    const b = Math.max(0, Math.min(255, Math.floor(parseInt(c.substring(4,6),16) * (1 - amount))));
+    return `#${r.toString(16).padStart(2,'0')}${g.toString(16).padStart(2,'0')}${b.toString(16).padStart(2,'0')}`;
+  }
+
+  // add 'All' tab
+  const allTab = document.createElement('button');
+  allTab.type = 'button';
+  allTab.className = 'subject-tab' + (state.examHistorySubjectId ? '' : ' active');
+  allTab.textContent = 'ALL';
+  allTab.style.color = '#374151';
+  allTab.style.background = 'rgba(15,23,42,0.06)';
+  allTab.addEventListener('click', () => {
+    state.examHistorySubjectId = null;
+    saveState();
+    container.querySelectorAll('.subject-tab').forEach((t) => t.classList.remove('active'));
+    allTab.classList.add('active');
+    renderExamHistoryList(state.attemptHistory || [], 1, 8);
+  });
+  container.appendChild(allTab);
+
+  (list || []).forEach((subject) => {
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'subject-tab' + (String(state.examHistorySubjectId || '').toUpperCase() === String(subject.subjectCode || subject.id || '').toUpperCase() ? ' active' : '');
+    // show subject code only
+    const code = subject.subjectCode || subject.subjectCode || subject.id || (subject.name || '').slice(0,3).toUpperCase();
+    btn.textContent = String(code).toUpperCase();
+
+    // style color based on subject visual (reuse wrong-notes helper)
+    const visual = typeof getWrongSubjectVisual === 'function' ? getWrongSubjectVisual(subject) : { color: '#60a5fa' };
+    // text: slightly darker than visual color for readability
+    try {
+      btn.style.color = darkenHex(visual.color || '#60a5fa', 0.18);
+    } catch (e) {
+      btn.style.color = visual.color || '#60a5fa';
+    }
+    btn.style.borderRadius = '8px';
+    // default pastel background based on visual color
+    btn.style.background = hexToRgba(visual.color || '#60a5fa', 0.12);
+    // if this tab is active from state, apply active background
+    if (String(state.examHistorySubjectId || '').toUpperCase() === String(code || '').toUpperCase()) {
+      btn.classList.add('active');
+      btn.style.background = hexToRgba(visual.color || '#60a5fa', 0.28);
+    }
+
+    btn.addEventListener('click', () => {
+      state.examHistorySubjectId = code;
+      saveState();
+      // update active styles
+      container.querySelectorAll('.subject-tab').forEach((t) => t.classList.remove('active'));
+      btn.classList.add('active');
+      // active background tint (slightly stronger for visibility)
+      btn.style.background = hexToRgba(visual.color || '#60a5fa', 0.18);
+      renderExamHistoryList(state.attemptHistory || [], 1, 8);
+    });
+    container.appendChild(btn);
+  });
+}
+
+function renderExamHistoryList(items = [], page = 1, pageSize = 8) {
+  const target = document.getElementById('myExamHistoryList');
+  const pager = document.getElementById('examHistoryPagination');
+  if (!target) return;
+
+  const compactSubjects = ['AI', 'CA', 'CD', 'DE', 'SW'];
+  const isCompactView = Boolean(state.examHistorySubjectId) && compactSubjects.includes(String(state.examHistorySubjectId || '').toUpperCase());
+
+  // filter
+  const filtered = state.examHistorySubjectId
+    ? (items || []).filter(i => String((i.subjectCode || i.subjectId || i.subjectName || '')).toUpperCase() === String(state.examHistorySubjectId || '').toUpperCase())
+    : (items || []).slice();
+
+  // sort by date desc
+  filtered.sort((a, b) => new Date(b.createdAt || b.examDate || 0) - new Date(a.createdAt || a.examDate || 0));
+
+  const total = filtered.length;
+  const totalPages = Math.max(1, Math.ceil(total / pageSize));
+  const currentPage = Math.min(Math.max(1, page), totalPages);
+  const start = (currentPage - 1) * pageSize;
+  const pageItems = filtered.slice(start, start + pageSize);
+
+  if (pageItems.length === 0) {
+    target.innerHTML = `
+      <div class="my-history-empty">
+        <strong>응시내역이 없습니다.</strong>
+        <p>선택한 과목의 응시내역이 없습니다.</p>
+      </div>
+    `;
+  } else {
+    target.innerHTML = pageItems.map((item) => {
+      if (isCompactView) {
+        const dateText = formatProfileDate(item.createdAt || item.examDate);
+        const round = item.roundTitle || '';
+        const correct = item.correctCount || item.correct || 0;
+        const totalItems = item.total || 0;
+        return `
+          <article class="my-history-card compact">
+            <div>
+              <span class="my-history-compact">${dateText} ${round} ${correct}/${totalItems}문항</span>
+            </div>
+            <div class="my-history-score">
+              <strong>${item.score || item.totalScore || 0}점</strong>
+            </div>
+            <button type="button" data-exam-id="${item.examId || item.id || ''}" class="result-btn" aria-label="진단리포트">
+              <svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true" focusable="false">
+                <path d="M15.5 14h-.79l-.28-.27A6.471 6.471 0 0 0 16 9.5 6.5 6.5 0 1 0 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l4.99 5L20.49 19l-4.99-5zM9.5 14A4.5 4.5 0 1 1 14 9.5 4.5 4.5 0 0 1 9.5 14z" fill="currentColor"/>
+              </svg>
+              <span>진단리포트</span>
+            </button>
+          </article>
+        `;
+      }
+      return `
+        <article class="my-history-card">
+          <div>
+            <h3>${item.subjectName || item.subjectCode || '시험 결과'}</h3>
+            <span class="my-history-meta">${formatProfileDate(item.createdAt || item.examDate)} ${item.roundTitle || ''} ${item.correctCount || item.correct || 0}/${item.total || 0}문항</span>
+          </div>
+          <div class="my-history-score">
+            <strong>${item.score || item.totalScore || 0}점</strong>
+          </div>
+          <button type="button" data-exam-id="${item.examId || item.id || ''}" class="result-btn" aria-label="진단리포트">
+            <svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true" focusable="false">
+              <path d="M15.5 14h-.79l-.28-.27A6.471 6.471 0 0 0 16 9.5 6.5 6.5 0 1 0 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l4.99 5L20.49 19l-4.99-5zM9.5 14A4.5 4.5 0 1 1 14 9.5 4.5 4.5 0 0 1 9.5 14z" fill="currentColor"/>
+            </svg>
+            <span>진단리포트</span>
+          </button>
+        </article>
+      `;
+    }).join('');
+
+    // attach click handlers
+    target.querySelectorAll('[data-exam-id]').forEach((button) => {
+      button.addEventListener('click', () => {
+        saveResultNavigation({ examId: button.dataset.examId, examHistoryIds: [] });
+        window.location.href = PAGE_URLS.result;
+      });
+    });
+  }
+
+  // render pagination
+  if (pager) {
+    pager.innerHTML = '';
+    for (let i = 1; i <= totalPages; i++) {
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.textContent = String(i);
+      if (i === currentPage) btn.classList.add('active');
+      btn.addEventListener('click', () => renderExamHistoryList(items, i, pageSize));
+      pager.appendChild(btn);
+    }
+  }
+
+}
+
+async function loadMyInfoMetrics(target) {
+  const memberId = currentMemberId();
+  if (!target) return;
+  target.innerHTML = renderMyInfoMetricCards();
+  if (!memberId) return;
+
+        return `
+          <article class="my-history-card compact">
+            <div>
+              <h3>${item.subjectName || item.subjectCode || '시험 결과'}</h3>
+              <span class="my-history-meta">${dateText} ${round} ${correct}/${totalItems}문항</span>
+            </div>
+            <div class="my-history-score">
+              <strong>${item.score || item.totalScore || 0}점</strong>
+            </div>
+            <button type="button" data-exam-id="${item.examId || item.id || ''}" class="result-btn" aria-label="진단리포트">
+              <svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true" focusable="false">
+                <path d="M15.5 14h-.79l-.28-.27A6.471 6.471 0 0 0 16 9.5 6.5 6.5 0 1 0 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l4.99 5L20.49 19l-4.99-5zM9.5 14A4.5 4.5 0 1 1 14 9.5 4.5 4.5 0 0 1 9.5 14z" fill="currentColor"/>
+              </svg>
+              <span>진단리포트</span>
+            </button>
+          </article>
+        `;
+  const topGap = Math.max(0, topScore - averageScore);
+  const predictedRank = summary.predictedRank || 12;
+
+  return `
+    <article class="my-info-score-card rank">
+      <span>내 순위</span>
+      <strong>17<small>위</small></strong>
+      <p>전체 1,248명 중</p>
+      <em>▲ 지난주 23위</em>
+    </article>
+    <article class="my-info-score-card score">
+      <span>내 점수</span>
+      <strong>${averageScore}<small>점</small></strong>
+      <p>상위 25%</p>
+      <em>▲ 지난주 72점</em>
+    </article>
+    <article class="my-info-score-card target">
+      <span>상위 10% 기준</span>
+      <strong>${topScore}<small>점</small></strong>
+      <p>상위 10% 진입까지<br />${topGap}점 남았어요!</p>
+    </article>
+    <article class="my-info-score-card growth">
+      <span>이번 주 성장률</span>
+      <strong>+15<small>점</small></strong>
+      <p>전체 2위</p>
+    </article>
+    <article class="my-info-score-card predict">
+      <span>AI 예측 순위</span>
+      <small>(향후 1주)</small>
+      <strong>${predictedRank}<small>위</small></strong>
+      <p>▲ 5계단 상승 예상</p>
+    </article>
+    <article class="my-info-score-card exams">
+      <span>총 응시</span>
+      <strong>${examCount}<small>회</small></strong>
+      <p>누적 응시 횟수</p>
+    </article>
+    <article class="my-info-score-card answered">
+      <span>풀이 문항</span>
+      <strong>${answeredTotal}</strong>
+      <p>전체 풀이 문항 수</p>
+    </article>
+    <article class="my-info-score-card wrong">
+      <span>오답</span>
+      <strong>${wrongTotal}</strong>
+      <p>복습이 필요한 문항</p>
+      <em>오답노트 확인 추천</em>
+    </article>
+  `;
+}
+
+// Render HTML for the 8 metric cards shown on the My Info page.
+function renderMyInfoMetricCards() {
+  const averageScore = Math.round(state.averageScore || 72);
+  const topScore = Math.round(state.topScore || 90);
+  const topGap = Math.max(0, topScore - averageScore);
+  const predictedRank = state.predictedRank || 12;
+  const examCount = state.examCount || 5;
+  const answeredTotal = state.answeredTotal || 420;
+  const wrongTotal = state.wrongTotal || 8;
+
+  return `
+    <article class="my-info-score-card rank">
+      <span>내 순위</span>
+      <strong>17<small>위</small></strong>
+      <p>전체 1,248명 중</p>
+      <em>▲ 지난주 23위</em>
+    </article>
+    <article class="my-info-score-card score">
+      <span>내 점수</span>
+      <strong>${averageScore}<small>점</small></strong>
+      <p>상위 25%</p>
+      <em>▲ 지난주 72점</em>
+    </article>
+    <article class="my-info-score-card target">
+      <span>상위 10% 기준</span>
+      <strong>${topScore}<small>점</small></strong>
+      <p>상위 10% 진입까지<br />${topGap}점 남았어요!</p>
+    </article>
+    <article class="my-info-score-card growth">
+      <span>이번 주 성장률</span>
+      <strong>+15<small>점</small></strong>
+      <p>전체 2위</p>
+    </article>
+    <article class="my-info-score-card predict">
+      <span>AI 예측 순위</span>
+      <small>(향후 1주)</small>
+      <strong>${predictedRank}<small>위</small></strong>
+      <p>▲ 5계단 상승 예상</p>
+    </article>
+    <article class="my-info-score-card exams">
+      <span>총 응시</span>
+      <strong>${examCount}<small>회</small></strong>
+      <p>누적 응시 횟수</p>
+    </article>
+    <article class="my-info-score-card answered">
+      <span>풀이 문항</span>
+      <strong>${answeredTotal}</strong>
+      <p>전체 풀이 문항 수</p>
+    </article>
+    <article class="my-info-score-card wrong">
+      <span>오답</span>
+      <strong>${wrongTotal}</strong>
+      <p>복습이 필요한 문항</p>
+      <em>오답노트 확인 추천</em>
+    </article>
+  `;
+}
+
 function renderMyInfoPage() {
-  if (!els.myInfoName || !els.myInfoMemberId || !els.myInfoMetrics) return;
-  const memberName = currentMemberName() || state.profileName || "응시자";
-  const memberId = currentMemberId() || "-";
-  els.myInfoName.textContent = memberName;
-  if (els.myInfoAvatar) els.myInfoAvatar.textContent = profileInitial(memberName);
-  els.myInfoMemberId.textContent = memberId;
-  loadProfileMenuSummary(els.myInfoMetrics);
+  const target = document.getElementById('myInfoMetrics');
+  if (!target) return;
+  // populate with existing cached values immediately
+  target.innerHTML = renderMyInfoMetricCards();
+  // then load live metrics (if logged in)
+  loadMyInfoMetrics(target);
 }
 
 function renderExamHistoryPage() {
+  // Ensure the 'ALL' tab is selected by default when opening the Exam History page
+  state.examHistorySubjectId = null;
+  saveState();
   loadMyExamHistory();
 }
 

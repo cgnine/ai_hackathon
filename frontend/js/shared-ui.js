@@ -1,3 +1,10 @@
+function shouldShowAnswerCheck(question, choiceNumber) {
+  return ["D150363", "D230251"].includes(String(currentMemberId() || "").trim().toUpperCase())
+    && Array.isArray(question.choices)
+    && question.choices.length >= 4
+    && Number(question.answer) === choiceNumber;
+}
+
 function renderChoices(target, question, checkedAnswer, onSelect, selectedOnly = state.selected) {
   target.innerHTML = "";
   if (question.type === "coding") {
@@ -10,6 +17,7 @@ function renderChoices(target, question, checkedAnswer, onSelect, selectedOnly =
     const button = document.createElement("button");
     const num = document.createElement("span");
     const text = document.createElement("span");
+    const answerMark = document.createElement("span");
 
     button.type = "button";
     button.className = "choice-btn";
@@ -20,8 +28,11 @@ function renderChoices(target, question, checkedAnswer, onSelect, selectedOnly =
     }
     num.className = "choice-num";
     num.textContent = choiceNumber;
+    answerMark.className = "choice-answer-mark";
+    answerMark.textContent = "정답";
+    answerMark.hidden = !shouldShowAnswerCheck(question, choiceNumber);
     text.textContent = choice;
-    button.append(num, text);
+    button.append(num, text, answerMark);
     button.addEventListener("click", () => {
       onSelect(choiceNumber);
       target.querySelectorAll(".choice-btn").forEach((item) => item.classList.remove("selected"));

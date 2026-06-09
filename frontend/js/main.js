@@ -33,6 +33,27 @@ function renderMonthlyRanking(items) {
     if (name) name.textContent = hasScore ? (item.memberName || item.memberId) : "\u00a0";
     if (score) score.textContent = hasScore ? formatMonthlyScore(item.averageScore) : "\u00a0";
   });
+
+  renderTopRankingPodium(items);
+}
+
+function renderTopRankingPodium(items) {
+  const podium = document.getElementById("topRankingPodium");
+  if (!podium) return;
+
+  const order = [1, 0, 2];
+  const cards = Array.from(podium.querySelectorAll(".podium-user"));
+  cards.forEach((card, cardIndex) => {
+    const item = items[order[cardIndex]];
+    const hasScore = item?.memberName || item?.memberId;
+    const avatar = card.querySelector(".podium-avatar");
+    const name = card.querySelector("strong");
+    const score = card.querySelector("b");
+
+    if (avatar) avatar.textContent = hasScore ? String(item.memberName || item.memberId).trim().slice(0, 1) : "?";
+    if (name) name.textContent = hasScore ? (item.memberName || item.memberId) : "-";
+    if (score) score.textContent = hasScore ? formatMonthlyScore(item.averageScore) : "-";
+  });
 }
 
 async function loadMonthlyRanking() {

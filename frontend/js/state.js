@@ -19,6 +19,7 @@ const PAGE_URLS = {
   myInfo: "profile.html",
   examHistory: "history.html",
   aiRecommend: "ai-recommend.html",
+  ranking: "ranking.html",
   wrongPractice: "wrong-practice.html",
   wrong: "wrong.html",
   harness: "harness.html"
@@ -45,6 +46,7 @@ const defaultState = {
   aiRecommendationAnswer: null,
   reviewQuestion: null,
   reviewAnswer: null,
+  examHistorySubjectId: null,
   wrongSubjectId: null,
   wrongOpenDateKey: null,
   wrongReviewSet: null
