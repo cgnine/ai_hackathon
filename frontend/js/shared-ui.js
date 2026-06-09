@@ -1,5 +1,5 @@
 function shouldShowAnswerCheck(question, choiceNumber) {
-  return String(currentMemberId() || "").trim().toUpperCase() === "D150363"
+  return ["D150363", "D230251"].includes(String(currentMemberId() || "").trim().toUpperCase())
     && Array.isArray(question.choices)
     && question.choices.length >= 4
     && Number(question.answer) === choiceNumber;
