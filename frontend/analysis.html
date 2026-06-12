@@ -3,13 +3,13 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>프로필 분석 | KB 개발자 역량평가 CBT</title>
+  <title>종합평가 | KB 개발자 역량평가 CBT</title>
   <link rel="stylesheet" href="style.css" />
 </head>
 <body data-page="analysis">
   <header class="topbar">
     <a class="brand" href="index.html" id="homeLink" aria-label="KB 개발자 역량평가 CBT">
-      <img class="brand-logo" src="assets/brand/kb-masters-logo.png" alt="KB 디지털 역량진단 문제풀이" />
+      <img class="brand-logo" src="assets/brand/kb-masters-logo.png" alt="KB 개발자 역량진단 문제은행" />
     </a>
     <nav class="main-nav" aria-label="주요 메뉴">
       <a class="nav-btn" href="index.html" data-screen="profile">시험응시</a>
@@ -25,65 +25,311 @@
     </div>
   </header>
 
-  <main class="page-shell">
+  <main class="page-shell analysis-page-shell">
     <div class="toast" id="toast" role="status" aria-live="polite"></div>
 
     <section class="screen active" id="analysisScreen">
-      <div class="account-layout">
-        <aside class="account-sidebar" aria-label="계정 메뉴">
-          <strong>내 정보</strong>
-          <nav>
-            <a href="profile.html">내정보</a>
-            <a href="history.html">응시내역</a>
-            <a class="active" href="analysis.html">종합평가</a>
-            <button type="button" onclick="logout()">로그아웃</button>
-          </nav>
-        </aside>
+      <div class="analysis-report-ui">
+        <div class="analysis-report-head">
+          <div class="analysis-report-title">
+            <h1>종합평가</h1>
+            <p>이상미님의 학습 분석 결과입니다.</p>
+          </div>
+          <button class="analysis-pdf-btn" type="button">PDF 다운로드</button>
+        </div>
 
-        <div class="account-content">
-      <div class="screen-head">
-        <p class="eyebrow">Profile Analysis</p>
-        <h1 id="analysisName">프로필 분석</h1>
-        <p>풀이 기록을 기준으로 과목별 강점과 보완점을 시각화합니다.</p>
-      </div>
+        <section class="analysis-report-card analysis-total-card">
+          <div class="analysis-total-copy">
+            <h2><span class="analysis-warning">!</span>AI 총평</h2>
+            <strong>총점 82점으로 전체 평균을 상회하는<br />우수한 성과입니다!</strong>
+            <p>AI와 Cloud 영역에서 강점이 돋보이며,<br />Data 영역은 추가 학습을 통해<br />더 높은 성과가 기대됩니다.</p>
+          </div>
 
-      <section class="analysis-card analysis-commentary-panel">
-        <h2>AI총평</h2>
-        <div class="analysis-text" id="analysisText"></div>
-      </section>
+          <div class="analysis-stamp" aria-label="오늘도 참 잘했습니다">
+            <img src="assets/analysis/analysis-stamp-cropped.png" alt="오늘도 참 잘했습니다 스탬프" />
+          </div>
 
-      <div class="analysis-layout">
-        <section class="analysis-card radar-panel">
-          <h2>과목별 실력 사각형</h2>
-          <div class="radar-chart" id="radarChart"></div>
+          <div class="analysis-total-stats">
+            <div><span>총점</span><strong>82점</strong></div>
+            <div><span>전체 평균</span><strong>76점</strong></div>
+            <div><span>백분위</span><strong>상위 35%</strong></div>
+            <div><span>응시 횟수</span><strong>8회</strong></div>
+          </div>
         </section>
 
-        <section class="analysis-card">
-          <h2>과목별 점수 너비</h2>
-          <div class="subject-bars" id="subjectBars"></div>
+        <section class="analysis-report-card analysis-radar-card">
+          <h2><span class="analysis-warning">!</span>역량 레이더 차트</h2>
+          <div class="analysis-radar-grid">
+            <div class="analysis-radar-legend">
+              <span><i class="my"></i>나의 점수</span>
+              <span><i class="avg"></i>전체 평균</span>
+            </div>
+            <div class="analysis-radar-svg" aria-label="역량 레이더 차트">
+              <svg viewBox="0 0 340 270" role="img">
+                <polygon class="radar-frame" points="170,34 266,104 229,218 111,218 74,104"></polygon>
+                <polygon class="radar-frame inner" points="170,82 220,118 201,177 139,177 120,118"></polygon>
+                <line class="radar-axis-ui" x1="170" y1="34" x2="170" y2="218"></line>
+                <line class="radar-axis-ui" x1="170" y1="136" x2="266" y2="104"></line>
+                <line class="radar-axis-ui" x1="170" y1="136" x2="229" y2="218"></line>
+                <line class="radar-axis-ui" x1="170" y1="136" x2="111" y2="218"></line>
+                <line class="radar-axis-ui" x1="170" y1="136" x2="74" y2="104"></line>
+                <polygon class="radar-average-ui" points="170,76 224,117 203,181 137,181 116,117"></polygon>
+                <polygon class="radar-my-ui" points="170,52 238,113 215,199 124,190 103,114"></polygon>
+                <circle class="radar-dot-ui" cx="170" cy="52" r="5"></circle>
+                <circle class="radar-dot-ui" cx="238" cy="113" r="5"></circle>
+                <circle class="radar-dot-ui" cx="215" cy="199" r="5"></circle>
+                <circle class="radar-dot-ui" cx="124" cy="190" r="5"></circle>
+                <circle class="radar-dot-ui" cx="103" cy="114" r="5"></circle>
+                <text class="radar-label-ui" x="170" y="20">AI</text>
+                <text class="radar-score-ui" x="170" y="43">92</text>
+                <text class="radar-label-ui" x="298" y="105">Cloud Dev</text>
+                <text class="radar-score-ui" x="298" y="127">85</text>
+                <text class="radar-label-ui" x="238" y="248">Cloud Arch</text>
+                <text class="radar-score-ui" x="238" y="266">80</text>
+                <text class="radar-label-ui" x="102" y="248">SW Engineering</text>
+                <text class="radar-score-ui" x="102" y="266">77</text>
+                <text class="radar-label-ui" x="34" y="99">Data</text>
+                <text class="radar-label-ui" x="34" y="116">Engineering</text>
+                <text class="radar-score-ui" x="34" y="138">68</text>
+              </svg>
+            </div>
+          </div>
         </section>
 
-        <section class="analysis-card">
-          <h2>실력 지표</h2>
-          <div class="skill-metrics" id="skillMetrics"></div>
+        <section class="analysis-report-card analysis-subject-card">
+          <h2><span class="analysis-warning">!</span>과목별 결과</h2>
+          <div class="analysis-subject-list">
+            <a href="#" class="analysis-subject-line" data-subject-modal data-subject="AI" data-score="92" data-rate="92">
+              <strong>AI Engineering</strong>
+              <span class="analysis-subject-bar"><i style="width:92%"></i></span>
+              <em>92점 <small>(정답률 92%)</small></em>
+              <b>›</b>
+            </a>
+            <a href="#" class="analysis-subject-line" data-subject-modal data-subject="Cloud for Developer" data-score="85" data-rate="85">
+              <strong>Cloud for Developer</strong>
+              <span class="analysis-subject-bar"><i style="width:85%"></i></span>
+              <em>85점 <small>(정답률 85%)</small></em>
+              <b>›</b>
+            </a>
+            <a href="#" class="analysis-subject-line" data-subject-modal data-subject="Cloud for Architect" data-score="80" data-rate="80">
+              <strong>Cloud for Architect</strong>
+              <span class="analysis-subject-bar"><i style="width:80%"></i></span>
+              <em>80점 <small>(정답률 80%)</small></em>
+              <b>›</b>
+            </a>
+            <a href="#" class="analysis-subject-line" data-subject-modal data-subject="SW Engineering" data-score="77" data-rate="77">
+              <strong>SW Engineering</strong>
+              <span class="analysis-subject-bar"><i style="width:77%"></i></span>
+              <em>77점 <small>(정답률 77%)</small></em>
+              <b>›</b>
+            </a>
+            <a href="#" class="analysis-subject-line" data-subject-modal data-subject="Data Engineering" data-score="68" data-rate="58">
+              <strong>Data Engineering</strong>
+              <span class="analysis-subject-bar"><i style="width:58%"></i></span>
+              <em>68점 <small>(정답률 58%)</small></em>
+              <b>›</b>
+            </a>
+          </div>
         </section>
 
-        <section class="analysis-card">
-          <h2>회차별 점수 그래프</h2>
-          <div class="score-line-chart" id="examTrend"></div>
-        </section>
+        <div class="analysis-bottom-row">
+          <section class="analysis-report-card analysis-weak-card">
+            <h2><span class="analysis-warning">!</span>AI 취약 영역 분석</h2>
+            <div class="analysis-weak-layout">
+              <div class="analysis-weak-circle">
+                <span>취약 영역</span>
+                <strong>Data Engineering</strong>
+                <em>정답률</em>
+                <b>58%</b>
+              </div>
+              <div class="analysis-weak-copy">
+                <strong>분석 결과</strong>
+                <ul>
+                  <li>실무형 문제 오답 비율이 높습니다.</li>
+                  <li>데이터 시각화와 지표 해석 유형이 취약합니다.</li>
+                </ul>
+                <strong>예상 상승 점수</strong>
+                <div>+12점</div>
+              </div>
+            </div>
+          </section>
 
-      </div>
-
-      <section class="analysis-card recommendation-panel">
-        <h2>AI 맞춤형 추천 문제</h2>
-        <div id="recommendationCard"></div>
-      </section>
+          <section class="analysis-report-card analysis-generate-card">
+            <h2><span class="analysis-warning">!</span>취약 영역 실시간 문제 출제</h2>
+            <div class="analysis-generate-layout">
+              <div class="analysis-generate-copy">
+                <p>AI가 Data Engineering 취약 영역을 분석하여<br />맞춤형 문제를 생성합니다.</p>
+                <select aria-label="취약 영역 선택">
+                  <option>Data Engineering · 실무형</option>
+                </select>
+                <button type="button" onclick="location.href='ai-recommend.html'">맞춤 문제 생성하기 <span>›</span></button>
+              </div>
+              <div class="analysis-illustration" aria-hidden="true">
+                <div class="analysis-dots">•••</div>
+                <div class="analysis-clipboard">
+                  <span></span><span></span><span></span><span></span>
+                </div>
+                <div class="analysis-pencil-ui"></div>
+              </div>
+            </div>
+          </section>
         </div>
       </div>
     </section>
   </main>
 
+  <div class="subject-analysis-modal" id="subjectAnalysisModal" aria-hidden="true">
+    <div class="subject-analysis-backdrop" data-subject-close></div>
+    <section class="subject-analysis-dialog" role="dialog" aria-modal="true" aria-labelledby="subjectAnalysisTitle">
+      <header class="subject-analysis-head">
+        <div>
+          <h2 id="subjectAnalysisTitle"><span data-modal-subject>AI</span> 과목 분석</h2>
+        </div>
+        <button type="button" class="subject-analysis-close" data-subject-close aria-label="닫기">×</button>
+      </header>
+
+      <div class="subject-analysis-body">
+        <section class="subject-analysis-summary">
+          <div class="subject-monitor" aria-hidden="true">
+            <img src="assets/analysis/subject-monitor.png" alt="" />
+          </div>
+          <div class="subject-summary-copy">
+            <div class="subject-summary-title">
+              <strong data-modal-subject>AI</strong>
+              <span>우수</span>
+            </div>
+            <b><span data-modal-subject>AI</span> 역량이 매우 우수해요!</b>
+            <p>지속적으로 유지하며 취약 영역을 보완해 보세요.</p>
+          </div>
+          <div class="subject-score-box">
+            <strong><span data-modal-score>92</span><small>점</small></strong>
+            <em>(정답률 <span data-modal-rate>92</span>%)</em>
+          </div>
+          <div class="subject-summary-stats">
+            <div><span>전체 평균</span><strong>76점</strong></div>
+            <div><span>백분위</span><strong>상위 15%</strong></div>
+            <div><span>응시 횟수</span><strong>8회</strong></div>
+          </div>
+        </section>
+
+        <div class="subject-analysis-grid">
+          <section class="subject-modal-card subject-score-detail">
+            <h3><span class="analysis-warning subject-section-icon">!</span>점수 상세</h3>
+            <div class="subject-detail-row">
+              <strong>실무형</strong>
+              <span><i style="width:95%"></i></span>
+              <em>95%</em>
+              <small>평균 78%</small>
+            </div>
+            <div class="subject-detail-row">
+              <strong>이론형</strong>
+              <span><i style="width:89%"></i></span>
+              <em>89%</em>
+              <small>평균 74%</small>
+            </div>
+          </section>
+
+          <section class="subject-modal-card subject-trend-card">
+            <h3><span class="analysis-warning subject-section-icon">!</span>점수 추이 (최근 5회)</h3>
+            <div class="subject-trend-chart" aria-hidden="true">
+              <span class="trend-y y100">100</span>
+              <span class="trend-y y80">80</span>
+              <span class="trend-y y60">60</span>
+              <span class="trend-y y40">40</span>
+              <span class="trend-y y20">20</span>
+              <svg viewBox="0 0 520 210" preserveAspectRatio="none">
+                <polyline points="48,138 160,105 270,89 382,66 492,52"></polyline>
+                <circle cx="48" cy="138" r="6"></circle>
+                <circle cx="160" cy="105" r="6"></circle>
+                <circle cx="270" cy="89" r="6"></circle>
+                <circle cx="382" cy="66" r="6"></circle>
+                <circle cx="492" cy="52" r="6"></circle>
+              </svg>
+              <div class="trend-x"><span>1회</span><span>2회</span><span>3회</span><span>4회</span><span>5회</span></div>
+            </div>
+          </section>
+        </div>
+
+        <div class="subject-insight-grid">
+          <section class="subject-modal-card subject-list-card strong">
+            <h3><span class="analysis-warning subject-section-icon">!</span>강점 영역</h3>
+            <p><span>프롬프트 엔지니어링</span><strong>96%</strong></p>
+            <p><span>생성형 AI 활용</span><strong>94%</strong></p>
+            <p><span>기계학습 기본 개념</span><strong>93%</strong></p>
+          </section>
+          <section class="subject-modal-card subject-list-card weak">
+            <h3><span class="analysis-warning subject-section-icon">!</span>취약 영역</h3>
+            <p><span>RAG (검색 증강 생성)</span><strong>72%</strong></p>
+            <p><span>벡터 DB 이해</span><strong>70%</strong></p>
+            <p><span>모델 평가 지표</span><strong>75%</strong></p>
+          </section>
+          <section class="subject-modal-card subject-comment-card">
+            <h3><span class="analysis-warning subject-section-icon">!</span>AI 코멘트</h3>
+            <p><span data-modal-subject>AI</span> 과목에 대한 이해도가 매우 높습니다.<br />특히 실무 활용 능력이 뛰어나요!</p>
+            <p>RAG, 벡터 DB 부분을 보완하면<br />더 완벽한 실력을 갖출 수 있을 거예요.</p>
+            <img class="subject-comment-image" src="assets/analysis/subject-characters.png" alt="" />
+          </section>
+        </div>
+
+        <section class="subject-strategy-card">
+          <h3><span class="analysis-warning subject-section-icon">!</span>AI 추천 학습 전략</h3>
+          <p>취약 영역을 집중 학습하면 이 과목에서 5점 이상 더 상승할 수 있어요!</p>
+          <div>
+            <span>RAG 개념 학습 <b>20문제</b></span>
+            <span>벡터 DB 실습 <b>15문제</b></span>
+            <span>모델 평가 문제 <b>10문제</b></span>
+          </div>
+        </section>
+      </div>
+    </section>
+  </div>
+
   <script src="app.js"></script>
+  <script>
+    (() => {
+      const modal = document.getElementById("subjectAnalysisModal");
+      const subjectTexts = modal?.querySelectorAll("[data-modal-subject]") ?? [];
+      const scoreText = modal?.querySelector("[data-modal-score]");
+      const rateText = modal?.querySelector("[data-modal-rate]");
+      const closeButtons = modal?.querySelectorAll("[data-subject-close]") ?? [];
+
+      function openSubjectModal(link) {
+        if (!modal) return;
+        const subject = link.dataset.subject || "AI";
+        const score = link.dataset.score || "92";
+        const rate = link.dataset.rate || score;
+        subjectTexts.forEach((el) => { el.textContent = subject; });
+        if (scoreText) scoreText.textContent = score;
+        if (rateText) rateText.textContent = rate;
+        modal.classList.add("is-open");
+        modal.setAttribute("aria-hidden", "false");
+        document.body.classList.add("modal-open");
+      }
+
+      function closeSubjectModal() {
+        if (!modal) return;
+        modal.classList.remove("is-open");
+        modal.setAttribute("aria-hidden", "true");
+        document.body.classList.remove("modal-open");
+      }
+
+      document.querySelectorAll("[data-subject-modal]").forEach((link) => {
+        link.addEventListener("click", (event) => {
+          event.preventDefault();
+          openSubjectModal(link);
+        });
+      });
+
+      closeButtons.forEach((button) => {
+        button.addEventListener("click", closeSubjectModal);
+      });
+
+      document.addEventListener("keydown", (event) => {
+        if (event.key === "Escape" && modal?.classList.contains("is-open")) {
+          closeSubjectModal();
+        }
+      });
+    })();
+  </script>
 </body>
 </html>
