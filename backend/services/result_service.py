@@ -143,6 +143,83 @@ def _truncate_commentary_sentence(value: str, limit: int) -> str:
     return _truncate_commentary_text(text, limit)
 
 
+def _fallback_ranking_goal_coach(
+    my_rank: int,
+    target_rank: int,
+    gap_score: float,
+    subject_targets: list[dict[str, Any]],
+) -> str:
+    subjects = [
+        str(item.get("subjectName") or item.get("subjectCode") or "").strip()
+        for item in subject_targets[:2]
+        if str(item.get("subjectName") or item.get("subjectCode") or "").strip()
+    ]
+    gap = int(gap_score) if float(gap_score).is_integer() else gap_score
+    if subjects:
+        subject_text = "와 ".join(subjects)
+        message = f"현재 {target_rank}위까지 {gap}점 차이입니다. {subject_text} 학습을 강화해 보세요."
+    else:
+        message = f"현재 {target_rank}위까지 {gap}점 차이입니다. 핵심 과목을 꾸준히 보완해 보세요."
+    return _truncate_commentary_sentence(message, 50)
+
+
+def _bedrock_ranking_goal_coach(
+    ranking_goal: dict[str, Any],
+    subject_targets: list[dict[str, Any]],
+) -> str:
+    my_rank = int(ranking_goal["my_rank"])
+    target_rank = int(ranking_goal["target_rank"])
+    gap_score = float(ranking_goal["gap_score"] or 0)
+    fallback = _fallback_ranking_goal_coach(my_rank, target_rank, gap_score, subject_targets)
+    prompt_subjects = [
+        {
+            "subjectName": item.get("subjectName"),
+            "subjectCode": item.get("subjectCode"),
+            "expectedUpScore": item.get("expectedUpScore"),
+        }
+        for item in subject_targets[:2]
+    ]
+    system_prompt = "당신은 KB Masters의 AI 성장 코치입니다."
+    user_prompt = (
+        "사용자의 현재 순위, 목표 순위, 점수 차이, 추천 과목을 분석하여 목표 달성을 위한 학습 전략을 제안하세요.\n\n"
+        "규칙\n\n"
+        "* 2문장 이하\n"
+        "* 50자 이내\n"
+        "* 현재 순위 또는 목표 순위를 반드시 포함\n"
+        "* 점수 차이를 반드시 포함\n"
+        "* 추천 과목은 최대 2개만 언급\n"
+        "* 긍정적이고 실천 가능한 조언 작성\n"
+        "* 제목 없이 문장만 출력\n\n"
+        "예시\n\n"
+        "현재 20위까지 3점 차이입니다. SW와 Cloud 학습을 우선 강화해 보세요.\n\n"
+        "목표 순위까지 2점 남았습니다. AI 과목을 집중 학습해 보세요.\n\n"
+        "데이터\n"
+        + json.dumps(
+            {
+                "myRank": my_rank,
+                "myScore": float(ranking_goal["my_score"] or 0),
+                "targetRank": target_rank,
+                "targetScore": float(ranking_goal["target_score"] or 0),
+                "gapScore": gap_score,
+                "successRate": int(ranking_goal["success_rate"] or 0),
+                "recommendedSubjects": prompt_subjects,
+            },
+            ensure_ascii=False,
+        )
+    )
+    try:
+        raw = bedrock_client.invoke(system_prompt, user_prompt, max_tokens=120)
+    except Exception:
+        return fallback
+
+    text = " ".join(str(raw or "").replace('"', "").split())
+    if not text:
+        return fallback
+    if ("위" not in text) or ("점" not in text):
+        return fallback
+    return _truncate_commentary_sentence(text, 50)
+
+
 def _compact_analysis_headline(value: str) -> str:
     text = " ".join(str(value or "").replace("…", "").split()).rstrip(".。!?！？")
     if len(text) <= 25:
@@ -1798,48 +1875,47 @@ def get_exam_history(
     }
 
 
-def get_monthly_ranking(limit: int = 5) -> dict[str, Any]:
-    safe_limit = max(1, min(limit, 20))
+def get_monthly_ranking(limit: int = 10) -> dict[str, Any]:
+    safe_limit = max(1, min(limit, 10))
     now = datetime.now()
-    month_start = now.replace(day=1)
-    next_month = (month_start.replace(day=28) + timedelta(days=4)).replace(day=1)
-    start_date = month_start.strftime("%Y%m%d")
-    end_date = (next_month - timedelta(days=1)).strftime("%Y%m%d")
 
     with get_conn() as conn:
         with conn.cursor(cursor_factory=RealDictCursor) as cur:
             cur.execute(
                 """
+                WITH member_avg AS (
+                    SELECT
+                        e.member_id,
+                        m.member_name,
+                        ROUND(AVG(CAST(e.exam_score AS DECIMAL(5,2))), 1) AS avg_score
+                    FROM exam_tb e
+                    JOIN member_tb m
+                      ON e.member_id = m.member_id
+                    WHERE e.exam_score IS NOT NULL
+                      AND e.exam_score::text ~ '^[0-9]+(\\.[0-9]+)?$'
+                    GROUP BY e.member_id, m.member_name
+                )
                 SELECT
-                    e.member_id,
-                    COALESCE(m.member_name, e.member_id) AS member_name,
-                    ROUND(AVG(e.exam_score::numeric), 1) AS average_score,
-                    COUNT(*) AS exam_count
-                FROM exam_tb e
-                LEFT JOIN member_tb m ON m.member_id = e.member_id
-                WHERE e.exam_date BETWEEN %s AND %s
-                  AND e.exam_score IS NOT NULL
-                  AND e.exam_score::text ~ '^[0-9]+(\\.[0-9]+)?$'
-                GROUP BY e.member_id, COALESCE(m.member_name, e.member_id)
-                ORDER BY AVG(e.exam_score::numeric) DESC, COUNT(*) DESC, e.member_id ASC
+                    RANK() OVER (ORDER BY avg_score DESC) AS rank_no,
+                    member_id,
+                    member_name,
+                    avg_score
+                FROM member_avg
+                ORDER BY avg_score DESC
                 LIMIT %s
                 """,
-                (start_date, end_date, safe_limit),
+                (safe_limit,),
             )
             rows = cur.fetchall()
 
     return {
-        "month": now.month,
         "monthLabel": f"{now.month}월",
-        "startDate": start_date,
-        "endDate": end_date,
         "items": [
             {
-                "rank": index,
+                "rank": int(row["rank_no"] or index),
                 "memberId": row["member_id"],
                 "memberName": row["member_name"],
-                "averageScore": float(row["average_score"] or 0),
-                "examCount": int(row["exam_count"] or 0),
+                "averageScore": float(row["avg_score"] or 0),
             }
             for index, row in enumerate(rows, start=1)
         ],
@@ -1971,8 +2047,231 @@ def get_ranking_goal(member_id: str) -> dict[str, Any]:
             )
             subject_rows = cur.fetchall()
 
+            cur.execute(
+                """
+                WITH member_avg AS (
+                    SELECT
+                        e.member_id,
+                        m.member_name,
+                        ROUND(AVG(CAST(e.exam_score AS DECIMAL(5,2))), 1) AS avg_score
+                    FROM exam_tb e
+                    JOIN member_tb m
+                      ON e.member_id = m.member_id
+                    WHERE e.exam_score IS NOT NULL
+                      AND e.exam_score::text ~ '^[0-9]+(\\.[0-9]+)?$'
+                    GROUP BY e.member_id, m.member_name
+                ),
+                ranked AS (
+                    SELECT
+                        member_id,
+                        member_name,
+                        avg_score,
+                        RANK() OVER (ORDER BY avg_score DESC) AS rank_no
+                    FROM member_avg
+                ),
+                my_info AS (
+                    SELECT
+                        member_id,
+                        rank_no,
+                        avg_score
+                    FROM ranked
+                    WHERE member_id = %s
+                )
+                SELECT
+                    r.member_id AS rival_id,
+                    r.member_name AS rival_name,
+                    r.rank_no AS rival_rank,
+                    r.avg_score AS rival_score,
+                    ABS(r.avg_score - m.avg_score) AS score_gap
+                FROM ranked r
+                JOIN my_info m
+                  ON 1 = 1
+                WHERE r.member_id <> %s
+                  AND ABS(r.rank_no - m.rank_no) <= 5
+                ORDER BY ABS(r.avg_score - m.avg_score), ABS(r.rank_no - m.rank_no)
+                LIMIT 1
+                """,
+                (normalized_member_id, normalized_member_id),
+            )
+            rival_row = cur.fetchone()
+
+            rival_subject_rows = []
+            if rival_row:
+                cur.execute(
+                    """
+                    WITH subject_avg AS (
+                        SELECT
+                            e.member_id,
+                            e.subject_code,
+                            s.subject_name,
+                            ROUND(AVG(CAST(e.exam_score AS DECIMAL(5,2))), 1) AS avg_subject_score
+                        FROM exam_tb e
+                        JOIN subject_tb s
+                          ON e.subject_code = s.subject_code
+                        WHERE e.member_id IN (%s, %s)
+                          AND e.exam_score IS NOT NULL
+                          AND e.exam_score::text ~ '^[0-9]+(\\.[0-9]+)?$'
+                        GROUP BY e.member_id, e.subject_code, s.subject_name
+                    )
+                    SELECT
+                        subject_code,
+                        subject_name,
+                        MAX(CASE WHEN member_id = %s THEN avg_subject_score END) AS my_score,
+                        MAX(CASE WHEN member_id = %s THEN avg_subject_score END) AS rival_score
+                    FROM subject_avg
+                    GROUP BY subject_code, subject_name
+                    ORDER BY subject_code
+                    """,
+                    (
+                        normalized_member_id,
+                        rival_row["rival_id"],
+                        normalized_member_id,
+                        rival_row["rival_id"],
+                    ),
+                )
+                rival_subject_rows = cur.fetchall()
+
+            cur.execute(
+                """
+                WITH member_avg AS (
+                    SELECT
+                        member_id,
+                        ROUND(AVG(CAST(exam_score AS DECIMAL(5,2))), 1) AS avg_score
+                    FROM exam_tb
+                    WHERE exam_score IS NOT NULL
+                      AND exam_score::text ~ '^[0-9]+(\\.[0-9]+)?$'
+                    GROUP BY member_id
+                ),
+                ranked AS (
+                    SELECT
+                        member_id,
+                        avg_score,
+                        RANK() OVER (ORDER BY avg_score DESC) AS rank_no
+                    FROM member_avg
+                ),
+                top10 AS (
+                    SELECT member_id
+                    FROM ranked
+                    WHERE rank_no <= 10
+                ),
+                top_pattern AS (
+                    SELECT
+                        ROUND(AVG(exam_count), 1) AS avg_exam_count,
+                        ROUND(AVG(subject_count), 1) AS avg_subject_count,
+                        ROUND(AVG(practical_rate), 1) AS avg_practical_rate,
+                        ROUND(AVG(wrong_note_count), 1) AS avg_wrong_note_saved_count
+                    FROM (
+                        SELECT
+                            e.member_id,
+                            COUNT(DISTINCT e.exam_id) AS exam_count,
+                            COUNT(DISTINCT e.subject_code) AS subject_count,
+                            ROUND(
+                                SUM(CASE WHEN q.question_type = '실무형' THEN 1 ELSE 0 END)::numeric
+                                / NULLIF(COUNT(q.question_id), 0) * 100,
+                                1
+                            ) AS practical_rate,
+                            SUM(CASE WHEN h.wrong_note_saved = 'Y' THEN 1 ELSE 0 END) AS wrong_note_count
+                        FROM exam_tb e
+                        LEFT JOIN exam_history_tb h
+                          ON e.exam_id = h.exam_id
+                        LEFT JOIN question_tb q
+                          ON h.question_id = q.question_id
+                        WHERE e.member_id IN (SELECT member_id FROM top10)
+                        GROUP BY e.member_id
+                    ) x
+                ),
+                my_weak_subject AS (
+                    SELECT
+                        s.subject_name,
+                        ROUND(AVG(CAST(e.exam_score AS DECIMAL(5,2))), 1) AS avg_subject_score
+                    FROM exam_tb e
+                    JOIN subject_tb s
+                      ON e.subject_code = s.subject_code
+                    WHERE e.member_id = %s
+                      AND e.exam_score IS NOT NULL
+                      AND e.exam_score::text ~ '^[0-9]+(\\.[0-9]+)?$'
+                    GROUP BY s.subject_name
+                    ORDER BY avg_subject_score ASC
+                    LIMIT 1
+                )
+                SELECT
+                    tp.avg_exam_count,
+                    tp.avg_subject_count,
+                    tp.avg_practical_rate,
+                    tp.avg_wrong_note_saved_count,
+                    mws.subject_name AS weak_subject,
+                    mws.avg_subject_score AS weak_subject_score
+                FROM top_pattern tp
+                CROSS JOIN my_weak_subject mws
+                """,
+                (normalized_member_id,),
+            )
+            learning_pattern_row = cur.fetchone()
+
+            cur.execute(
+                """
+                WITH unit_stats AS (
+                    SELECT
+                        s.subject_name,
+                        q.major_unit,
+                        COUNT(*) AS total_count,
+                        SUM(CASE WHEN h.is_correct = 'Y' THEN 1 ELSE 0 END) AS correct_count,
+                        ROUND(
+                            SUM(CASE WHEN h.is_correct = 'Y' THEN 1 ELSE 0 END)::numeric
+                            / NULLIF(COUNT(*), 0) * 100,
+                            1
+                        ) AS correct_rate
+                    FROM exam_tb e
+                    JOIN exam_history_tb h
+                      ON e.exam_id = h.exam_id
+                    JOIN question_tb q
+                      ON h.question_id = q.question_id
+                    JOIN subject_tb s
+                      ON e.subject_code = s.subject_code
+                    WHERE e.member_id = %s
+                    GROUP BY s.subject_name, q.major_unit
+                ),
+                strong_unit AS (
+                    SELECT
+                        CONCAT(subject_name, ' ', major_unit) AS strong_keyword
+                    FROM unit_stats
+                    WHERE total_count >= 2
+                    ORDER BY correct_rate DESC, total_count DESC
+                    LIMIT 1
+                ),
+                weak_unit AS (
+                    SELECT
+                        CONCAT(subject_name, ' ', major_unit) AS weak_keyword
+                    FROM unit_stats
+                    WHERE total_count >= 2
+                    ORDER BY correct_rate ASC, total_count DESC
+                    LIMIT 1
+                )
+                SELECT
+                    strong_unit.strong_keyword,
+                    weak_unit.weak_keyword
+                FROM strong_unit
+                CROSS JOIN weak_unit
+                """,
+                (normalized_member_id,),
+            )
+            strength_keyword_row = cur.fetchone()
+
     if not row:
         raise HTTPException(status_code=404, detail="Ranking goal not found")
+
+    subject_target_items = [
+        {
+            "subjectCode": subject_row["subject_code"],
+            "subjectName": subject_row["subject_name"],
+            "currentScore": float(subject_row["current_score"] or 0),
+            "expectedUpScore": float(subject_row["expected_up_score"] or 0),
+            "targetSubjectScore": float(subject_row["target_subject_score"] or 0),
+            "recommendTitle": subject_row["recommend_title"],
+        }
+        for subject_row in subject_rows
+    ]
+    goal_coach_message = _bedrock_ranking_goal_coach(row, subject_target_items)
 
     return {
         "memberId": normalized_member_id,
@@ -1982,17 +2281,36 @@ def get_ranking_goal(member_id: str) -> dict[str, Any]:
         "targetScore": float(row["target_score"] or 0),
         "gapScore": float(row["gap_score"] or 0),
         "successRate": int(row["success_rate"] or 0),
-        "subjectTargets": [
-            {
-                "subjectCode": subject_row["subject_code"],
-                "subjectName": subject_row["subject_name"],
-                "currentScore": float(subject_row["current_score"] or 0),
-                "expectedUpScore": float(subject_row["expected_up_score"] or 0),
-                "targetSubjectScore": float(subject_row["target_subject_score"] or 0),
-                "recommendTitle": subject_row["recommend_title"],
-            }
-            for subject_row in subject_rows
-        ],
+        "subjectTargets": subject_target_items,
+        "goalCoachMessage": goal_coach_message,
+        "rival": {
+            "rivalId": rival_row["rival_id"],
+            "rivalName": rival_row["rival_name"],
+            "rivalRank": int(rival_row["rival_rank"]),
+            "rivalScore": float(rival_row["rival_score"] or 0),
+            "scoreGap": float(rival_row["score_gap"] or 0),
+            "subjectComparisons": [
+                {
+                    "subjectCode": subject_row["subject_code"],
+                    "subjectName": subject_row["subject_name"],
+                    "myScore": float(subject_row["my_score"] or 0),
+                    "rivalScore": float(subject_row["rival_score"] or 0),
+                }
+                for subject_row in rival_subject_rows
+            ],
+        } if rival_row else None,
+        "learningPattern": {
+            "avgExamCount": float(learning_pattern_row["avg_exam_count"] or 0),
+            "avgSubjectCount": float(learning_pattern_row["avg_subject_count"] or 0),
+            "avgPracticalRate": float(learning_pattern_row["avg_practical_rate"] or 0),
+            "avgWrongNoteSavedCount": float(learning_pattern_row["avg_wrong_note_saved_count"] or 0),
+            "weakSubject": learning_pattern_row["weak_subject"],
+            "weakSubjectScore": float(learning_pattern_row["weak_subject_score"] or 0),
+        } if learning_pattern_row else None,
+        "strengthKeywords": {
+            "strongKeyword": strength_keyword_row["strong_keyword"],
+            "weakKeyword": strength_keyword_row["weak_keyword"],
+        } if strength_keyword_row else None,
     }
 
 

@@ -1106,6 +1106,77 @@ body[data-page="ranking"] .nav-btn:hover {
   font-weight: 600;
 }
 
+.ranking-modal[hidden] {
+  display: none;
+}
+
+.ranking-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 3600;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+}
+
+.ranking-modal-backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.34);
+}
+
+.ranking-modal-dialog {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  gap: 16px;
+  width: min(560px, 100%);
+  max-height: min(720px, calc(100vh - 48px));
+  overflow: auto;
+  padding: 22px;
+  border: 1px solid #e5eaf0;
+  border-radius: 8px;
+  background: #fff;
+  box-shadow: 0 24px 70px rgba(15, 23, 42, 0.22);
+}
+
+.ranking-modal-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+}
+
+.ranking-modal-head h2 {
+  color: #111827;
+  font-size: 1.08rem;
+  font-weight: 800;
+}
+
+.ranking-modal-close {
+  display: grid;
+  width: 34px;
+  height: 34px;
+  place-items: center;
+  border: 1px solid #e5eaf0;
+  border-radius: 8px;
+  background: #fff;
+  color: #64748b;
+  font-size: 1.2rem;
+  line-height: 1;
+}
+
+.ranking-modal-close:hover,
+.ranking-modal-close:focus-visible {
+  border-color: #bfdbfe;
+  background: #eff6ff;
+  color: #2563eb;
+}
+
+.ranking-modal-list {
+  padding: 0;
+}
+
 .ranking-spark {
   color: #2563eb;
 }
@@ -1620,6 +1691,17 @@ body[data-page="ranking"] .nav-btn:hover {
   margin-top: 2px;
 }
 
+.ranking-goal-coach {
+  padding: 14px 16px;
+  border: 1px solid #fde68a;
+  border-radius: 8px;
+  background: #fffaf0;
+  color: #07135f;
+  font-size: 0.88rem;
+  font-weight: 800;
+  line-height: 1.55;
+}
+
 .ranking-goal-card .ranking-primary-btn {
   align-self: end;
   width: min(100%, 280px);
@@ -1738,10 +1820,13 @@ body[data-page="ranking"] .nav-btn:hover {
 
 .rival-table th,
 .rival-table td {
+  overflow: hidden;
   padding: 9px 8px;
   border-bottom: 1px solid #edf2f7;
   color: #111827;
   text-align: center;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .rival-table thead th {
@@ -1765,6 +1850,12 @@ body[data-page="ranking"] .nav-btn:hover {
 
 .ranking-learning-card .ranking-card-head {
   align-items: flex-start;
+}
+
+.ranking-learning-card .ranking-primary-btn {
+  align-self: end;
+  width: min(100%, 280px);
+  justify-self: center;
 }
 
 .learning-list li {

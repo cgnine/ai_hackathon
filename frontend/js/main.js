@@ -7,6 +7,7 @@ const MAIN_AUTH_SESSION_KEY = "kbCbtAuthSession";
 const MAIN_AUTH_TTL_MS = 12 * 60 * 60 * 1000;
 let rankingLoadingTimer = null;
 let rankingLoadingProgress = 0;
+let monthlyRankingItems = [];
 
 function setCurrentMonthTitle(monthLabel) {
   const title = document.getElementById("monthlyRankingTitle");
@@ -19,24 +20,80 @@ function renderMonthlyRanking(items) {
   const list = document.getElementById("monthlyRankingList");
   if (!list) return;
 
-  const rows = Array.from({ length: 5 }, (_, index) => items[index] || { rank: index + 1 });
-  const elements = Array.from(list.querySelectorAll("li"));
+  monthlyRankingItems = Array.isArray(items) ? items.slice(0, 10) : [];
+  const rows = Array.from({ length: 5 }, (_, index) => monthlyRankingItems[index] || { rank: index + 1 });
+  list.replaceChildren();
 
   rows.forEach((item, index) => {
-    const row = elements[index];
-    if (!row) return;
+    const row = document.createElement("li");
+    const rank = document.createElement("span");
+    const name = document.createElement("span");
+    const score = document.createElement("strong");
     const hasScore = item.memberName || item.memberId;
-    const rank = row.querySelector(".ranking-rank");
-    const name = row.querySelector(".ranking-name");
-    const score = row.querySelector("strong");
 
+    rank.className = "ranking-rank";
+    name.className = "ranking-name";
     row.classList.toggle("ranking-placeholder", !hasScore);
-    if (rank) rank.textContent = item.rank || index + 1;
-    if (name) name.textContent = hasScore ? (item.memberName || item.memberId) : "\u00a0";
-    if (score) score.textContent = hasScore ? formatMonthlyScore(item.averageScore) : "\u00a0";
+    rank.textContent = item.rank || index + 1;
+    name.textContent = hasScore ? (item.memberName || item.memberId) : "\u00a0";
+    score.textContent = hasScore ? formatMonthlyScore(item.averageScore) : "\u00a0";
+
+    row.append(rank, name, score);
+    list.appendChild(row);
   });
 
   renderTopRankingPodium(items);
+}
+
+function renderRankingMoreList() {
+  const list = document.getElementById("rankingMoreList");
+  if (!list) return;
+
+  const rows = Array.from({ length: 10 }, (_, index) => monthlyRankingItems[index] || { rank: index + 1 });
+  list.replaceChildren();
+
+  rows.forEach((item, index) => {
+    const row = document.createElement("li");
+    const rank = document.createElement("span");
+    const name = document.createElement("span");
+    const score = document.createElement("strong");
+    const hasScore = item.memberName || item.memberId;
+
+    rank.className = "ranking-rank";
+    name.className = "ranking-name";
+    row.classList.toggle("ranking-placeholder", !hasScore);
+    rank.textContent = item.rank || index + 1;
+    name.textContent = hasScore ? (item.memberName || item.memberId) : "\u00a0";
+    score.textContent = hasScore ? formatMonthlyScore(item.averageScore) : "\u00a0";
+
+    row.append(rank, name, score);
+    list.appendChild(row);
+  });
+}
+
+function openRankingMoreModal() {
+  const modal = document.getElementById("rankingMoreModal");
+  if (!modal) return;
+  renderRankingMoreList();
+  modal.hidden = false;
+}
+
+function closeRankingMoreModal() {
+  const modal = document.getElementById("rankingMoreModal");
+  if (modal) modal.hidden = true;
+}
+
+function initRankingMoreModal() {
+  const button = document.querySelector(".ranking-table-card .ranking-more-btn");
+  if (button) button.addEventListener("click", openRankingMoreModal);
+
+  document.querySelectorAll("[data-ranking-modal-close]").forEach((target) => {
+    target.addEventListener("click", closeRankingMoreModal);
+  });
+
+  document.addEventListener("keydown", (event) => {
+    if (event.key === "Escape") closeRankingMoreModal();
+  });
 }
 
 function renderTopRankingPodium(items) {
@@ -125,6 +182,122 @@ function renderRankingSubjectTargets(subjectTargets) {
   }
 }
 
+function renderRankingRival(rival) {
+  if (!rival) return;
+
+  const rivalName = rival.rivalName || rival.rivalId || "-";
+  const rivalRank = Number(rival.rivalRank) || 0;
+  const rivalScore = formatRankingNumber(rival.rivalScore);
+  const scoreGap = formatRankingNumber(rival.scoreGap);
+  const avatar = document.getElementById("rankingRivalAvatar");
+
+  if (avatar) avatar.textContent = String(rivalName).trim().slice(0, 1) || "?";
+  setRankingText("rankingRivalName", rivalName);
+  setRankingText("rankingRivalRank", rivalRank);
+  setRankingText("rankingRivalScore", rivalScore);
+  setRankingText("rankingRivalScoreGap", scoreGap);
+  setRankingText("rankingRivalNote", `${rivalName}님과 평균 점수 차이가 ${scoreGap}점으로 가장 가깝습니다.`);
+
+  const comparisons = Array.isArray(rival.subjectComparisons) ? rival.subjectComparisons : [];
+  const head = document.getElementById("rankingRivalTableHead");
+  const body = document.getElementById("rankingRivalTableBody");
+  if (!head || !body || !comparisons.length) return;
+
+  const headerRow = document.createElement("tr");
+  headerRow.appendChild(document.createElement("th"));
+  comparisons.forEach((item) => {
+    const th = document.createElement("th");
+    th.textContent = item.subjectCode || item.subjectName || "-";
+    headerRow.appendChild(th);
+  });
+
+  const myRow = document.createElement("tr");
+  const myLabel = document.createElement("th");
+  myLabel.textContent = "나";
+  myRow.appendChild(myLabel);
+
+  const rivalRow = document.createElement("tr");
+  const rivalLabel = document.createElement("th");
+  rivalLabel.textContent = rivalName;
+  rivalRow.appendChild(rivalLabel);
+
+  comparisons.forEach((item) => {
+    const myCell = document.createElement("td");
+    const rivalCell = document.createElement("td");
+    myCell.textContent = formatRankingNumber(item.myScore);
+    rivalCell.textContent = formatRankingNumber(item.rivalScore);
+    myRow.appendChild(myCell);
+    rivalRow.appendChild(rivalCell);
+  });
+
+  head.replaceChildren(headerRow);
+  body.replaceChildren(myRow, rivalRow);
+}
+
+function renderRankingStrengthKeywords(keywords) {
+  if (!keywords) return;
+
+  const target = document.getElementById("rankingStrengthTags");
+  if (!target) return;
+
+  const strongKeyword = keywords.strongKeyword || "강점 분석중";
+  const weakKeyword = keywords.weakKeyword || "취약 분석중";
+  const strong = document.createElement("span");
+  const weak = document.createElement("span");
+
+  strong.textContent = `강점 ${strongKeyword}`;
+  weak.className = "weak";
+  weak.textContent = `취약 ${weakKeyword}`;
+  target.replaceChildren(strong, weak);
+}
+
+function renderRankingLearningPattern(pattern) {
+  if (!pattern) return;
+
+  const list = document.getElementById("rankingLearningList");
+  if (!list) return;
+
+  const items = [
+    {
+      icon: "◇",
+      title: `상위권 평균 ${formatRankingNumber(pattern.avgExamCount)}회 응시`,
+      description: "꾸준한 실전 응시로 점수 안정성을 높여요."
+    },
+    {
+      icon: "□",
+      title: `평균 ${formatRankingNumber(pattern.avgSubjectCount)}개 과목 학습`,
+      description: "여러 과목을 균형 있게 반복 학습해요."
+    },
+    {
+      icon: "☆",
+      title: `실무형 문제 비중 ${formatRankingNumber(pattern.avgPracticalRate)}%`,
+      description: "실무형 문제를 중심으로 감각을 키워요."
+    },
+    {
+      icon: "◇",
+      title: `${pattern.weakSubject || "취약 과목"} 집중 보완`,
+      description: `현재 평균 ${formatRankingNumber(pattern.weakSubjectScore)}점 영역을 우선 학습해요.`
+    }
+  ];
+
+  list.replaceChildren();
+  items.forEach((item) => {
+    const row = document.createElement("li");
+    const icon = document.createElement("span");
+    const copy = document.createElement("div");
+    const title = document.createElement("strong");
+    const description = document.createElement("p");
+
+    icon.className = "learning-icon";
+    icon.textContent = item.icon;
+    title.textContent = item.title;
+    description.textContent = item.description;
+    copy.append(title, description);
+    row.append(icon, copy);
+    list.appendChild(row);
+  });
+}
+
 function renderRankingGoal(goal) {
   const myRank = Number(goal.myRank) || 0;
   const myScore = formatRankingNumber(goal.myScore);
@@ -144,7 +317,11 @@ function renderRankingGoal(goal) {
   setRankingText("rankingGoalGapScore", gapScore);
   setRankingText("rankingGoalTargetRank", targetRank);
   setRankingText("rankingGoalGapScoreRing", gapScore);
+  if (goal.goalCoachMessage) setRankingText("rankingGoalCoach", goal.goalCoachMessage);
   renderRankingSubjectTargets(goal.subjectTargets);
+  renderRankingRival(goal.rival);
+  renderRankingStrengthKeywords(goal.strengthKeywords);
+  renderRankingLearningPattern(goal.learningPattern);
 }
 
 function startRankingLoading() {
@@ -208,7 +385,7 @@ async function loadMonthlyRanking() {
   setCurrentMonthTitle();
 
   try {
-    const response = await fetch(`${API_BASE}/results/ranking/monthly?limit=5`);
+    const response = await fetch(`${API_BASE}/results/ranking/monthly?limit=10`);
     if (!response.ok) throw new Error(`HTTP ${response.status}`);
     const data = await response.json();
     setCurrentMonthTitle(data.monthLabel);
@@ -289,4 +466,5 @@ function initMainMiniLogin() {
 }
 
 initMainMiniLogin();
+initRankingMoreModal();
 initRankingPage();

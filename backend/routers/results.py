@@ -65,7 +65,7 @@ async def get_exam_history(
 
 
 @router.get("/ranking/monthly")
-async def get_monthly_ranking(limit: int = 5):
+async def get_monthly_ranking(limit: int = 10):
     return result_service.get_monthly_ranking(limit)
 
 
