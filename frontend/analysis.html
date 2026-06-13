@@ -29,11 +29,19 @@
     <div class="toast" id="toast" role="status" aria-live="polite"></div>
 
     <section class="screen active" id="analysisScreen">
-      <div class="analysis-report-ui">
+      <section class="analysis-loading result-loading" id="analysisLoading" aria-live="polite">
+        <p class="eyebrow">AI Analysis</p>
+        <p id="analysisLoadingMessage">종합평가를 로딩중입니다.<br /><br />잠시만 기다려주십시오.</p>
+        <div class="result-loading-track" aria-hidden="true">
+          <span id="analysisLoadingBar"></span>
+        </div>
+      </section>
+
+      <div class="analysis-report-ui" id="analysisReportUi" hidden>
         <div class="analysis-report-head">
           <div class="analysis-report-title">
             <h1>종합평가</h1>
-            <p>이상미님의 학습 분석 결과입니다.</p>
+            <p><span id="analysisMemberName">응시자</span>님의 학습 분석 결과입니다.</p>
           </div>
           <button class="analysis-pdf-btn" type="button">PDF 다운로드</button>
         </div>
@@ -41,8 +49,8 @@
         <section class="analysis-report-card analysis-total-card">
           <div class="analysis-total-copy">
             <h2><span class="analysis-warning">!</span>AI 총평</h2>
-            <strong>총점 82점으로 전체 평균을 상회하는<br />우수한 성과입니다!</strong>
-            <p>AI와 Cloud 영역에서 강점이 돋보이며,<br />Data 영역은 추가 학습을 통해<br />더 높은 성과가 기대됩니다.</p>
+            <strong id="analysisSummaryHeadline">총점 82점으로 전체 평균을 상회하는<br />우수한 성과입니다!</strong>
+            <p id="analysisSummaryText">AI와 Cloud 영역에서 강점이 돋보이며,<br />Data 영역은 추가 학습을 통해<br />더 높은 성과가 기대됩니다.</p>
           </div>
 
           <div class="analysis-stamp" aria-label="오늘도 참 잘했습니다">
@@ -50,10 +58,17 @@
           </div>
 
           <div class="analysis-total-stats">
-            <div><span>총점</span><strong>82점</strong></div>
-            <div><span>전체 평균</span><strong>76점</strong></div>
-            <div><span>백분위</span><strong>상위 35%</strong></div>
-            <div><span>응시 횟수</span><strong>8회</strong></div>
+            <div><span>총점</span><strong id="analysisTotalScore">82점</strong></div>
+            <div><span>전체 평균</span><strong id="analysisOverallAverage">76점</strong></div>
+            <div><span>백분위</span><strong id="analysisPercentile">상위 35%</strong></div>
+            <div><span>응시 횟수</span><strong id="analysisExamCount">8회</strong></div>
+          </div>
+        </section>
+
+        <section class="analysis-report-card analysis-ai-comment-card">
+          <h2><span class="analysis-warning">!</span>AI 코멘트</h2>
+          <div class="analysis-ai-comment-list" id="analysisAiCommentList">
+            <p>강점 과목과 보완 과목을 바탕으로 학습 방향을 정리하고 있습니다.</p>
           </div>
         </section>
 
@@ -97,38 +112,9 @@
         </section>
 
         <section class="analysis-report-card analysis-subject-card">
-          <h2><span class="analysis-warning">!</span>과목별 결과</h2>
-          <div class="analysis-subject-list">
-            <a href="#" class="analysis-subject-line" data-subject-modal data-subject="AI" data-score="92" data-rate="92">
-              <strong>AI Engineering</strong>
-              <span class="analysis-subject-bar"><i style="width:92%"></i></span>
-              <em>92점 <small>(정답률 92%)</small></em>
-              <b>›</b>
-            </a>
-            <a href="#" class="analysis-subject-line" data-subject-modal data-subject="Cloud for Developer" data-score="85" data-rate="85">
-              <strong>Cloud for Developer</strong>
-              <span class="analysis-subject-bar"><i style="width:85%"></i></span>
-              <em>85점 <small>(정답률 85%)</small></em>
-              <b>›</b>
-            </a>
-            <a href="#" class="analysis-subject-line" data-subject-modal data-subject="Cloud for Architect" data-score="80" data-rate="80">
-              <strong>Cloud for Architect</strong>
-              <span class="analysis-subject-bar"><i style="width:80%"></i></span>
-              <em>80점 <small>(정답률 80%)</small></em>
-              <b>›</b>
-            </a>
-            <a href="#" class="analysis-subject-line" data-subject-modal data-subject="SW Engineering" data-score="77" data-rate="77">
-              <strong>SW Engineering</strong>
-              <span class="analysis-subject-bar"><i style="width:77%"></i></span>
-              <em>77점 <small>(정답률 77%)</small></em>
-              <b>›</b>
-            </a>
-            <a href="#" class="analysis-subject-line" data-subject-modal data-subject="Data Engineering" data-score="68" data-rate="58">
-              <strong>Data Engineering</strong>
-              <span class="analysis-subject-bar"><i style="width:58%"></i></span>
-              <em>68점 <small>(정답률 58%)</small></em>
-              <b>›</b>
-            </a>
+          <h2><span class="analysis-warning">!</span>과목별 평균 점수</h2>
+          <div class="analysis-subject-list" id="analysisSubjectAverageList">
+            <p class="analysis-subject-empty">과목별 평균 점수를 불러오고 있습니다.</p>
           </div>
         </section>
 
@@ -313,11 +299,11 @@
         document.body.classList.remove("modal-open");
       }
 
-      document.querySelectorAll("[data-subject-modal]").forEach((link) => {
-        link.addEventListener("click", (event) => {
-          event.preventDefault();
-          openSubjectModal(link);
-        });
+      document.addEventListener("click", (event) => {
+        const link = event.target.closest("[data-subject-modal]");
+        if (!link) return;
+        event.preventDefault();
+        openSubjectModal(link);
       });
 
       closeButtons.forEach((button) => {

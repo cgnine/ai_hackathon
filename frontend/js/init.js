@@ -176,7 +176,7 @@ async function initPage() {
   const memberId = currentMemberId();
   if (memberId) {
     state.profileName = currentMemberName();
-  } else if (!profiles.includes(state.profileName)) {
+  } else if (profiles.length && !profiles.includes(state.profileName)) {
     state.profileName = profiles[0];
   }
   state.questionCount = 20;

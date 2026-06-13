@@ -86,7 +86,7 @@ function renderProfileButton() {
   const summary = document.createElement("div");
   const menuList = document.createElement("div");
   const logoutButton = document.createElement("button");
-  const memberName = currentMemberName() || state.profileName || profiles[0];
+  const memberName = currentMemberName() || state.profileName || profiles[0] || "응시자";
   const memberId = currentMemberId();
 
   actions.className = "profile-actions";
@@ -682,7 +682,9 @@ function selectProfile(name) {
 }
 
 function initProfilePage() {
-  const initialProfile = profiles.includes(state.profileName) ? state.profileName : profiles[0];
+  const initialProfile = profiles.includes(state.profileName)
+    ? state.profileName
+    : currentMemberName() || state.profileName || profiles[0] || "응시자";
   state.profileName = initialProfile;
   state.questionCount = 20;
   if (els.profileSearch) els.profileSearch.value = initialProfile;
@@ -692,7 +694,9 @@ function initProfilePage() {
 
 function startPractice() {
   const typedName = (els.profileSearch?.value || "").trim();
-  const selectedName = profiles.includes(typedName) ? typedName : state.profileName || profiles[0];
+  const selectedName = profiles.includes(typedName)
+    ? typedName
+    : typedName || state.profileName || currentMemberName() || profiles[0] || "응시자";
 
   state.profileName = selectedName;
   state.questionCount = 20;

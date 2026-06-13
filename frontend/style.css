@@ -5574,6 +5574,15 @@ body[data-page="analysis"] .page-shell {
   padding-inline: 30px;
 }
 
+.analysis-loading[hidden],
+.analysis-report-ui[hidden] {
+  display: none;
+}
+
+.analysis-loading {
+  color: var(--text);
+}
+
 .analysis-report-ui,
 .analysis-report-ui * {
   box-sizing: border-box;
@@ -5680,9 +5689,9 @@ body[data-page="analysis"] .page-shell {
 
 .analysis-total-card {
   display: grid;
-  grid-template-columns: minmax(260px, 1.08fr) 190px minmax(390px, 1.58fr);
+  grid-template-columns: minmax(220px, 0.82fr) 150px minmax(620px, 2.2fr);
   align-items: center;
-  gap: 32px;
+  gap: 18px;
   min-height: 242px;
   padding: 28px 34px;
 }
@@ -5713,8 +5722,8 @@ body[data-page="analysis"] .page-shell {
 .analysis-stamp {
   position: relative;
   display: grid;
-  width: 168px;
-  height: 168px;
+  width: 148px;
+  height: 148px;
   place-items: center;
   justify-self: center;
   border-radius: 50%;
@@ -5731,10 +5740,10 @@ body[data-page="analysis"] .page-shell {
 
 .analysis-total-stats {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(4, minmax(132px, 1fr));
   align-items: center;
   min-height: 112px;
-  padding-left: 42px;
+  padding-left: 20px;
   border-left: 1px solid var(--line);
 }
 
@@ -5743,7 +5752,7 @@ body[data-page="analysis"] .page-shell {
   gap: 12px;
   place-items: center;
   min-height: 80px;
-  padding-inline: 14px;
+  padding-inline: 22px;
   border-right: 1px solid var(--line);
   text-align: center;
 }
@@ -5759,9 +5768,40 @@ body[data-page="analysis"] .page-shell {
 
 .analysis-total-stats strong {
   color: var(--navy);
-  font-size: clamp(1.24rem, 1.65vw, 1.62rem);
+  font-size: clamp(1.14rem, 1.45vw, 1.46rem);
   font-weight: 600;
   white-space: nowrap;
+}
+
+.analysis-ai-comment-card {
+  display: grid;
+  gap: 16px;
+  padding: 22px 34px;
+}
+
+.analysis-ai-comment-list {
+  display: block;
+  border: 1px solid #e6edf7;
+  border-radius: 8px;
+  background: #f8fbff;
+  padding: 20px 22px;
+}
+
+.analysis-ai-comment-list p {
+  margin: 0;
+  min-height: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: #243553;
+  font-size: clamp(0.86rem, 0.96vw, 0.96rem);
+  font-weight: 400;
+  line-height: 1.75;
+  text-indent: 1em;
+}
+
+.analysis-ai-comment-list p + p {
+  margin-top: 10px;
 }
 
 .analysis-radar-card {
@@ -5805,11 +5845,13 @@ body[data-page="analysis"] .page-shell {
   display: grid;
   place-items: center;
   min-width: 0;
+  min-height: 236px;
+  overflow: visible;
 }
 
 .analysis-radar-svg svg {
   display: block;
-  width: min(100%, 360px);
+  width: min(100%, 390px);
   height: auto;
   overflow: visible;
 }
@@ -5830,7 +5872,10 @@ body[data-page="analysis"] .page-shell {
   fill: #050505;
   font-size: 12px;
   font-weight: 600;
-  text-anchor: middle;
+  paint-order: stroke;
+  stroke: #ffffff;
+  stroke-width: 3px;
+  stroke-linejoin: round;
 }
 
 .radar-score-ui {
@@ -5839,8 +5884,9 @@ body[data-page="analysis"] .page-shell {
   font-weight: 600;
   text-anchor: middle;
   paint-order: stroke;
-  stroke: #eff6ff;
-  stroke-width: 10px;
+  stroke: #ffffff;
+  stroke-width: 3px;
+  stroke-linejoin: round;
 }
 
 .analysis-subject-card {
@@ -5855,7 +5901,7 @@ body[data-page="analysis"] .page-shell {
 
 .analysis-subject-line {
   display: grid;
-  grid-template-columns: 250px minmax(0, 1fr) 230px 24px;
+  grid-template-columns: minmax(180px, 250px) minmax(0, 1fr) 90px 24px;
   align-items: center;
   gap: 18px;
   min-width: 0;
@@ -6197,6 +6243,14 @@ body.modal-open {
   white-space: nowrap;
 }
 
+.analysis-subject-empty {
+  margin: 0;
+  padding: 12px 0;
+  color: #64748b;
+  font-size: clamp(0.82rem, 0.92vw, 0.92rem);
+  font-weight: 400;
+}
+
 .subject-analysis-head p {
   margin: 0;
   color: #334155;
@@ -6370,12 +6424,25 @@ body.modal-open {
   letter-spacing: -0.02em;
 }
 
+.subject-modal-card h3::before,
+.subject-strategy-card h3::before {
+  display: inline-grid !important;
+  flex: 0 0 18px;
+  width: 18px !important;
+  height: 17px !important;
+  place-items: center;
+  clip-path: polygon(50% 0, 100% 90%, 0 90%) !important;
+  background: var(--yellow) !important;
+  color: #ffffff !important;
+  font-size: 0.6rem !important;
+  font-weight: 700 !important;
+  line-height: 1 !important;
+  padding-top: 1px;
+  content: "!" !important;
+}
+
 .subject-section-icon {
-  flex: 0 0 auto;
-  width: 17px;
-  height: 16px;
-  font-size: 0.58rem;
-  font-weight: 600;
+  display: none !important;
 }
 
 .subject-score-detail {
@@ -6671,12 +6738,14 @@ body.modal-open {
   .analysis-total-card,
   .analysis-radar-card,
   .analysis-subject-card,
+  .analysis-ai-comment-card,
   .analysis-weak-card,
   .analysis-generate-card {
     padding: 20px;
   }
 
   .analysis-total-stats,
+  .analysis-ai-comment-list,
   .analysis-subject-line,
   .analysis-weak-layout {
     grid-template-columns: 1fr;

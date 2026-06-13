@@ -5,6 +5,8 @@ function analysisScoreColor(score) {
 }
 
 const ANALYSIS_CACHE_TTL_MS = 5 * 60 * 1000;
+let analysisLoadingTimer = null;
+let analysisLoadingProgress = 0;
 
 function analysisCacheKey(memberId, name) {
   return `analysis:${name}:${memberId}`;
@@ -42,13 +44,13 @@ function clearAnalysisCache(memberId = currentMemberId()) {
   localStorage.removeItem(analysisCacheKey(memberId, "commentary"));
 }
 
-async function loadAnalysisData() {
+async function loadAnalysisData(includeCommentary = false) {
   const memberId = currentMemberId();
   if (!memberId) {
     throw new Error("로그인 정보가 없습니다.");
   }
 
-  const response = await fetch(`${API_BASE}/results/analysis?member_id=${encodeURIComponent(memberId)}&include_commentary=false`);
+  const response = await fetch(`${API_BASE}/results/analysis?member_id=${encodeURIComponent(memberId)}&include_commentary=${includeCommentary ? "true" : "false"}`);
   if (!response.ok) {
     const data = await response.json().catch(() => ({}));
     throw new Error(data.detail || `HTTP ${response.status}`);
@@ -109,7 +111,278 @@ function refreshAnalysisCommentary(subjectStats, keepExistingOnError = false) {
     });
 }
 
+function setAnalysisReportText(id, value) {
+  const target = document.getElementById(id);
+  if (target) target.textContent = value;
+}
+
+function setAnalysisReportHtml(id, value) {
+  const target = document.getElementById(id);
+  if (target) target.innerHTML = value;
+}
+
+function startAnalysisReportLoading() {
+  const loading = document.getElementById("analysisLoading");
+  const report = document.getElementById("analysisReportUi");
+  const bar = document.getElementById("analysisLoadingBar");
+  const message = document.getElementById("analysisLoadingMessage");
+  const memberName = currentMemberName() || state.profileName || "회원";
+  analysisLoadingProgress = 0;
+  if (report) report.hidden = true;
+  if (loading) loading.hidden = false;
+  if (message) message.innerHTML = `${memberName}님의 종합평가를 로딩중입니다.<br /><br />잠시만 기다려주십시오.`;
+  if (bar) bar.style.width = "0%";
+  clearInterval(analysisLoadingTimer);
+  analysisLoadingTimer = setInterval(() => {
+    const ceiling = analysisLoadingProgress < 45 ? 45 : analysisLoadingProgress < 78 ? 78 : 92;
+    const step = analysisLoadingProgress < 45 ? 8 : analysisLoadingProgress < 78 ? 4 : 1;
+    analysisLoadingProgress = Math.min(ceiling, analysisLoadingProgress + step);
+    if (bar) bar.style.width = `${analysisLoadingProgress}%`;
+  }, 180);
+}
+
+function finishAnalysisReportLoading() {
+  const loading = document.getElementById("analysisLoading");
+  const report = document.getElementById("analysisReportUi");
+  const bar = document.getElementById("analysisLoadingBar");
+  clearInterval(analysisLoadingTimer);
+  analysisLoadingTimer = null;
+  if (bar) bar.style.width = "100%";
+  window.setTimeout(() => {
+    if (loading) loading.hidden = true;
+    if (report) report.hidden = false;
+  }, 180);
+}
+
+function formatAnalysisScore(value) {
+  const number = Number(value);
+  return Number.isFinite(number) ? `${Math.round(number)}점` : "-";
+}
+
+function renderAnalysisReportSubjects(subjectStats = []) {
+  const list = document.getElementById("analysisSubjectAverageList")
+    || document.querySelector(".analysis-subject-list");
+  if (!list) return;
+
+  const subjects = subjectStats
+    .filter((subject) => subject?.subjectName || subject?.subjectCode)
+    .sort((a, b) => String(a.subjectCode || "").localeCompare(String(b.subjectCode || "")));
+  if (!subjects.length) {
+    list.innerHTML = '<p class="analysis-subject-empty">표시할 과목별 평균 점수가 없습니다.</p>';
+    return;
+  }
+
+  list.innerHTML = "";
+  subjects.forEach((subject) => {
+    const score = Number(subject.score || subject.accuracy || 0);
+    const subjectName = subject.subjectName || subject.subjectCode || "과목";
+    const roundedScore = Math.round(score);
+    const safeScore = Math.max(0, Math.min(100, roundedScore));
+    const row = document.createElement("a");
+    row.href = "#";
+    row.className = "analysis-subject-line";
+    row.dataset.subjectModal = "";
+    row.dataset.subject = subjectName;
+    row.dataset.score = String(roundedScore);
+    row.dataset.rate = String(roundedScore);
+    row.innerHTML = `
+      <strong></strong>
+      <span class="analysis-subject-bar"><i></i></span>
+      <em></em>
+      <b>›</b>
+    `;
+
+    row.querySelector("strong").textContent = subjectName;
+    row.querySelector(".analysis-subject-bar i").style.width = `${safeScore}%`;
+    row.querySelector("em").textContent = `${roundedScore}점`;
+    list.appendChild(row);
+  });
+}
+
+function radarPoint(cx, cy, radius, index, count) {
+  const angle = (-90 + (index * 360 / count)) * Math.PI / 180;
+  return {
+    x: cx + Math.cos(angle) * radius,
+    y: cy + Math.sin(angle) * radius,
+  };
+}
+
+function splitRadarLabel(label) {
+  const text = String(label || "").trim();
+  if (text.length <= 14) return [text];
+  const parts = text.split(/\s+/).filter(Boolean);
+  if (parts.length <= 1) return [text];
+  const middle = Math.ceil(parts.length / 2);
+  return [
+    parts.slice(0, middle).join(" "),
+    parts.slice(middle).join(" "),
+  ];
+}
+
+function renderAnalysisReportRadar(subjectStats = [], summary = {}) {
+  const target = document.querySelector(".analysis-radar-svg");
+  if (!target) return;
+
+  const subjects = subjectStats
+    .filter((item) => item?.subjectName || item?.subjectCode)
+    .slice(0, 8);
+  if (!subjects.length) return;
+
+  const cx = 170;
+  const cy = 136;
+  const outerRadius = 88;
+  const innerRadius = 52;
+  const count = subjects.length;
+  const framePoints = subjects.map((_, index) => radarPoint(cx, cy, outerRadius, index, count));
+  const innerPoints = subjects.map((_, index) => radarPoint(cx, cy, innerRadius, index, count));
+  const averageScore = Number(summary.overallAverageScore || summary.averageScore || 0);
+  const averageRadius = outerRadius * Math.max(0, Math.min(100, averageScore)) / 100;
+  const averagePoints = subjects.map((_, index) => radarPoint(cx, cy, averageRadius, index, count));
+  const myPoints = subjects.map((subject, index) => {
+    const score = Number(subject.score || subject.accuracy || 0);
+    return radarPoint(cx, cy, outerRadius * Math.max(0, Math.min(100, score)) / 100, index, count);
+  });
+  const pointsAttr = (points) => points.map((point) => `${point.x.toFixed(1)},${point.y.toFixed(1)}`).join(" ");
+  const labels = subjects.map((subject, index) => {
+    const angle = (-90 + (index * 360 / count)) * Math.PI / 180;
+    const labelPoint = radarPoint(cx, cy, outerRadius + 40, index, count);
+    const scorePoint = radarPoint(cx, cy, outerRadius + 18, index, count);
+    const anchor = Math.cos(angle) > 0.35 ? "start" : Math.cos(angle) < -0.35 ? "end" : "middle";
+    const labelX = Math.max(30, Math.min(310, labelPoint.x));
+    const scoreX = Math.max(36, Math.min(304, scorePoint.x));
+    const labelY = Math.max(20, Math.min(248, labelPoint.y));
+    const scoreY = Math.max(34, Math.min(236, scorePoint.y));
+    const lines = splitRadarLabel(subject.subjectName || subject.subjectCode);
+    const scoreOffset = labelPoint.y < cy ? -10 : lines.length * 14 + 10;
+    const labelLines = lines.map((line, lineIndex) => (
+      `<text class="radar-label-ui" text-anchor="${anchor}" x="${labelX.toFixed(1)}" y="${(labelY + lineIndex * 14).toFixed(1)}">${line}</text>`
+    )).join("");
+    return `
+      ${labelLines}
+      <text class="radar-score-ui" x="${scoreX.toFixed(1)}" y="${Math.max(28, Math.min(244, scoreY + scoreOffset)).toFixed(1)}">${Math.round(Number(subject.score || 0))}</text>
+    `;
+  }).join("");
+
+  target.innerHTML = `
+    <svg viewBox="0 0 340 270" role="img" aria-label="로그인 회원 과목별 역량 레이더 차트">
+      <polygon class="radar-frame" points="${pointsAttr(framePoints)}"></polygon>
+      <polygon class="radar-frame inner" points="${pointsAttr(innerPoints)}"></polygon>
+      ${framePoints.map((point) => `<line class="radar-axis-ui" x1="${cx}" y1="${cy}" x2="${point.x.toFixed(1)}" y2="${point.y.toFixed(1)}"></line>`).join("")}
+      <polygon class="radar-average-ui" points="${pointsAttr(averagePoints)}"></polygon>
+      <polygon class="radar-my-ui" points="${pointsAttr(myPoints)}"></polygon>
+      ${myPoints.map((point) => `<circle class="radar-dot-ui" cx="${point.x.toFixed(1)}" cy="${point.y.toFixed(1)}" r="5"></circle>`).join("")}
+      ${labels}
+    </svg>
+  `;
+}
+
+function renderAnalysisReportAiComments(commentary = [], aiComment = null) {
+  const target = document.getElementById("analysisAiCommentList");
+  if (!target) return;
+
+  const reportComment = typeof aiComment === "string"
+    ? aiComment
+    : aiComment?.comment;
+  const detailLines = typeof aiComment === "object" && aiComment
+    ? [
+        aiComment.strengthAnalysis,
+        aiComment.weaknessCause,
+        aiComment.trendInsight,
+        aiComment.nextAction,
+      ].filter((line) => String(line || "").trim())
+    : [];
+  const lines = Array.isArray(commentary)
+    ? commentary.filter((line) => String(line || "").trim()).slice(0, 3)
+    : [];
+  const fallback = "\uac15\uc810 \uacfc\ubaa9\uacfc \ubcf4\uc644 \uacfc\ubaa9\uc744 \ubc14\ud0d5\uc73c\ub85c \ud559\uc2b5 \ubc29\ud5a5\uc744 \uc815\ub9ac\ud558\uace0 \uc788\uc2b5\ub2c8\ub2e4. \uc751\uc2dc \uc774\ub825\uc774 \uc313\uc774\uba74 \ucde8\uc57d \uc720\ud615\uacfc \ucd5c\uadfc \uc810\uc218 \ud750\ub984\uc744 \ub354 \uad6c\uccb4\uc801\uc73c\ub85c \ubd84\uc11d\ud560 \uc218 \uc788\uc2b5\ub2c8\ub2e4. \uc9c0\uae08\uc740 \ubcf5\uc2b5 \ud6c4 \ub9de\ucda4 \ubb38\uc81c\ub85c \uc774\ud574\ub3c4\ub97c \ud655\uc778\ud574 \ubcf4\uc138\uc694.";
+  const paragraphs = detailLines.length >= 2
+    ? detailLines
+    : [reportComment || lines.join(" ") || fallback];
+  target.innerHTML = "";
+  paragraphs.forEach((paragraph) => {
+    const p = document.createElement("p");
+    p.textContent = paragraph;
+    target.appendChild(p);
+  });
+}
+
+function renderAnalysisReportData(data) {
+  const summary = data.summary || {};
+  const aiOverview = data.aiOverview || {};
+  const subjectStats = data.subjectStats || [];
+  const totalScore = summary.totalScore ?? summary.averageScore ?? 0;
+  const overallAverage = summary.overallAverageScore ?? 0;
+  const percentileTop = summary.percentileTop;
+  const examCount = summary.examCount ?? 0;
+  const memberName = summary.memberName || currentMemberName() || state.profileName || "응시자";
+
+  setAnalysisReportText("analysisMemberName", memberName);
+  setAnalysisReportText("analysisTotalScore", formatAnalysisScore(totalScore));
+  setAnalysisReportText("analysisOverallAverage", formatAnalysisScore(overallAverage));
+  setAnalysisReportText("analysisPercentile", percentileTop ? `상위 ${percentileTop}%` : "-");
+  setAnalysisReportText("analysisExamCount", `${examCount}회`);
+
+  const compareText = Number(totalScore) >= Number(overallAverage || 0) ? "상회하는" : "보완이 필요한";
+  if (aiOverview.headline) {
+    setAnalysisReportText("analysisSummaryHeadline", aiOverview.headline);
+  } else {
+    setAnalysisReportHtml(
+      "analysisSummaryHeadline",
+      `총점 ${Math.round(Number(totalScore) || 0)}점으로 전체 평균을 ${compareText}<br />성과입니다!`
+    );
+  }
+
+  const sortedSubjects = [...subjectStats].sort((a, b) => (b.score || 0) - (a.score || 0));
+  const best = sortedSubjects[0];
+  const weak = sortedSubjects[sortedSubjects.length - 1];
+  if (best && weak) {
+    if (aiOverview.comment) {
+      setAnalysisReportText("analysisSummaryText", aiOverview.comment);
+    } else {
+      setAnalysisReportHtml(
+        "analysisSummaryText",
+        `${best.subjectName} 영역에서 강점이 돋보이며,<br />${weak.subjectName} 영역은 추가 학습을 통해<br />더 높은 성과가 기대됩니다.`
+      );
+    }
+  }
+
+  renderAnalysisReportSubjects(subjectStats);
+  renderAnalysisReportRadar(subjectStats, summary);
+  renderAnalysisReportAiComments(data.commentary || data.aiCommentary || [], data.aiComment);
+}
+
+async function renderAnalysisReportPage() {
+  const memberId = currentMemberId();
+  if (!memberId) {
+    window.location.href = loginUrl();
+    return;
+  }
+
+  startAnalysisReportLoading();
+
+  try {
+    const data = await loadAnalysisData(true);
+    const responseMemberId = String(data?.summary?.memberId || "").trim();
+    if (responseMemberId && responseMemberId !== String(memberId).trim()) {
+      clearAnalysisCache(memberId);
+      throw new Error("로그인 회원과 다른 종합평가 응답입니다.");
+    }
+    renderAnalysisReportData(data);
+    finishAnalysisReportLoading();
+  } catch (error) {
+    const loading = document.getElementById("analysisLoading");
+    const message = loading?.querySelector("p:not(.eyebrow)");
+    if (message) message.textContent = "종합평가 데이터를 불러오지 못했습니다.";
+    showToast(`종합평가 데이터를 불러오지 못했습니다. (${error.message})`);
+  }
+}
+
 async function renderAnalysisPage() {
+  if (document.querySelector(".analysis-report-ui")) {
+    await renderAnalysisReportPage();
+    return;
+  }
+
   if (!els.radarChart || !els.subjectBars || !els.analysisText || !els.skillMetrics || !els.recommendationCard) return;
 
   if (els.analysisName) els.analysisName.textContent = `${currentMemberName() || state.profileName || "응시자"}님의 학습 분석`;

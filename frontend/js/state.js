@@ -1,11 +1,6 @@
 let subjects = [];
 
-const profiles = [
-  "김우찬",
-  "김현수",
-  "윤정하",
-  "이상미"
-];
+const profiles = [];
 
 const PAGE_URLS = {
   login: "login.html",
