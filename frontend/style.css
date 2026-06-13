@@ -7731,3 +7731,27 @@ body.modal-open {
     bottom: 16px;
   }
 }
+
+@media (min-width: 921px) {
+  body[data-page="mock"] .exam-layout {
+    display: grid;
+    grid-template-columns: 280px minmax(0, 1fr);
+    align-items: start;
+  }
+
+  body[data-page="mock"] .side-panel {
+    position: fixed;
+    top: 92px;
+    left: max(24px, calc((100vw - 1180px) / 2));
+    width: 280px;
+    align-self: start;
+    max-height: calc(100vh - 112px);
+    overflow-y: auto;
+    z-index: 20;
+  }
+
+  body[data-page="mock"] .work-area {
+    grid-column: 2;
+    min-width: 0;
+  }
+}
