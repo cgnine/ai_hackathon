@@ -1578,41 +1578,85 @@ body[data-page="ranking"] .nav-btn:hover {
   font-size: 0.82rem;
 }
 
-.rival-radar {
-  position: relative;
+.rival-score-summary {
   display: grid;
-  min-height: 145px;
-  place-items: center;
-  border-radius: 50%;
-  background:
-    linear-gradient(72deg, transparent 49%, #e2e8f0 50%, transparent 51%),
-    linear-gradient(144deg, transparent 49%, #e2e8f0 50%, transparent 51%),
-    linear-gradient(216deg, transparent 49%, #e2e8f0 50%, transparent 51%),
-    linear-gradient(288deg, transparent 49%, #e2e8f0 50%, transparent 51%),
-    radial-gradient(circle, transparent 34%, #f8fafc 35%, #f8fafc 36%, transparent 37%),
-    radial-gradient(circle, transparent 58%, #f8fafc 59%, #f8fafc 60%, transparent 61%);
+  grid-template-columns: minmax(0, 1fr) minmax(100px, 0.82fr);
+  align-items: center;
+  min-height: 92px;
+  color: #07135f;
 }
 
-.rival-radar::after {
-  content: "";
-  width: 76px;
-  height: 76px;
-  clip-path: polygon(50% 0, 90% 36%, 76% 95%, 24% 95%, 10% 36%);
-  background: rgba(245, 184, 0, 0.24);
-  border: 2px solid #f5b800;
+.rival-score-summary > div {
+  display: grid;
+  justify-items: center;
+  gap: 9px;
+  text-align: center;
 }
 
-.rival-radar span {
-  position: absolute;
-  color: #475569;
-  font-size: 0.72rem;
+.rival-score-summary > div + div {
+  min-height: 72px;
+  border-left: 1px solid #e5eaf0;
 }
 
-.rival-radar span:nth-child(1) { top: 4px; left: 50%; transform: translateX(-50%); }
-.rival-radar span:nth-child(2) { right: 16px; top: 48px; }
-.rival-radar span:nth-child(3) { right: 32px; bottom: 10px; }
-.rival-radar span:nth-child(4) { left: 32px; bottom: 10px; }
-.rival-radar span:nth-child(5) { left: 12px; top: 48px; }
+.rival-score-summary p {
+  display: flex;
+  justify-content: center;
+  gap: 18px;
+  margin: 0;
+}
+
+.rival-score-summary p strong {
+  color: #07135f;
+  font-size: 1rem;
+  font-weight: 800;
+}
+
+.rival-score-summary em {
+  padding: 5px 10px;
+  border-radius: 6px;
+  background: #eaf3ff;
+  color: #0d63ff;
+  font-size: 0.76rem;
+  font-style: normal;
+  font-weight: 800;
+}
+
+.rival-score-summary span {
+  color: #07135f;
+  font-size: 0.78rem;
+  font-weight: 800;
+}
+
+.rival-score-summary > div > strong {
+  color: #111827;
+  font-size: 1.32rem;
+  font-weight: 900;
+}
+
+.rival-growth-note {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 46px;
+  padding: 0 14px;
+  border: 1px solid #e5eaf0;
+  border-radius: 7px;
+  background: #fff;
+  color: #07135f;
+}
+
+.rival-growth-note span {
+  color: #1d4ed8;
+  font-size: 1.22rem;
+  line-height: 1;
+}
+
+.rival-growth-note strong {
+  color: #07135f;
+  font-size: 0.84rem;
+  font-weight: 800;
+  line-height: 1.4;
+}
 
 .rival-table {
   width: 100%;
