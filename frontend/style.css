@@ -1047,7 +1047,7 @@ body[data-page="ranking"] .nav-btn:hover {
 
 .ranking-dashboard {
   display: grid;
-  grid-template-columns: 1.1fr 0.95fr 1.05fr;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 16px;
   align-items: stretch;
 }
@@ -1061,6 +1061,10 @@ body[data-page="ranking"] .nav-btn:hover {
   border-radius: 8px;
   background: #fff;
   box-shadow: 0 16px 36px rgba(15, 23, 42, 0.05);
+}
+
+.ranking-dashboard .ranking-card {
+  align-content: start;
 }
 
 .ranking-card-head {
@@ -1118,6 +1122,37 @@ body[data-page="ranking"] .nav-btn:hover {
   line-height: 1;
 }
 
+.ranking-current-detail {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+}
+
+.ranking-strength-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  max-width: 190px;
+}
+
+.ranking-strength-tags span {
+  display: inline-flex;
+  min-height: 28px;
+  align-items: center;
+  padding: 0 12px;
+  border-radius: 6px;
+  background: #e9f8ef;
+  color: #15803d;
+  font-size: 0.78rem;
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+.ranking-strength-tags .weak {
+  background: #fff1e8;
+  color: #ea580c;
+}
+
 .ranking-current-rank small {
   margin-left: 4px;
   font-size: 1.25rem;
@@ -1147,7 +1182,8 @@ body[data-page="ranking"] .nav-btn:hover {
   background: #f59e0b;
 }
 
-.ranking-current-rank em {
+.ranking-current-rank em,
+.ranking-rank-change > div:first-child em {
   width: fit-content;
   padding: 8px 18px;
   border-radius: 10px;
@@ -1197,13 +1233,6 @@ body[data-page="ranking"] .nav-btn:hover {
 .ranking-rank-change strong b {
   margin-inline: 6px;
   font-size: 1.05rem;
-}
-
-.ranking-rank-change > div:first-child em {
-  color: #07135f;
-  font-size: 1.45rem;
-  font-style: normal;
-  font-weight: 800;
 }
 
 .ranking-target-scores {
@@ -1482,10 +1511,11 @@ body[data-page="ranking"] .nav-btn:hover {
 
 .goal-panel {
   display: grid;
-  grid-template-columns: 1fr 140px;
-  gap: 20px;
+  grid-template-columns: minmax(0, 1fr) 132px;
+  gap: 18px;
   align-items: center;
-  padding: 18px;
+  min-height: 170px;
+  padding: 18px 20px;
   border: 1px solid #e5eaf0;
   border-radius: 8px;
 }
@@ -1518,8 +1548,8 @@ body[data-page="ranking"] .nav-btn:hover {
 
 .goal-ring {
   display: grid;
-  width: 118px;
-  height: 118px;
+  width: 124px;
+  height: 124px;
   place-items: center;
   align-content: center;
   justify-self: center;
@@ -1559,11 +1589,22 @@ body[data-page="ranking"] .nav-btn:hover {
   line-height: 1.6;
 }
 
+.ranking-goal-card .ranking-task-list {
+  margin-top: 2px;
+}
+
+.ranking-goal-card .ranking-primary-btn {
+  align-self: end;
+  width: min(100%, 280px);
+  justify-self: center;
+}
+
 .rival-layout {
   display: grid;
-  grid-template-columns: 110px 1fr;
-  gap: 18px;
+  grid-template-columns: 112px minmax(0, 1fr);
+  gap: 20px;
   align-items: center;
+  min-height: 118px;
 }
 
 .rival-profile {
@@ -1665,6 +1706,7 @@ body[data-page="ranking"] .nav-btn:hover {
   border-radius: 8px;
   background: #fff;
   font-size: 0.76rem;
+  table-layout: fixed;
 }
 
 .rival-table th,
@@ -1680,17 +1722,22 @@ body[data-page="ranking"] .nav-btn:hover {
   font-weight: 800;
 }
 
-.ranking-table-card {
-  grid-column: span 2;
-}
-
 .ranking-table-card .ranking-list {
   padding: 0;
 }
 
 .ranking-table-card .ranking-list li {
   grid-template-columns: 36px minmax(0, 1fr) 70px;
-  min-height: 46px;
+  min-height: 48px;
+}
+
+.ranking-table-card .ranking-more-btn {
+  align-self: end;
+  width: 100%;
+}
+
+.ranking-learning-card .ranking-card-head {
+  align-items: flex-start;
 }
 
 .learning-list li {
@@ -1698,8 +1745,8 @@ body[data-page="ranking"] .nav-btn:hover {
   grid-template-columns: 42px 1fr;
   gap: 12px;
   align-items: center;
-  min-height: 62px;
-  padding: 8px 0;
+  min-height: 66px;
+  padding: 10px 0;
   border-bottom: 1px solid #edf2f7;
 }
 
@@ -7415,6 +7462,42 @@ body.modal-open {
   .side-panel .full {
     position: static;
     box-shadow: none;
+  }
+}
+
+@media (max-width: 760px) {
+  .ranking-card,
+  .ranking-summary-card {
+    padding: 20px;
+  }
+
+  .ranking-current-detail {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .goal-panel,
+  .rival-layout,
+  .rival-score-summary {
+    grid-template-columns: 1fr;
+  }
+
+  .goal-ring {
+    width: 112px;
+    height: 112px;
+  }
+
+  .rival-score-summary > div + div {
+    min-height: 0;
+    padding-top: 12px;
+    border-left: 0;
+    border-top: 1px solid #e5eaf0;
+  }
+
+  .ranking-card-head {
+    align-items: flex-start;
+    flex-direction: column;
   }
 }
 
