@@ -161,7 +161,6 @@ async function initPage() {
   bindOptional(els.singleWrongBtn, "click", () => addWrongNote(state.index));
   bindOptional(els.singlePrevBtn, "click", () => moveSingle(state.index - 1));
   bindOptional(els.singleNextBtn, "click", () => moveSingle(state.index + 1));
-  bindOptional(els.gradeMockBtn, "click", gradeMock);
   bindOptional(els.gradeMockAiBtn, "click", () => gradeMock(true));
   bindOptional(els.reviewSubmitBtn, "click", submitWrongPractice);
   bindOptional(els.reviewPrevBtn, "click", () => moveWrongReview(-1));

@@ -283,6 +283,39 @@ function setResultScoreText(scoreText) {
   if (els.resultScoreCardValue) els.resultScoreCardValue.textContent = scoreText;
 }
 
+function hasResultAiCommentary(result) {
+  const commentary = result?.diagnosis?.commentary;
+  return Boolean(
+    commentary
+    && typeof commentary === "object"
+    && ["overall", "strength", "weakness", "strategy"].some((key) => String(commentary[key] || "").trim())
+  );
+}
+
+async function loadResultWithAiCommentary(attemptId, examHistoryIds = []) {
+  const historyQuery = Array.isArray(examHistoryIds) && examHistoryIds.length
+    ? `?history_ids=${encodeURIComponent(examHistoryIds.join(","))}`
+    : "";
+  const url = `${API_BASE}/results/${encodeURIComponent(attemptId)}${historyQuery}`;
+  const response = await fetch(url);
+  if (response.status === 404) return null;
+  if (!response.ok) throw new Error(`HTTP ${response.status}`);
+
+  const result = await response.json();
+  if (hasResultAiCommentary(result)) return result;
+
+  try {
+    await generateResultCommentary(attemptId, examHistoryIds);
+  } catch (error) {
+    console.warn("Failed to generate result commentary", error);
+    return result;
+  }
+
+  const refreshed = await fetch(url);
+  if (!refreshed.ok) return result;
+  return refreshed.json();
+}
+
 function renderApiResultPage(result) {
   if (!els.resultList || !els.resultScore || !els.resultSummary) return;
 
@@ -519,9 +552,9 @@ function renderDiagnosisCommentCards(comments) {
 }
 
 function renderDiagnosisRadar(axes) {
-  const center = 140;
-  const maxRadius = 76;
-  const labelRadius = 108;
+  const center = 160;
+  const maxRadius = 74;
+  const labelRadius = 122;
   const count = axes.length;
   const axisPoints = axes.map((axis, index) => {
     const angle = (-90 + index * (360 / count)) * Math.PI / 180;
@@ -530,12 +563,15 @@ function renderDiagnosisRadar(axes) {
     const scoreRadius = maxRadius * (axis.score / 100);
     const scoreX = center + Math.cos(angle) * scoreRadius;
     const scoreY = center + Math.sin(angle) * scoreRadius;
-    const valueRadius = Math.min(maxRadius + 12, Math.max(scoreRadius + 14, 24));
+    const valueRadius = Math.min(maxRadius - 14, Math.max(scoreRadius + 10, 30));
     const valueX = center + Math.cos(angle) * valueRadius;
     const valueY = center + Math.sin(angle) * valueRadius;
-    const labelX = center + Math.cos(angle) * labelRadius;
-    const labelY = center + Math.sin(angle) * labelRadius;
-    return { axis, outerX, outerY, scoreX, scoreY, valueX, valueY, labelX, labelY };
+    const rawLabelX = center + Math.cos(angle) * labelRadius;
+    const rawLabelY = center + Math.sin(angle) * labelRadius;
+    const labelX = Math.min(292, Math.max(28, rawLabelX));
+    const labelY = Math.min(294, Math.max(26, rawLabelY));
+    const labelAnchor = Math.cos(angle) > 0.45 ? "end" : Math.cos(angle) < -0.45 ? "start" : "middle";
+    return { axis, outerX, outerY, scoreX, scoreY, valueX, valueY, labelX, labelY, labelAnchor };
   });
 
   const grid = [1, 0.66, 0.33].map((scale) => {
@@ -559,7 +595,7 @@ function renderDiagnosisRadar(axes) {
   const scorePoints = axisPoints.map((point) => `${point.scoreX},${point.scoreY}`).join(" ");
 
   els.diagnosisChart.innerHTML = `
-    <svg viewBox="0 0 280 280" role="img" aria-label="출제 영역 진단 레이더 차트">
+    <svg viewBox="0 0 320 320" role="img" aria-label="출제 영역 진단 레이더 차트">
       ${grid}
       ${axesMarkup}
       <polygon points="${scorePoints}" class="diagnosis-radar-score" />
@@ -604,7 +640,7 @@ function renderRadarLabel(point) {
   const tspans = lines.map((line, index) => (
     `<tspan x="${point.labelX}" y="${startY + index * lineHeight}">${line}</tspan>`
   )).join("");
-  return `<text class="diagnosis-radar-label">${tspans}</text>`;
+  return `<text class="diagnosis-radar-label" text-anchor="${point.labelAnchor}">${tspans}</text>`;
 }
 
 function renderDiagnosisBars(axes) {
@@ -819,17 +855,11 @@ async function loadBackendResultPage() {
   }
 
   try {
-    const historyQuery = examHistoryIds.length
-      ? `?history_ids=${encodeURIComponent(examHistoryIds.join(","))}`
-      : "";
-    const url = `${API_BASE}/results/${attemptId}${historyQuery}`;
-    const response = await fetch(url);
-    if (response.status === 404) {
+    const result = await loadResultWithAiCommentary(attemptId, examHistoryIds);
+    if (!result) {
       renderResultEmptyState();
       return;
     }
-    if (!response.ok) throw new Error(`HTTP ${response.status}`);
-    const result = await response.json();
     renderApiResultPage(result);
   } catch (error) {
     renderResultEmptyState({

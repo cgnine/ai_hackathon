@@ -4306,7 +4306,6 @@ body[data-page="mock"] .choice-btn.selected {
   fill: var(--muted);
   font-size: 10px;
   font-weight: 800;
-  text-anchor: middle;
   dominant-baseline: middle;
 }
 
@@ -5972,14 +5971,17 @@ body[data-page="analysis"] .page-shell {
 }
 
 .analysis-weak-circle {
-  display: grid;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
   width: 158px;
   height: 158px;
-  place-items: center;
   justify-self: center;
   padding: 26px 12px;
   border-radius: 50%;
   background: radial-gradient(circle, #fff8e7 0%, #fff3d8 100%);
+  text-align: center;
 }
 
 .analysis-weak-circle span,
@@ -5990,9 +5992,12 @@ body[data-page="analysis"] .page-shell {
 }
 
 .analysis-weak-circle strong {
+  width: 100%;
   color: #050505;
   font-size: 0.92rem;
   font-weight: 600;
+  line-height: 1.25;
+  word-break: keep-all;
 }
 
 .analysis-weak-circle em { color: #ef4444; }

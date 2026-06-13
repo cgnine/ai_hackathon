@@ -169,7 +169,6 @@ const els = {
   mockQuestionGrid: $("mockQuestionGrid"),
   mockQuestionList: $("mockQuestionList"),
   mockQuestionType: $("mockQuestionType"),
-  gradeMockBtn: $("gradeMockBtn"),
   gradeMockAiBtn: $("gradeMockAiBtn"),
   resultScore: $("resultScore"),
   resultScoreCardValue: $("resultScoreCardValue"),
