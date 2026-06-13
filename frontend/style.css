@@ -1234,16 +1234,36 @@ body[data-page="ranking"] .nav-btn:hover {
   display: inline-flex;
   min-height: 28px;
   align-items: center;
-  padding: 0 12px;
-  border-radius: 6px;
-  background: #e9f8ef;
-  color: #15803d;
+  gap: 5px;
+  padding: 0;
+  background: transparent;
   font-size: 0.78rem;
   font-weight: 800;
   white-space: nowrap;
 }
 
-.ranking-strength-tags .weak {
+.ranking-strength-tags b,
+.ranking-strength-tags em {
+  min-height: 28px;
+  display: inline-flex;
+  align-items: center;
+  padding: 0 10px;
+  border-radius: 6px;
+  font-style: normal;
+  line-height: 1;
+}
+
+.ranking-strength-tags b {
+  background: #e9f8ef;
+  color: #15803d;
+}
+
+.ranking-strength-tags em {
+  background: #f3f0f8;
+  color: #4b5563;
+}
+
+.ranking-strength-tags .weak b {
   background: #fff1e8;
   color: #ea580c;
 }
@@ -1338,7 +1358,7 @@ body[data-page="ranking"] .nav-btn:hover {
 
 .ranking-target-scores p {
   display: grid;
-  grid-template-columns: minmax(86px, 0.45fr) minmax(90px, 1fr) 72px;
+  grid-template-columns: minmax(54px, 0.32fr) minmax(90px, 1fr) 84px;
   align-items: center;
   gap: 10px;
   margin: 0;

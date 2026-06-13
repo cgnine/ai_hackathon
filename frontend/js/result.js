@@ -12,9 +12,7 @@ function appendResultItem(question, index, selected, correct, meta = {}) {
     selected,
     answer: question.answer,
     explanation: question.explanation,
-    sampleSolution: question.sampleSolution,
-    saved: state.wrongNotes.has(meta.attemptId ? `${meta.attemptId}-${currentSubject().id}-${index}` : `${currentSubject().id}-${index}`),
-    onSave: () => addWrongNote(index, true, meta)
+    sampleSolution: question.sampleSolution
   });
 
   item.className = "result-item";
@@ -120,9 +118,7 @@ function createResultDetail({
   selected,
   answer,
   explanation,
-  sampleSolution,
-  saved = false,
-  onSave = null
+  sampleSolution
 }) {
   const detail = document.createElement("div");
   const hasChoices = Array.isArray(choices) && choices.length > 0;
@@ -194,29 +190,6 @@ function createResultDetail({
   explanationSection.appendChild(explanationText);
   detail.appendChild(explanationSection);
 
-  if (onSave) {
-    const action = document.createElement("div");
-    const button = document.createElement("button");
-    action.className = "result-detail-actions";
-    button.type = "button";
-    button.className = "secondary-btn result-save-btn";
-    button.textContent = saved ? "오답노트 저장됨" : "오답노트 저장";
-    button.disabled = saved;
-    button.addEventListener("click", async () => {
-      button.disabled = true;
-      try {
-        await onSave();
-        renderSaveWrongAllButton(latestApiResult || state.lastResult);
-        button.textContent = "오답노트 저장됨";
-      } catch (error) {
-        button.disabled = false;
-        showToast(`오답노트 저장에 실패했습니다. (${error.message})`);
-      }
-    });
-    action.appendChild(button);
-    detail.appendChild(action);
-  }
-
   return detail;
 }
 
@@ -254,9 +227,7 @@ function appendApiResultItem(item, index, resultMeta) {
     scenario: item.questionScenario,
     selected: item.selected,
     answer: item.answer,
-    explanation: item.explanation,
-    saved: state.wrongNotes.has(apiWrongNoteKey(resultMeta, item, index)) || item.wrongNoteSaved,
-    onSave: () => saveApiResultItemToWrongNote(resultMeta, item, index)
+    explanation: item.explanation
   });
 
   row.className = "result-item";
@@ -407,8 +378,8 @@ function renderSaveWrongAllButton(result = latestApiResult) {
   els.saveWrongAllBtn.style.display = rows.length ? "inline-flex" : "none";
   els.saveWrongAllBtn.disabled = unsavedCount === 0;
   els.saveWrongAllBtn.textContent = unsavedCount === 0
-    ? "오답노트 모두저장됨"
-    : "오답노트 모두저장";
+    ? "오답노트 저장됨"
+    : "오답노트 저장";
 }
 
 function getResultSaveRows(result = latestApiResult || state.lastResult) {
@@ -454,7 +425,7 @@ async function saveAllWrongApiResultItems() {
     try {
       await updateWrongNoteSavedOnServer(result, unsavedRows.map((row) => row.questionId));
     } catch (error) {
-      showToast(`오답노트 모두저장에 실패했습니다. (${error.message})`);
+      showToast(`오답노트 저장에 실패했습니다. (${error.message})`);
       return;
     }
   }

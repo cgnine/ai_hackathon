@@ -220,6 +220,272 @@ def _bedrock_ranking_goal_coach(
     return _truncate_commentary_sentence(text, 50)
 
 
+def _fallback_ranking_goal_actions(subject_targets: list[dict[str, Any]]) -> list[dict[str, str]]:
+    actions = []
+    for item in subject_targets[:2]:
+        subject = str(item.get("subjectName") or item.get("subjectCode") or "과목").strip()
+        expected = item.get("expectedUpScore") or 0
+        expected_text = format_ranking_expected_score(expected)
+        if subject == "SW":
+            title = "SW 실무 문제 집중 학습"
+        elif subject == "Cloud":
+            title = "Cloud 개념 문제 학습"
+        else:
+            title = f"{subject} 집중 학습"
+        actions.append({
+            "title": title[:18],
+            "expected": expected_text,
+        })
+
+    while len(actions) < 2:
+        actions.append({
+            "title": "핵심 과목 집중 학습",
+            "expected": "+1점 예상",
+        })
+    return actions[:2]
+
+
+def format_ranking_expected_score(value: Any) -> str:
+    numeric = float(value or 0)
+    score = int(numeric) if numeric.is_integer() else numeric
+    return f"+{score}점 예상"
+
+
+def format_ranking_number(value: Any) -> str:
+    numeric = float(value or 0)
+    return str(int(numeric)) if numeric.is_integer() else f"{numeric:.1f}"
+
+
+def _extract_json_array(text: str) -> list[Any]:
+    decoder = json.JSONDecoder()
+    stripped = str(text or "").strip()
+    for index, char in enumerate(stripped):
+        if char != "[":
+            continue
+        try:
+            parsed, _ = decoder.raw_decode(stripped[index:])
+        except json.JSONDecodeError:
+            continue
+        if isinstance(parsed, list):
+            return parsed
+    raise ValueError("JSON array was not found in the model response")
+
+
+def _validate_ranking_goal_actions(payload: list[Any], fallback: list[dict[str, str]]) -> list[dict[str, str]]:
+    actions = []
+    for item in payload[:2]:
+        if not isinstance(item, dict):
+            continue
+        title = " ".join(str(item.get("title") or "").split())
+        expected = " ".join(str(item.get("expected") or "").split())
+        if not title or not expected:
+            continue
+        if "(" in title or ")" in title or "Pro" in title or "Chapter" in title:
+            continue
+        if len(title) > 18:
+            title = title[:18]
+        if not (expected.startswith("+") and expected.endswith("점 예상")):
+            continue
+        actions.append({"title": title, "expected": expected})
+    return actions if len(actions) == 2 else fallback
+
+
+def _bedrock_ranking_goal_actions(
+    ranking_goal: dict[str, Any],
+    subject_targets: list[dict[str, Any]],
+) -> list[dict[str, str]]:
+    fallback = _fallback_ranking_goal_actions(subject_targets)
+    subjects = [
+        {
+            "subjectName": item.get("subjectName"),
+            "expectedUpScore": item.get("expectedUpScore"),
+        }
+        for item in subject_targets[:2]
+    ]
+    system_prompt = "당신은 KB Masters의 AI 학습 추천 코치입니다."
+    user_prompt = (
+        "사용자의 목표 순위와 추천 과목 데이터를 바탕으로\n"
+        "AI 추격 목표 추천 카드에 표시할 학습 액션 2개를 작성하세요.\n\n"
+        "입력 데이터\n\n"
+        + json.dumps(
+            {
+                "myRank": int(ranking_goal["my_rank"]),
+                "myScore": float(ranking_goal["my_score"] or 0),
+                "targetRank": int(ranking_goal["target_rank"]),
+                "targetScore": float(ranking_goal["target_score"] or 0),
+                "gapScore": float(ranking_goal["gap_score"] or 0),
+                "successRate": int(ranking_goal["success_rate"] or 0),
+                "subjects": subjects,
+            },
+            ensure_ascii=False,
+        )
+        + "\n\n"
+        "규칙\n\n"
+        "- 정확히 2개만 작성\n"
+        "- 각 title은 18자 이내\n"
+        "- 과목명은 입력된 짧은 과목명 그대로 사용\n"
+        "- expected는 \"+N점 예상\" 형식\n"
+        "- 긴 과목명, 괄호, Pro, Chapter 문구 사용 금지\n"
+        "- 설명 문장 금지\n"
+        "- JSON 배열만 출력\n\n"
+        "출력 예시\n\n"
+        "[\n"
+        "  {\n"
+        "    \"title\": \"SW 실무 문제 집중 학습\",\n"
+        "    \"expected\": \"+3점 예상\"\n"
+        "  },\n"
+        "  {\n"
+        "    \"title\": \"Cloud 개념 문제 학습\",\n"
+        "    \"expected\": \"+2점 예상\"\n"
+        "  }\n"
+        "]"
+    )
+    try:
+        raw = bedrock_client.invoke(system_prompt, user_prompt, max_tokens=220)
+        return _validate_ranking_goal_actions(_extract_json_array(raw), fallback)
+    except Exception:
+        return fallback
+
+
+def _fallback_ranking_rival_coach(
+    rival_row: dict[str, Any],
+    subject_rows: list[dict[str, Any]],
+) -> str:
+    gap = float(rival_row["score_gap"] or 0)
+    gap_text = int(gap) if gap.is_integer() else gap
+    subject = ""
+    for row in subject_rows:
+        my_score = float(row["my_score"] or 0)
+        rival_score = float(row["rival_score"] or 0)
+        if rival_score > my_score:
+            subject = str(row.get("subject_code") or row.get("subject_name") or "").strip()
+            break
+    if subject:
+        message = f"현재 {gap_text}점 차이의 라이벌입니다. {subject} 보완으로 추격 가능합니다."
+    else:
+        message = f"현재 {gap_text}점 차이의 라이벌입니다. 꾸준히 풀면 추격 가능합니다."
+    return _truncate_commentary_sentence(message, 50)
+
+
+def _bedrock_ranking_rival_coach(
+    ranking_goal: dict[str, Any],
+    rival_row: dict[str, Any],
+    subject_rows: list[dict[str, Any]],
+) -> str:
+    fallback = _fallback_ranking_rival_coach(rival_row, subject_rows)
+    comparisons = [
+        {
+            "subjectCode": row.get("subject_code"),
+            "subjectName": row.get("subject_name"),
+            "myScore": float(row["my_score"] or 0),
+            "rivalScore": float(row["rival_score"] or 0),
+        }
+        for row in subject_rows
+    ]
+    system_prompt = "당신은 KB Masters의 AI 경쟁 분석가입니다."
+    user_prompt = (
+        "사용자와 라이벌의 순위 및 점수를 비교하여 라이벌 추천 이유를 작성하세요.\n\n"
+        "규칙\n\n"
+        "* 2문장 이하\n"
+        "* 50자 이내\n"
+        "* 점수 차이를 반드시 포함\n"
+        "* 경쟁 의식을 유발하되 긍정적 표현 사용\n"
+        "* 비교 과목은 최대 1개만 언급\n"
+        "* 제목 없이 문장만 출력\n\n"
+        "예시\n\n"
+        "현재 2점 차이의 라이벌입니다. SW 과목을 보완하면 충분히 추격 가능합니다.\n\n"
+        "가장 유사한 성장 패턴을 보이는 사용자입니다. 3점 차이로 충분히 도전 가능한 구간입니다.\n\n"
+        "데이터\n"
+        + json.dumps(
+            {
+                "myRank": int(ranking_goal["my_rank"]),
+                "myScore": float(ranking_goal["my_score"] or 0),
+                "rivalRank": int(rival_row["rival_rank"]),
+                "rivalScore": float(rival_row["rival_score"] or 0),
+                "scoreGap": float(rival_row["score_gap"] or 0),
+                "subjectComparisons": comparisons,
+            },
+            ensure_ascii=False,
+        )
+    )
+    try:
+        raw = bedrock_client.invoke(system_prompt, user_prompt, max_tokens=120)
+    except Exception:
+        return fallback
+
+    text = " ".join(str(raw or "").replace('"', "").split())
+    if not text:
+        return fallback
+    gap_text = format_ranking_number(float(rival_row["score_gap"] or 0))
+    if gap_text not in text:
+        return fallback
+    return _truncate_commentary_sentence(text, 50)
+
+
+def _fallback_ranking_learning_recommendations(pattern: dict[str, Any]) -> list[str]:
+    exam_count = format_ranking_number(float(pattern["avg_exam_count"] or 0))
+    practical_rate = format_ranking_number(float(pattern["avg_practical_rate"] or 0))
+    weak_subject = str(pattern["weak_subject"] or "취약 과목").strip()
+    return [
+        f"{exam_count}회 이상 응시하기"[:20],
+        f"{weak_subject} 문제 풀기"[:20],
+        f"실무형 {practical_rate}% 유지"[:20],
+    ]
+
+
+def _validate_ranking_learning_recommendations(
+    payload: list[Any],
+    fallback: list[str],
+) -> list[str]:
+    items = []
+    blocked_words = ("복습했다", "먼저 풀었다", "반복 학습했다")
+    for item in payload[:3]:
+        text = " ".join(str(item or "").split())
+        if not text or any(word in text for word in blocked_words):
+            continue
+        items.append(text[:20])
+    return items if len(items) == 3 else fallback
+
+
+def _bedrock_ranking_learning_recommendations(pattern: dict[str, Any]) -> list[str]:
+    fallback = _fallback_ranking_learning_recommendations(pattern)
+    system_prompt = "당신은 KB Masters의 AI 학습 추천 코치입니다."
+    user_prompt = (
+        "상위권 학습자들의 학습 패턴과 사용자의 취약 과목을 분석하여 실천 가능한 학습 추천 3가지를 작성하세요.\n\n"
+        "규칙\n\n"
+        "* 정확히 3개 작성\n"
+        "* 각 항목은 20자 이내\n"
+        "* 행동 중심 문장 사용\n"
+        "* 숫자가 있으면 적극 활용\n"
+        "* DB에서 확인할 수 없는 내용 작성 금지\n"
+        "* \"복습했다\", \"먼저 풀었다\", \"반복 학습했다\" 등의 표현 금지\n"
+        "* JSON 배열만 출력\n\n"
+        "출력 예시\n\n"
+        "[\n"
+        "\"주 3회 이상 응시 추천\",\n"
+        "\"Cloud 중심 문제 풀이\",\n"
+        "\"실무형 문제 60% 유지\"\n"
+        "]\n\n"
+        "데이터\n"
+        + json.dumps(
+            {
+                "avgExamCount": float(pattern["avg_exam_count"] or 0),
+                "avgSubjectCount": float(pattern["avg_subject_count"] or 0),
+                "avgPracticalRate": float(pattern["avg_practical_rate"] or 0),
+                "avgWrongNoteSavedCount": float(pattern["avg_wrong_note_saved_count"] or 0),
+                "weakSubject": pattern["weak_subject"],
+                "weakSubjectScore": float(pattern["weak_subject_score"] or 0),
+            },
+            ensure_ascii=False,
+        )
+    )
+    try:
+        raw = bedrock_client.invoke(system_prompt, user_prompt, max_tokens=180)
+        return _validate_ranking_learning_recommendations(_extract_json_array(raw), fallback)
+    except Exception:
+        return fallback
+
+
 def _compact_analysis_headline(value: str) -> str:
     text = " ".join(str(value or "").replace("…", "").split()).rstrip(".。!?！？")
     if len(text) <= 25:
@@ -1185,6 +1451,86 @@ def get_analysis(member_id: str, include_commentary: bool = True) -> dict[str, A
             )
             subject_average_rows = cur.fetchall()
 
+            cur.execute(
+                """
+                WITH unit_stats AS (
+                    SELECT
+                        q.minor_unit,
+                        TRIM(
+                            REGEXP_REPLACE(
+                                SPLIT_PART(
+                                    REPLACE(
+                                        REPLACE(
+                                            REGEXP_REPLACE(
+                                                COALESCE(NULLIF(q.minor_unit, ''), '미분류'),
+                                                '^SECTION [0-9]+\\.\\s*',
+                                                ''
+                                            ),
+                                            '의 이해',
+                                            ''
+                                        ),
+                                        '개요 및 활용법',
+                                        ''
+                                    ),
+                                    '/',
+                                    1
+                                ),
+                                '^[0-9]+\\.\\s*',
+                                ''
+                            )
+                        ) AS display_keyword,
+                        COUNT(*) AS total_count,
+                        SUM(
+                            CASE
+                                WHEN h.is_correct = 'Y'
+                                THEN 1
+                                ELSE 0
+                            END
+                        ) AS correct_count,
+                        ROUND(
+                            SUM(
+                                CASE
+                                    WHEN h.is_correct = 'Y'
+                                    THEN 1
+                                    ELSE 0
+                                END
+                            )::numeric / NULLIF(COUNT(*), 0) * 100,
+                            1
+                        ) AS correct_rate
+                    FROM exam_tb e
+                    JOIN exam_history_tb h
+                      ON e.exam_id = h.exam_id
+                    JOIN question_tb q
+                      ON h.question_id = q.question_id
+                    WHERE e.member_id = %s
+                    GROUP BY q.minor_unit
+                ),
+                strong_unit AS (
+                    SELECT
+                        display_keyword AS strong_keyword
+                    FROM unit_stats
+                    WHERE total_count >= 2
+                    ORDER BY correct_rate DESC, total_count DESC
+                    LIMIT 1
+                ),
+                weak_unit AS (
+                    SELECT
+                        display_keyword AS weak_keyword
+                    FROM unit_stats
+                    WHERE total_count >= 2
+                    ORDER BY correct_rate ASC, total_count DESC
+                    LIMIT 1
+                )
+                SELECT
+                    strong_unit.strong_keyword,
+                    weak_unit.weak_keyword
+                FROM strong_unit
+                CROSS JOIN weak_unit
+                """,
+                (normalized_member_id,),
+            )
+            strength_keyword_row = cur.fetchone()
+
     subject_map: dict[str, dict[str, Any]] = {}
     type_map: dict[str, dict[str, Any]] = {}
     subject_type_map: dict[tuple[str, str], dict[str, Any]] = {}
@@ -1330,6 +1676,10 @@ def get_analysis(member_id: str, include_commentary: bool = True) -> dict[str, A
         "overallAverageScore": overall_average_score,
         "percentileTop": 0,
         "latestExamAt": latest_exam_at,
+        "strengthKeywords": {
+            "strongKeyword": strength_keyword_row["strong_keyword"],
+            "weakKeyword": strength_keyword_row["weak_keyword"],
+        } if strength_keyword_row else None,
     }
 
     if member_score_rows:
@@ -2009,7 +2359,14 @@ def get_ranking_goal(member_id: str) -> dict[str, Any]:
                 WITH subject_avg AS (
                     SELECT
                         e.subject_code,
-                        s.subject_name,
+                        CASE
+                            WHEN e.subject_code = 'AI' THEN 'AI'
+                            WHEN e.subject_code = 'CA' THEN 'Cloud'
+                            WHEN e.subject_code = 'DE' THEN 'Data'
+                            WHEN e.subject_code = 'CD' THEN 'Cloud Dev'
+                            WHEN e.subject_code = 'SA' THEN 'SW'
+                            ELSE s.subject_name
+                        END AS subject_name,
                         ROUND(AVG(CAST(e.exam_score AS DECIMAL(5,2))), 1) AS current_score
                     FROM exam_tb e
                     JOIN subject_tb s
@@ -2212,8 +2569,30 @@ def get_ranking_goal(member_id: str) -> dict[str, Any]:
                 """
                 WITH unit_stats AS (
                     SELECT
-                        s.subject_name,
-                        q.major_unit,
+                        q.minor_unit,
+                        TRIM(
+                            REGEXP_REPLACE(
+                                SPLIT_PART(
+                                    REPLACE(
+                                        REPLACE(
+                                            REGEXP_REPLACE(
+                                                COALESCE(NULLIF(q.minor_unit, ''), '미분류'),
+                                                '^SECTION [0-9]+\\.\\s*',
+                                                ''
+                                            ),
+                                            '의 이해',
+                                            ''
+                                        ),
+                                        '개요 및 활용법',
+                                        ''
+                                    ),
+                                    '/',
+                                    1
+                                ),
+                                '^[0-9]+\\.\\s*',
+                                ''
+                            )
+                        ) AS display_keyword,
                         COUNT(*) AS total_count,
                         SUM(CASE WHEN h.is_correct = 'Y' THEN 1 ELSE 0 END) AS correct_count,
                         ROUND(
@@ -2226,14 +2605,12 @@ def get_ranking_goal(member_id: str) -> dict[str, Any]:
                       ON e.exam_id = h.exam_id
                     JOIN question_tb q
                       ON h.question_id = q.question_id
-                    JOIN subject_tb s
-                      ON e.subject_code = s.subject_code
                     WHERE e.member_id = %s
-                    GROUP BY s.subject_name, q.major_unit
+                    GROUP BY q.minor_unit
                 ),
                 strong_unit AS (
                     SELECT
-                        CONCAT(subject_name, ' ', major_unit) AS strong_keyword
+                        display_keyword AS strong_keyword
                     FROM unit_stats
                     WHERE total_count >= 2
                     ORDER BY correct_rate DESC, total_count DESC
@@ -2241,7 +2618,7 @@ def get_ranking_goal(member_id: str) -> dict[str, Any]:
                 ),
                 weak_unit AS (
                     SELECT
-                        CONCAT(subject_name, ' ', major_unit) AS weak_keyword
+                        display_keyword AS weak_keyword
                     FROM unit_stats
                     WHERE total_count >= 2
                     ORDER BY correct_rate ASC, total_count DESC
@@ -2271,7 +2648,27 @@ def get_ranking_goal(member_id: str) -> dict[str, Any]:
         }
         for subject_row in subject_rows
     ]
-    goal_coach_message = _bedrock_ranking_goal_coach(row, subject_target_items)
+    gap_score = float(row["gap_score"] or 0)
+    if gap_score == 0:
+        goal_coach_message = "현재 1위를 유지 중입니다."
+        goal_actions = [
+            {"title": "현재 순위 유지 학습", "expected": "+0점 예상"},
+            {"title": "취약 과목 보완 학습", "expected": "+0점 예상"},
+        ]
+    else:
+        goal_coach_message = _bedrock_ranking_goal_coach(row, subject_target_items)
+        goal_actions = _bedrock_ranking_goal_actions(row, subject_target_items)
+
+    rival_coach_message = (
+        _bedrock_ranking_rival_coach(row, rival_row, rival_subject_rows)
+        if rival_row
+        else None
+    )
+    learning_recommendations = (
+        _bedrock_ranking_learning_recommendations(learning_pattern_row)
+        if learning_pattern_row
+        else []
+    )
 
     return {
         "memberId": normalized_member_id,
@@ -2279,16 +2676,18 @@ def get_ranking_goal(member_id: str) -> dict[str, Any]:
         "myScore": float(row["my_score"] or 0),
         "targetRank": int(row["target_rank"]),
         "targetScore": float(row["target_score"] or 0),
-        "gapScore": float(row["gap_score"] or 0),
+        "gapScore": gap_score,
         "successRate": int(row["success_rate"] or 0),
         "subjectTargets": subject_target_items,
         "goalCoachMessage": goal_coach_message,
+        "goalActions": goal_actions,
         "rival": {
             "rivalId": rival_row["rival_id"],
             "rivalName": rival_row["rival_name"],
             "rivalRank": int(rival_row["rival_rank"]),
             "rivalScore": float(rival_row["rival_score"] or 0),
             "scoreGap": float(rival_row["score_gap"] or 0),
+            "rivalCoachMessage": rival_coach_message,
             "subjectComparisons": [
                 {
                     "subjectCode": subject_row["subject_code"],
@@ -2306,6 +2705,7 @@ def get_ranking_goal(member_id: str) -> dict[str, Any]:
             "avgWrongNoteSavedCount": float(learning_pattern_row["avg_wrong_note_saved_count"] or 0),
             "weakSubject": learning_pattern_row["weak_subject"],
             "weakSubjectScore": float(learning_pattern_row["weak_subject_score"] or 0),
+            "recommendations": learning_recommendations,
         } if learning_pattern_row else None,
         "strengthKeywords": {
             "strongKeyword": strength_keyword_row["strong_keyword"],

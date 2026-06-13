@@ -156,9 +156,9 @@ function renderRankingSubjectTargets(subjectTargets) {
       const up = document.createElement("em");
       const targetScore = Math.max(0, Math.min(100, Number(item.targetSubjectScore) || 0));
 
-      name.textContent = item.subjectName || item.subjectCode || "-";
+      name.textContent = item.subjectCode || item.subjectName || "-";
       fill.style.width = `${targetScore}%`;
-      up.textContent = `+${formatRankingNumber(item.expectedUpScore)}점 ↑`;
+      up.textContent = `+${formatRankingNumber(item.expectedUpScore)}점 필요`;
 
       bar.appendChild(fill);
       row.append(name, bar, up);
@@ -166,20 +166,30 @@ function renderRankingSubjectTargets(subjectTargets) {
     });
   }
 
-  const recommendationList = document.getElementById("rankingSubjectRecommendations");
-  if (recommendationList) {
-    recommendationList.replaceChildren();
-    items.forEach((item) => {
-      const row = document.createElement("li");
-      const title = document.createElement("span");
-      const score = document.createElement("strong");
+}
 
-      title.textContent = item.recommendTitle || `${item.subjectName || item.subjectCode || "과목"} 집중 학습`;
-      score.textContent = `+${formatRankingNumber(item.expectedUpScore)}점 예상`;
-      row.append(title, score);
-      recommendationList.appendChild(row);
-    });
-  }
+function renderRankingGoalActions(actions, subjectTargets) {
+  const recommendationList = document.getElementById("rankingSubjectRecommendations");
+  if (!recommendationList) return;
+
+  const fallback = (Array.isArray(subjectTargets) ? subjectTargets.slice(0, 2) : []).map((item) => ({
+    title: item.recommendTitle || `${item.subjectName || item.subjectCode || "과목"} 집중 학습`,
+    expected: `+${formatRankingNumber(item.expectedUpScore)}점 예상`
+  }));
+  const items = Array.isArray(actions) && actions.length === 2 ? actions : fallback;
+  if (!items.length) return;
+
+  recommendationList.replaceChildren();
+  items.slice(0, 2).forEach((item) => {
+    const row = document.createElement("li");
+    const title = document.createElement("span");
+    const score = document.createElement("strong");
+
+    title.textContent = item.title || "핵심 과목 집중 학습";
+    score.textContent = item.expected || "+1점 예상";
+    row.append(title, score);
+    recommendationList.appendChild(row);
+  });
 }
 
 function renderRankingRival(rival) {
@@ -196,7 +206,10 @@ function renderRankingRival(rival) {
   setRankingText("rankingRivalRank", rivalRank);
   setRankingText("rankingRivalScore", rivalScore);
   setRankingText("rankingRivalScoreGap", scoreGap);
-  setRankingText("rankingRivalNote", `${rivalName}님과 평균 점수 차이가 ${scoreGap}점으로 가장 가깝습니다.`);
+  setRankingText(
+    "rankingRivalNote",
+    rival.rivalCoachMessage || `${rivalName}님과 평균 점수 차이가 ${scoreGap}점으로 가장 가깝습니다.`
+  );
 
   const comparisons = Array.isArray(rival.subjectComparisons) ? rival.subjectComparisons : [];
   const head = document.getElementById("rankingRivalTableHead");
@@ -243,11 +256,19 @@ function renderRankingStrengthKeywords(keywords) {
   const strongKeyword = keywords.strongKeyword || "강점 분석중";
   const weakKeyword = keywords.weakKeyword || "취약 분석중";
   const strong = document.createElement("span");
+  const strongLabel = document.createElement("b");
+  const strongValue = document.createElement("em");
   const weak = document.createElement("span");
+  const weakLabel = document.createElement("b");
+  const weakValue = document.createElement("em");
 
-  strong.textContent = `강점 ${strongKeyword}`;
+  strongLabel.textContent = "강점";
+  strongValue.textContent = strongKeyword;
+  strong.append(strongLabel, strongValue);
   weak.className = "weak";
-  weak.textContent = `취약 ${weakKeyword}`;
+  weakLabel.textContent = "취약";
+  weakValue.textContent = weakKeyword;
+  weak.append(weakLabel, weakValue);
   target.replaceChildren(strong, weak);
 }
 
@@ -256,6 +277,25 @@ function renderRankingLearningPattern(pattern) {
 
   const list = document.getElementById("rankingLearningList");
   if (!list) return;
+
+  const recommendations = Array.isArray(pattern.recommendations) ? pattern.recommendations.slice(0, 3) : [];
+  if (recommendations.length === 3) {
+    list.replaceChildren();
+    recommendations.forEach((recommendation) => {
+      const row = document.createElement("li");
+      const icon = document.createElement("span");
+      const copy = document.createElement("div");
+      const title = document.createElement("strong");
+
+      icon.className = "learning-icon";
+      icon.textContent = "AI";
+      title.textContent = recommendation;
+      copy.appendChild(title);
+      row.append(icon, copy);
+      list.appendChild(row);
+    });
+    return;
+  }
 
   const items = [
     {
@@ -319,6 +359,7 @@ function renderRankingGoal(goal) {
   setRankingText("rankingGoalGapScoreRing", gapScore);
   if (goal.goalCoachMessage) setRankingText("rankingGoalCoach", goal.goalCoachMessage);
   renderRankingSubjectTargets(goal.subjectTargets);
+  renderRankingGoalActions(goal.goalActions, goal.subjectTargets);
   renderRankingRival(goal.rival);
   renderRankingStrengthKeywords(goal.strengthKeywords);
   renderRankingLearningPattern(goal.learningPattern);

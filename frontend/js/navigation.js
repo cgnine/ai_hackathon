@@ -33,6 +33,15 @@ function formatProfileDate(value) {
   return normalized || "-";
 }
 
+function escapeProfileHtml(value) {
+  return String(value ?? "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+
 async function loadProfileMenuSummary(target, latestExamTarget = null) {
   const memberId = currentMemberId();
   if (!memberId || !target) return;
@@ -56,19 +65,20 @@ async function loadProfileMenuSummary(target, latestExamTarget = null) {
 function renderProfileInsightSummary(summary = {}) {
   const averageScore = Number(summary.averageScore || 0);
   const wrongTotal = Number(summary.wrongTotal || 0);
-  const strength = averageScore >= 70 ? "Cloud Computing" : "AI 기초";
-  const needsReview = wrongTotal > 0 ? ["Security", "Networking"] : ["실무형 문제", "오답 복습"];
+  const keywords = summary.strengthKeywords || {};
+  const strength = keywords.strongKeyword || (averageScore >= 70 ? "Cloud Computing" : "AI 기초");
+  const needsReview = keywords.weakKeyword || (wrongTotal > 0 ? "Security" : "실무형 문제");
 
   return `
     <div class="profile-insight-summary">
       <strong>AI 분석 요약</strong>
       <div class="profile-insight-tags">
         <span class="good">강점</span>
-        <span>${strength}</span>
+        <span>${escapeProfileHtml(strength)}</span>
       </div>
       <div class="profile-insight-tags">
         <span class="warn">보완 필요</span>
-        ${needsReview.map((item) => `<span>${item}</span>`).join("")}
+        <span>${escapeProfileHtml(needsReview)}</span>
       </div>
     </div>
   `;
