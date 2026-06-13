@@ -1028,6 +1028,24 @@ body[data-page="ranking"] .nav-btn:hover {
   margin-top: 24px;
 }
 
+.ranking-loading[hidden],
+.ranking-content[hidden] {
+  display: none;
+}
+
+.ranking-content {
+  display: grid;
+  gap: 20px;
+}
+
+.mock-grading-loading[hidden] {
+  display: none;
+}
+
+#mockScreen[hidden] {
+  display: none;
+}
+
 .ranking-hero {
   display: grid;
   gap: 4px;
@@ -1107,8 +1125,8 @@ body[data-page="ranking"] .nav-btn:hover {
   color: #07135f;
 }
 
-.ranking-current-rank span,
-.ranking-rank-change span,
+.ranking-current-rank > span,
+.ranking-rank-change > div:first-child > span,
 .ranking-target-scores span {
   color: #07135f;
   font-size: 0.9rem;
@@ -1120,6 +1138,12 @@ body[data-page="ranking"] .nav-btn:hover {
   font-size: clamp(2.2rem, 3.8vw, 3.25rem);
   font-weight: 800;
   line-height: 1;
+}
+
+.ranking-current-rank strong span,
+.ranking-rank-change strong span {
+  color: inherit;
+  font: inherit;
 }
 
 .ranking-current-detail {
@@ -1243,16 +1267,19 @@ body[data-page="ranking"] .nav-btn:hover {
 
 .ranking-target-scores p {
   display: grid;
-  grid-template-columns: 62px minmax(90px, 1fr) 72px;
+  grid-template-columns: minmax(86px, 0.45fr) minmax(90px, 1fr) 72px;
   align-items: center;
   gap: 10px;
   margin: 0;
 }
 
 .ranking-target-scores p strong {
+  overflow: hidden;
   color: #07135f;
   font-size: 0.9rem;
   font-weight: 800;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .ranking-target-scores p i {

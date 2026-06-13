@@ -1846,6 +1846,156 @@ def get_monthly_ranking(limit: int = 5) -> dict[str, Any]:
     }
 
 
+def get_ranking_goal(member_id: str) -> dict[str, Any]:
+    normalized_member_id = member_id.strip()
+    if not normalized_member_id:
+        raise HTTPException(status_code=400, detail="member_id is required")
+
+    with get_conn() as conn:
+        with conn.cursor(cursor_factory=RealDictCursor) as cur:
+            cur.execute(
+                """
+                WITH member_avg AS (
+                    SELECT
+                        member_id,
+                        ROUND(AVG(CAST(exam_score AS DECIMAL(5,2))), 1) AS avg_score
+                    FROM exam_tb
+                    WHERE exam_score IS NOT NULL
+                      AND exam_score::text ~ '^[0-9]+(\\.[0-9]+)?$'
+                    GROUP BY member_id
+                ),
+                ranked AS (
+                    SELECT
+                        member_id,
+                        avg_score,
+                        RANK() OVER (
+                            ORDER BY avg_score DESC
+                        ) AS rank_no
+                    FROM member_avg
+                ),
+                my_info AS (
+                    SELECT
+                        member_id,
+                        rank_no,
+                        avg_score,
+                        CASE
+                            WHEN rank_no = 1 THEN 1
+                            WHEN rank_no <= 5 THEN 1
+                            WHEN rank_no <= 10 THEN 5
+                            WHEN rank_no <= 20 THEN 10
+                            WHEN rank_no <= 50 THEN 20
+                            ELSE GREATEST(
+                                rank_no - CEIL(rank_no * 0.2),
+                                1
+                            )
+                        END AS target_rank
+                    FROM ranked
+                    WHERE member_id = %s
+                ),
+                goal_info AS (
+                    SELECT
+                        m.rank_no AS my_rank,
+                        m.avg_score AS my_score,
+                        m.target_rank,
+                        t.avg_score AS target_score,
+                        GREATEST(
+                            ROUND(
+                                t.avg_score - m.avg_score,
+                                1
+                            ),
+                            0
+                        ) AS gap_score
+                    FROM my_info m
+                    JOIN ranked t
+                      ON t.rank_no = m.target_rank
+                )
+                SELECT
+                    my_rank,
+                    my_score,
+                    target_rank,
+                    target_score,
+                    gap_score,
+                    CASE
+                        WHEN gap_score = 0 THEN 100
+                        WHEN gap_score <= 2 THEN 95
+                        WHEN gap_score <= 5 THEN 85
+                        WHEN gap_score <= 10 THEN 70
+                        ELSE 50
+                    END AS success_rate
+                FROM goal_info
+                """,
+                (normalized_member_id,),
+            )
+            row = cur.fetchone()
+
+            cur.execute(
+                """
+                WITH subject_avg AS (
+                    SELECT
+                        e.subject_code,
+                        s.subject_name,
+                        ROUND(AVG(CAST(e.exam_score AS DECIMAL(5,2))), 1) AS current_score
+                    FROM exam_tb e
+                    JOIN subject_tb s
+                      ON e.subject_code = s.subject_code
+                    WHERE e.member_id = %s
+                      AND e.exam_score IS NOT NULL
+                      AND e.exam_score::text ~ '^[0-9]+(\\.[0-9]+)?$'
+                    GROUP BY e.subject_code, s.subject_name
+                ),
+                ranked_subject AS (
+                    SELECT
+                        *,
+                        ROW_NUMBER() OVER (ORDER BY current_score ASC) AS subject_rank
+                    FROM subject_avg
+                )
+                SELECT
+                    subject_code,
+                    subject_name,
+                    current_score,
+                    CASE
+                        WHEN subject_rank = 1 THEN 3
+                        WHEN subject_rank = 2 THEN 2
+                    END AS expected_up_score,
+                    current_score +
+                    CASE
+                        WHEN subject_rank = 1 THEN 3
+                        WHEN subject_rank = 2 THEN 2
+                    END AS target_subject_score,
+                    CONCAT(subject_name, ' 집중 학습') AS recommend_title
+                FROM ranked_subject
+                WHERE subject_rank <= 2
+                ORDER BY subject_rank
+                """,
+                (normalized_member_id,),
+            )
+            subject_rows = cur.fetchall()
+
+    if not row:
+        raise HTTPException(status_code=404, detail="Ranking goal not found")
+
+    return {
+        "memberId": normalized_member_id,
+        "myRank": int(row["my_rank"]),
+        "myScore": float(row["my_score"] or 0),
+        "targetRank": int(row["target_rank"]),
+        "targetScore": float(row["target_score"] or 0),
+        "gapScore": float(row["gap_score"] or 0),
+        "successRate": int(row["success_rate"] or 0),
+        "subjectTargets": [
+            {
+                "subjectCode": subject_row["subject_code"],
+                "subjectName": subject_row["subject_name"],
+                "currentScore": float(subject_row["current_score"] or 0),
+                "expectedUpScore": float(subject_row["expected_up_score"] or 0),
+                "targetSubjectScore": float(subject_row["target_subject_score"] or 0),
+                "recommendTitle": subject_row["recommend_title"],
+            }
+            for subject_row in subject_rows
+        ],
+    }
+
+
 def get_wrong_items(attempt_id: str) -> dict[str, Any]:
     result = get_result(attempt_id)
     wrong_items = [item for item in result["items"] if not item["correct"]]

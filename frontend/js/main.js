@@ -5,6 +5,8 @@ function formatMonthlyScore(score) {
 
 const MAIN_AUTH_SESSION_KEY = "kbCbtAuthSession";
 const MAIN_AUTH_TTL_MS = 12 * 60 * 60 * 1000;
+let rankingLoadingTimer = null;
+let rankingLoadingProgress = 0;
 
 function setCurrentMonthTitle(monthLabel) {
   const title = document.getElementById("monthlyRankingTitle");
@@ -54,6 +56,152 @@ function renderTopRankingPodium(items) {
     if (name) name.textContent = hasScore ? (item.memberName || item.memberId) : "-";
     if (score) score.textContent = hasScore ? formatMonthlyScore(item.averageScore) : "-";
   });
+}
+
+function readMainCurrentMemberId() {
+  if (typeof currentMemberId === "function") {
+    return currentMemberId();
+  }
+
+  try {
+    const saved = JSON.parse(localStorage.getItem(MAIN_AUTH_SESSION_KEY) || "null");
+    return saved?.memberId || "";
+  } catch {
+    return "";
+  }
+}
+
+function formatRankingNumber(value) {
+  const numeric = Number(value) || 0;
+  return Number.isInteger(numeric) ? String(numeric) : numeric.toFixed(1);
+}
+
+function setRankingText(id, value) {
+  const target = document.getElementById(id);
+  if (target) target.textContent = value;
+}
+
+function renderRankingSubjectTargets(subjectTargets) {
+  const items = Array.isArray(subjectTargets) ? subjectTargets.slice(0, 2) : [];
+  if (!items.length) return;
+
+  const targetList = document.getElementById("rankingSubjectTargets");
+  if (targetList) {
+    const title = targetList.querySelector(":scope > span");
+    targetList.replaceChildren();
+    if (title) targetList.appendChild(title);
+
+    items.forEach((item) => {
+      const row = document.createElement("p");
+      const name = document.createElement("strong");
+      const bar = document.createElement("i");
+      const fill = document.createElement("b");
+      const up = document.createElement("em");
+      const targetScore = Math.max(0, Math.min(100, Number(item.targetSubjectScore) || 0));
+
+      name.textContent = item.subjectName || item.subjectCode || "-";
+      fill.style.width = `${targetScore}%`;
+      up.textContent = `+${formatRankingNumber(item.expectedUpScore)}점 ↑`;
+
+      bar.appendChild(fill);
+      row.append(name, bar, up);
+      targetList.appendChild(row);
+    });
+  }
+
+  const recommendationList = document.getElementById("rankingSubjectRecommendations");
+  if (recommendationList) {
+    recommendationList.replaceChildren();
+    items.forEach((item) => {
+      const row = document.createElement("li");
+      const title = document.createElement("span");
+      const score = document.createElement("strong");
+
+      title.textContent = item.recommendTitle || `${item.subjectName || item.subjectCode || "과목"} 집중 학습`;
+      score.textContent = `+${formatRankingNumber(item.expectedUpScore)}점 예상`;
+      row.append(title, score);
+      recommendationList.appendChild(row);
+    });
+  }
+}
+
+function renderRankingGoal(goal) {
+  const myRank = Number(goal.myRank) || 0;
+  const myScore = formatRankingNumber(goal.myScore);
+  const targetRank = Number(goal.targetRank) || 0;
+  const targetScore = formatRankingNumber(goal.targetScore);
+  const gapScore = formatRankingNumber(goal.gapScore);
+  const successRate = Number(goal.successRate) || 0;
+
+  setRankingText("rankingMyRank", myRank);
+  setRankingText("rankingChangeMyRank", myRank);
+  setRankingText("rankingChangeTargetRank", targetRank);
+  setRankingText("rankingSuccessRate", successRate);
+  setRankingText("rankingGoalMyRank", myRank);
+  setRankingText("rankingGoalMyScore", myScore);
+  setRankingText("rankingGoalTargetRankLabel", targetRank);
+  setRankingText("rankingGoalTargetScore", targetScore);
+  setRankingText("rankingGoalGapScore", gapScore);
+  setRankingText("rankingGoalTargetRank", targetRank);
+  setRankingText("rankingGoalGapScoreRing", gapScore);
+  renderRankingSubjectTargets(goal.subjectTargets);
+}
+
+function startRankingLoading() {
+  const loading = document.getElementById("rankingLoading");
+  const content = document.getElementById("rankingContent");
+  const bar = document.getElementById("rankingLoadingBar");
+
+  rankingLoadingProgress = 0;
+  if (loading) loading.hidden = false;
+  if (content) content.hidden = true;
+  if (bar) bar.style.width = "0%";
+
+  clearInterval(rankingLoadingTimer);
+  rankingLoadingTimer = setInterval(() => {
+    const ceiling = rankingLoadingProgress < 45 ? 45 : rankingLoadingProgress < 78 ? 78 : 92;
+    const step = rankingLoadingProgress < 45 ? 8 : rankingLoadingProgress < 78 ? 4 : 1;
+    rankingLoadingProgress = Math.min(ceiling, rankingLoadingProgress + step);
+    if (bar) bar.style.width = `${rankingLoadingProgress}%`;
+  }, 180);
+}
+
+function finishRankingLoading() {
+  const loading = document.getElementById("rankingLoading");
+  const content = document.getElementById("rankingContent");
+  const bar = document.getElementById("rankingLoadingBar");
+
+  clearInterval(rankingLoadingTimer);
+  rankingLoadingTimer = null;
+  if (bar) bar.style.width = "100%";
+
+  setTimeout(() => {
+    if (loading) loading.hidden = true;
+    if (content) content.hidden = false;
+  }, 180);
+}
+
+async function loadRankingGoal() {
+  const memberId = readMainCurrentMemberId();
+  if (!memberId) return;
+
+  try {
+    const response = await fetch(`${API_BASE}/results/ranking/goal?member_id=${encodeURIComponent(memberId)}`);
+    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+    const data = await response.json();
+    renderRankingGoal(data);
+  } catch {
+    // Keep the static fallback values when the member has no ranking data yet.
+  }
+}
+
+async function initRankingPage() {
+  startRankingLoading();
+  await Promise.all([
+    loadMonthlyRanking(),
+    loadRankingGoal()
+  ]);
+  finishRankingLoading();
 }
 
 async function loadMonthlyRanking() {
@@ -141,4 +289,4 @@ function initMainMiniLogin() {
 }
 
 initMainMiniLogin();
-loadMonthlyRanking();
+initRankingPage();

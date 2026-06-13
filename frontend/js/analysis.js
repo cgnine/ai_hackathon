@@ -126,11 +126,10 @@ function startAnalysisReportLoading() {
   const report = document.getElementById("analysisReportUi");
   const bar = document.getElementById("analysisLoadingBar");
   const message = document.getElementById("analysisLoadingMessage");
-  const memberName = currentMemberName() || state.profileName || "회원";
   analysisLoadingProgress = 0;
   if (report) report.hidden = true;
   if (loading) loading.hidden = false;
-  if (message) message.innerHTML = `${memberName}님의 종합평가를 로딩중입니다.<br /><br />잠시만 기다려주십시오.`;
+  if (message) message.innerHTML = "AI가 종합평가를 작성중입니다.<br /><br />잠시만 기다려 주십시오.";
   if (bar) bar.style.width = "0%";
   clearInterval(analysisLoadingTimer);
   analysisLoadingTimer = setInterval(() => {

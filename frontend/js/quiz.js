@@ -154,12 +154,54 @@ function renderMockProgress() {
   renderQuestionGrid(els.mockQuestionGrid, questions, state.mockAnswers, state.index, moveMock);
 }
 
+let mockGradingLoadingTimer = null;
+let mockGradingLoadingProgress = 0;
+
+function startMockGradingLoading() {
+  const loading = document.getElementById("mockGradingLoading");
+  const bar = document.getElementById("mockGradingLoadingBar");
+  const mockScreen = document.getElementById("mockScreen");
+
+  mockGradingLoadingProgress = 0;
+  if (mockScreen) mockScreen.hidden = true;
+  if (loading) loading.hidden = false;
+  if (bar) bar.style.width = "0%";
+
+  clearInterval(mockGradingLoadingTimer);
+  mockGradingLoadingTimer = setInterval(() => {
+    const ceiling = mockGradingLoadingProgress < 45 ? 45 : mockGradingLoadingProgress < 78 ? 78 : 92;
+    const step = mockGradingLoadingProgress < 45 ? 8 : mockGradingLoadingProgress < 78 ? 4 : 1;
+    mockGradingLoadingProgress = Math.min(ceiling, mockGradingLoadingProgress + step);
+    if (bar) bar.style.width = `${mockGradingLoadingProgress}%`;
+  }, 180);
+}
+
+function stopMockGradingLoading(restoreMock = false) {
+  const loading = document.getElementById("mockGradingLoading");
+  const bar = document.getElementById("mockGradingLoadingBar");
+  const mockScreen = document.getElementById("mockScreen");
+
+  clearInterval(mockGradingLoadingTimer);
+  mockGradingLoadingTimer = null;
+  if (bar) bar.style.width = restoreMock ? "0%" : "100%";
+  if (loading) loading.hidden = true;
+  if (restoreMock && mockScreen) mockScreen.hidden = false;
+}
+
+function completeMockGradingLoading() {
+  const bar = document.getElementById("mockGradingLoadingBar");
+  clearInterval(mockGradingLoadingTimer);
+  mockGradingLoadingTimer = null;
+  if (bar) bar.style.width = "100%";
+}
+
 async function gradeMock(useBedrockCommentary = false) {
   const questions = currentQuestions();
   if (questions.length === 0) {
     showToast("채점할 DB 문제가 없습니다.");
     return;
   }
+  startMockGradingLoading();
   let correctCount = 0;
   const resultRows = [];
   const subject = currentSubject();
@@ -192,19 +234,17 @@ async function gradeMock(useBedrockCommentary = false) {
       : [];
     attemptId = savedResult.attemptId || attemptId;
     roundTitle = savedResult.roundTitle || roundTitle;
-    showToast("응시 결과를 저장했습니다.");
   } catch (error) {
+    stopMockGradingLoading(true);
     showToast(`응시 결과 저장에 실패했습니다. (${error.message})`);
     return;
   }
 
   if (useBedrockCommentary) {
     try {
-      showToast("AI 코멘트를 생성하는 중입니다.");
       await generateResultCommentary(attemptId, examHistoryIds);
-      showToast("AI 코멘트를 저장했습니다.");
     } catch (error) {
-      showToast(`AI 코멘트 생성에 실패했습니다. (${error.message})`);
+      console.warn("AI commentary generation failed", error);
     }
   }
 
@@ -255,5 +295,6 @@ async function gradeMock(useBedrockCommentary = false) {
     memberId,
     examHistoryIds
   });
+  completeMockGradingLoading();
   window.location.href = PAGE_URLS.result;
 }
