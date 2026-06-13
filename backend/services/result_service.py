@@ -167,6 +167,83 @@ def _compact_analysis_comment(value: str) -> str:
     return "강점 과목은 유지하세요. 취약 과목은 핵심 개념과 오답 단원을 복습하세요."
 
 
+def _build_analysis_comment_report(
+    comment: str,
+    details: dict[str, str],
+    min_length: int = 350,
+    max_length: int = 1200,
+) -> str:
+    text = _truncate_commentary_sentence(comment, max_length)
+    detail_text = " ".join(value for value in details.values() if value)
+    if len(text) >= min_length:
+        return text
+    merged = " ".join(part for part in [text, detail_text] if part).strip()
+    if len(merged) >= min_length:
+        return _truncate_commentary_sentence(merged, max_length)
+    supplement = (
+        "강점으로 확인된 과목은 현재 학습 흐름을 유지하되, 정답률이 낮은 과목은 기본 개념과 자주 틀린 단원을 먼저 다시 정리하는 것이 좋습니다. "
+        "최근 점수 추이와 실무형·이론형 정답률 차이를 함께 보면서 어느 유형에서 판단이 흔들리는지 확인하세요. "
+        "다음 학습에서는 취약 단원 개념을 짧게 복습한 뒤 맞춤 문제를 풀고, 틀린 문항은 오답노트로 다시 점검하는 순서가 효과적입니다."
+    )
+    separator = "\n\n" if merged else ""
+    return _truncate_commentary_sentence(f"{merged}{separator}{supplement}", max_length)
+
+
+def _validate_analysis_weakness(payload: dict[str, Any]) -> dict[str, str]:
+    analysis1 = _truncate_commentary_sentence(str(payload.get("analysis1") or ""), 60)
+    analysis2 = _truncate_commentary_sentence(str(payload.get("analysis2") or ""), 60)
+    if not analysis1:
+        analysis1 = "오답이 집중된 유형부터 원인을 점검해야 합니다."
+    if not analysis2:
+        analysis2 = "취약 단원 개념을 복습한 뒤 맞춤 문제를 풀어보세요."
+    return {"analysis1": analysis1, "analysis2": analysis2}
+
+
+def _fallback_analysis_weakness_commentary(payload: dict[str, Any]) -> dict[str, str]:
+    weak_type = payload.get("weakQuestionType") or "오답 유형"
+    weak_unit = payload.get("weakUnit") or "취약 단원"
+    weak_unit_label = weak_unit if len(str(weak_unit)) <= 18 else "취약 단원"
+    return {
+        "analysis1": f"{weak_type} 오답 비율이 높아 원인 점검이 필요합니다.",
+        "analysis2": f"{weak_unit_label} 중심으로 개념 복습과 재풀이를 진행하세요.",
+    }
+
+
+def _bedrock_analysis_weakness(payload: dict[str, Any], include_commentary: bool = True) -> dict[str, str]:
+    fallback = _fallback_analysis_weakness_commentary(payload)
+    if not include_commentary:
+        return fallback
+
+    system_prompt = (
+        "당신은 KB Masters의 AI 학습 코치입니다. "
+        "사용자의 취약 과목과 오답 패턴을 분석하여 취약 영역 분석 결과를 작성합니다. "
+        "입력 데이터에 없는 사실은 추측하지 않습니다. 반드시 JSON만 출력합니다."
+    )
+    user_prompt = (
+        "작성 규칙\n"
+        "1. analysis1은 취약 원인과 오답 집중 유형을 설명한다.\n"
+        "2. analysis2는 우선 학습 행동을 제안한다.\n"
+        "3. 각 값은 1문장으로 작성한다.\n"
+        "4. 각 문장은 45자 이내로 작성한다.\n"
+        "5. 과목명은 길면 subjectCode를 사용한다.\n"
+        "6. 점수를 단순 나열하지 않는다.\n"
+        "7. 입력 데이터에 없는 사실은 추측하지 않는다.\n"
+        "8. JSON만 반환한다.\n"
+        "9. 마크다운 코드블록을 사용하지 않는다.\n\n"
+        f"입력 데이터\n{json.dumps(payload, ensure_ascii=False, indent=2)}\n\n"
+        "출력 형식\n"
+        "{\n"
+        '  "analysis1": "",\n'
+        '  "analysis2": ""\n'
+        "}"
+    )
+    try:
+        raw = bedrock_client.invoke(system_prompt, user_prompt, max_tokens=500)
+        return _validate_analysis_weakness(_extract_json_object(raw))
+    except Exception:
+        return fallback
+
+
 def _parse_diagnosis_content(value: Any) -> tuple[str | None, dict[str, str] | None]:
     if not value:
         return None, None
@@ -524,7 +601,7 @@ def _validate_analysis_ai_summary(payload: dict[str, Any]) -> dict[str, Any]:
         key: _truncate_commentary_sentence(str(ai_comment.get(key) or ""), 500)
         for key in detail_keys
     }
-    report_comment = _truncate_commentary_sentence(str(ai_comment.get("comment") or payload.get("comment") or ""), 1200)
+    report_comment = str(ai_comment.get("comment") or payload.get("comment") or "").strip()
     if not headline or not comment:
         raise ValueError("headline and comment are required")
     if not report_comment:
@@ -538,6 +615,7 @@ def _validate_analysis_ai_summary(payload: dict[str, Any]) -> dict[str, Any]:
         report_comment = _truncate_commentary_sentence(report_comment, 1200)
     if not report_comment:
         raise ValueError("ai comment is required")
+    report_comment = _build_analysis_comment_report(report_comment, details)
     return {
         "aiOverview": {
             "headline": headline,
@@ -622,8 +700,8 @@ def _bedrock_analysis_ai_summary(
         "7. 과도한 칭찬 금지\n"
         "8. 제공된 실제 학습 데이터만 근거로 분석\n"
         "9. 근거 없는 추측 금지\n"
-        "10. aiComment.comment는 위 4개 세부 내용을 자연스럽게 합친 7~10문장 리포트로 작성\n"
-        "11. aiComment.comment는 900자 이내로 작성하되, 근거와 행동 제안이 충분히 드러나도록 작성\n"
+        "10. aiComment.comment는 위 4개 세부 내용을 자연스럽게 합친 6~9문장 리포트로 작성\n"
+        "11. aiComment.comment는 최소 350자 이상, 최대 900자 이하로 작성\n"
         "12. 사용자를 격려하는 긍정적인 어조 사용\n"
         "13. JSON 외 텍스트를 출력하지 않음\n"
         "14. 마크다운 코드블록 사용 금지\n"
@@ -635,6 +713,9 @@ def _bedrock_analysis_ai_summary(
         "20. AI 총평은 결론 중심, AI 코멘트는 근거·원인·행동 중심으로 차별화\n\n"
         "21. 모든 문장은 완결된 문장으로 끝내며 단어 중간에서 끊지 않음\n"
         "22. 문장을 줄여야 하면 마지막 문장 전체를 제거하고, 말줄임표를 사용하지 않음\n\n"
+        "23. comment에는 강점, 취약 원인, 최근 추이, 실무형·이론형 차이, 다음 행동을 각각 최소 1문장씩 포함\n"
+        "24. 데이터가 부족한 항목은 부족하다고 설명하되 학습 행동 제안으로 보완\n"
+        "25. comment는 2~3개 문단으로 나누고 문단 사이는 반드시 \\n\\n으로 구분\n\n"
         f"입력 데이터\n{json.dumps(payload, ensure_ascii=False, indent=2)}\n\n"
         "출력 형식\n"
         "{\n"
@@ -1004,8 +1085,32 @@ def get_analysis(member_id: str, include_commentary: bool = True) -> dict[str, A
             )
             subject_rows = cur.fetchall()
 
+            cur.execute(
+                """
+                SELECT
+                    e.subject_code,
+                    ROUND(
+                        COUNT(h.exam_question_id) FILTER (
+                            WHERE h.selected_number::text ~ '^[0-9]+$'
+                              AND q.answer_number::text ~ '^[0-9]+$'
+                              AND h.selected_number::integer = q.answer_number::integer
+                        )::numeric
+                        / NULLIF(COUNT(h.exam_question_id), 0)
+                        * 100
+                    ) AS average_score
+                FROM exam_tb e
+                JOIN exam_history_tb h ON h.exam_id = e.exam_id
+                JOIN question_tb q
+                    ON q.question_id = h.question_id
+                   AND q.subject_code = e.subject_code
+                GROUP BY e.subject_code
+                """
+            )
+            subject_average_rows = cur.fetchall()
+
     subject_map: dict[str, dict[str, Any]] = {}
     type_map: dict[str, dict[str, Any]] = {}
+    subject_type_map: dict[tuple[str, str], dict[str, Any]] = {}
     unit_map: dict[tuple[str, str], dict[str, Any]] = {}
     exam_map: dict[str, dict[str, Any]] = {}
 
@@ -1058,6 +1163,13 @@ def get_analysis(member_id: str, include_commentary: bool = True) -> dict[str, A
         type_stat["answered"] += 1
         type_stat["correct"] += 1 if is_correct else 0
 
+        subject_type_stat = subject_type_map.setdefault(
+            (subject_code, question_type),
+            {"type": question_type, "answered": 0, "correct": 0},
+        )
+        subject_type_stat["answered"] += 1
+        subject_type_stat["correct"] += 1 if is_correct else 0
+
         unit_stat = unit_map.setdefault(
             (subject_code, unit),
             {"subjectCode": subject_code, "subjectName": subject_name, "unit": unit, "answered": 0, "correct": 0},
@@ -1083,10 +1195,15 @@ def get_analysis(member_id: str, include_commentary: bool = True) -> dict[str, A
         str(row["subject_code"]): index
         for index, row in enumerate(subject_rows)
     }
+    subject_average_map = {
+        str(row["subject_code"]): int(row["average_score"] or 0)
+        for row in subject_average_rows
+    }
     subject_stats = []
     for item in subject_map.values():
         item["score"] = _score(item["correct"], item["answered"])
         item["accuracy"] = item["score"]
+        item["overallAverageScore"] = subject_average_map.get(item["subjectCode"], 0)
         subject_stats.append(item)
     subject_stats.sort(key=lambda item: subject_order.get(item["subjectCode"], len(subject_order)))
 
@@ -1161,6 +1278,68 @@ def get_analysis(member_id: str, include_commentary: bool = True) -> dict[str, A
                 min(100, round(((higher_count + 1) / len(score_values)) * 100)),
             )
 
+    attempted_subject_stats = [
+        item for item in subject_stats
+        if int(item.get("answered") or 0) > 0
+    ]
+    weak_subject = min(
+        attempted_subject_stats,
+        key=lambda item: (item["score"], -item["answered"]),
+        default=None,
+    )
+    weakness_analysis = None
+    if weak_subject:
+        weak_subject_code = weak_subject["subjectCode"]
+        weak_subject_type_stats = []
+        for (subject_code, question_type), item in subject_type_map.items():
+            if subject_code != weak_subject_code:
+                continue
+            score = _score(item["correct"], item["answered"])
+            weak_subject_type_stats.append(
+                {
+                    "type": question_type,
+                    "answered": item["answered"],
+                    "correct": item["correct"],
+                    "wrong": item["answered"] - item["correct"],
+                    "score": score,
+                }
+            )
+        weak_subject_type_stats.sort(key=lambda item: (item["score"], -item["wrong"]))
+        weak_units = [
+            item for item in unit_stats
+            if item["subjectCode"] == weak_subject_code
+        ][:3]
+        weak_question_type = weak_subject_type_stats[0]["type"] if weak_subject_type_stats else None
+        weak_unit = weak_units[0]["unit"] if weak_units else None
+        expected_gain = max(5, min(15, round((100 - weak_subject["score"]) * 0.28)))
+        weakness_payload = {
+            "weakSubject": weak_subject,
+            "weakSubjectTypeStats": weak_subject_type_stats,
+            "weakUnits": weak_units,
+            "weakQuestionType": weak_question_type,
+            "weakUnit": weak_unit,
+            "expectedGain": expected_gain,
+        }
+        weakness_commentary = _bedrock_analysis_weakness(weakness_payload, include_commentary)
+        weakness_analysis = {
+            "weakArea": weak_subject["subjectName"],
+            "subjectCode": weak_subject_code,
+            "accuracy": weak_subject["score"],
+            "practicalAccuracy": next(
+                (item["score"] for item in weak_subject_type_stats if item["type"] == "실무형"),
+                None,
+            ),
+            "theoryAccuracy": next(
+                (item["score"] for item in weak_subject_type_stats if item["type"] == "이론형"),
+                None,
+            ),
+            "weakQuestionType": weak_question_type,
+            "weakUnit": weak_unit,
+            "analysis1": weakness_commentary["analysis1"],
+            "analysis2": weakness_commentary["analysis2"],
+            "expectedGain": expected_gain,
+        }
+
     ai_summary = (
         _bedrock_analysis_ai_summary(summary, subject_stats, type_stats, unit_stats, recent_exam_stats)
         if include_commentary
@@ -1171,6 +1350,7 @@ def get_analysis(member_id: str, include_commentary: bool = True) -> dict[str, A
         "summary": summary,
         "aiOverview": ai_summary["aiOverview"],
         "aiComment": ai_summary["aiComment"],
+        "weaknessAnalysis": weakness_analysis,
         "subjectStats": subject_stats,
         "typeStats": type_stats,
         "unitStats": unit_stats[:8],

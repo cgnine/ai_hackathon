@@ -235,9 +235,11 @@ function renderAnalysisReportRadar(subjectStats = [], summary = {}) {
   const count = subjects.length;
   const framePoints = subjects.map((_, index) => radarPoint(cx, cy, outerRadius, index, count));
   const innerPoints = subjects.map((_, index) => radarPoint(cx, cy, innerRadius, index, count));
-  const averageScore = Number(summary.overallAverageScore || summary.averageScore || 0);
-  const averageRadius = outerRadius * Math.max(0, Math.min(100, averageScore)) / 100;
-  const averagePoints = subjects.map((_, index) => radarPoint(cx, cy, averageRadius, index, count));
+  const fallbackAverageScore = Number(summary.overallAverageScore || summary.averageScore || 0);
+  const averagePoints = subjects.map((subject, index) => {
+    const averageScore = Number(subject.overallAverageScore ?? fallbackAverageScore);
+    return radarPoint(cx, cy, outerRadius * Math.max(0, Math.min(100, averageScore)) / 100, index, count);
+  });
   const myPoints = subjects.map((subject, index) => {
     const score = Number(subject.score || subject.accuracy || 0);
     return radarPoint(cx, cy, outerRadius * Math.max(0, Math.min(100, score)) / 100, index, count);
@@ -253,7 +255,12 @@ function renderAnalysisReportRadar(subjectStats = [], summary = {}) {
     const labelY = Math.max(20, Math.min(248, labelPoint.y));
     const scoreY = Math.max(34, Math.min(236, scorePoint.y));
     const lines = splitRadarLabel(subject.subjectName || subject.subjectCode);
-    const scoreOffset = labelPoint.y < cy ? -10 : lines.length * 14 + 10;
+    const isTopLabel = Math.sin(angle) < -0.75;
+    const scoreOffset = isTopLabel
+      ? lines.length * 14 + 14
+      : labelPoint.y < cy
+        ? -18
+        : lines.length * 14 + 10;
     const labelLines = lines.map((line, lineIndex) => (
       `<text class="radar-label-ui" text-anchor="${anchor}" x="${labelX.toFixed(1)}" y="${(labelY + lineIndex * 14).toFixed(1)}">${line}</text>`
     )).join("");
@@ -276,6 +283,15 @@ function renderAnalysisReportRadar(subjectStats = [], summary = {}) {
   `;
 }
 
+function splitAnalysisCommentParagraphs(text) {
+  const normalized = String(text || "").replace(/\r\n/g, "\n").trim();
+  if (!normalized) return [];
+  return normalized
+    .split(/\n{2,}/)
+    .map((paragraph) => paragraph.replace(/\s*\n\s*/g, " ").trim())
+    .filter(Boolean);
+}
+
 function renderAnalysisReportAiComments(commentary = [], aiComment = null) {
   const target = document.getElementById("analysisAiCommentList");
   if (!target) return;
@@ -295,15 +311,32 @@ function renderAnalysisReportAiComments(commentary = [], aiComment = null) {
     ? commentary.filter((line) => String(line || "").trim()).slice(0, 3)
     : [];
   const fallback = "\uac15\uc810 \uacfc\ubaa9\uacfc \ubcf4\uc644 \uacfc\ubaa9\uc744 \ubc14\ud0d5\uc73c\ub85c \ud559\uc2b5 \ubc29\ud5a5\uc744 \uc815\ub9ac\ud558\uace0 \uc788\uc2b5\ub2c8\ub2e4. \uc751\uc2dc \uc774\ub825\uc774 \uc313\uc774\uba74 \ucde8\uc57d \uc720\ud615\uacfc \ucd5c\uadfc \uc810\uc218 \ud750\ub984\uc744 \ub354 \uad6c\uccb4\uc801\uc73c\ub85c \ubd84\uc11d\ud560 \uc218 \uc788\uc2b5\ub2c8\ub2e4. \uc9c0\uae08\uc740 \ubcf5\uc2b5 \ud6c4 \ub9de\ucda4 \ubb38\uc81c\ub85c \uc774\ud574\ub3c4\ub97c \ud655\uc778\ud574 \ubcf4\uc138\uc694.";
-  const paragraphs = detailLines.length >= 2
-    ? detailLines
-    : [reportComment || lines.join(" ") || fallback];
+  const paragraphs = reportComment
+    ? splitAnalysisCommentParagraphs(reportComment)
+    : detailLines.length >= 2
+      ? splitAnalysisCommentParagraphs(detailLines.join(" "))
+      : splitAnalysisCommentParagraphs(lines.join(" ") || fallback);
   target.innerHTML = "";
   paragraphs.forEach((paragraph) => {
     const p = document.createElement("p");
     p.textContent = paragraph;
     target.appendChild(p);
   });
+}
+
+function renderAnalysisReportWeakness(weaknessAnalysis = null) {
+  if (!weaknessAnalysis) return;
+  setAnalysisReportText("analysisWeakArea", weaknessAnalysis.weakArea || weaknessAnalysis.subjectCode || "-");
+  setAnalysisReportText(
+    "analysisWeakAccuracy",
+    Number.isFinite(Number(weaknessAnalysis.accuracy)) ? `${Math.round(Number(weaknessAnalysis.accuracy))}%` : "-"
+  );
+  setAnalysisReportText("analysisWeakAnalysis1", weaknessAnalysis.analysis1 || "취약 원인을 분석하고 있습니다.");
+  setAnalysisReportText("analysisWeakAnalysis2", weaknessAnalysis.analysis2 || "우선 학습 행동을 정리하고 있습니다.");
+  setAnalysisReportText(
+    "analysisWeakExpectedGain",
+    Number.isFinite(Number(weaknessAnalysis.expectedGain)) ? `+${Math.round(Number(weaknessAnalysis.expectedGain))}점` : "-"
+  );
 }
 
 function renderAnalysisReportData(data) {
@@ -349,6 +382,7 @@ function renderAnalysisReportData(data) {
   renderAnalysisReportSubjects(subjectStats);
   renderAnalysisReportRadar(subjectStats, summary);
   renderAnalysisReportAiComments(data.commentary || data.aiCommentary || [], data.aiComment);
+  renderAnalysisReportWeakness(data.weaknessAnalysis);
 }
 
 async function renderAnalysisReportPage() {
