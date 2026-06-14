@@ -27,8 +27,8 @@ class ExamResultSaveRequest(BaseModel):
 
 
 @router.get("/wrong-notes/saved")
-async def get_saved_wrong_notes():
-    return result_service.get_saved_wrong_notes()
+async def get_saved_wrong_notes(member_id: str | None = None):
+    return result_service.get_saved_wrong_notes(member_id)
 
 
 @router.post("")

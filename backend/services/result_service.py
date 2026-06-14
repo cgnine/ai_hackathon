@@ -1665,7 +1665,7 @@ def get_analysis(member_id: str, include_commentary: bool = True) -> dict[str, A
 
             cur.execute(
                 """
-                WITH member_avg AS (
+                WITH member_subject_avg AS (
                     SELECT
                         member_id,
                         subject_code,
@@ -1686,13 +1686,13 @@ def get_analysis(member_id: str, include_commentary: bool = True) -> dict[str, A
                             PARTITION BY subject_code
                             ORDER BY avg_score DESC
                         ) AS rank_no,
-                        COUNT(*) OVER (PARTITION BY subject_code) AS total_count
-                    FROM member_avg
+                        COUNT(*) OVER (PARTITION BY subject_code) AS total_member_count
+                    FROM member_subject_avg
                 ),
                 subject_avg AS (
                     SELECT
                         subject_code,
-                        ROUND(AVG(CAST(exam_score AS DECIMAL(5,2))), 1) AS subject_avg
+                        ROUND(AVG(CAST(exam_score AS DECIMAL(5,2))), 1) AS total_avg_score
                     FROM exam_tb
                     WHERE exam_score IS NOT NULL
                       AND exam_score::text ~ '^[0-9]+(\\.[0-9]+)?$'
@@ -1700,15 +1700,36 @@ def get_analysis(member_id: str, include_commentary: bool = True) -> dict[str, A
                 )
                 SELECT
                     r.subject_code,
+                    subj.subject_name,
                     r.avg_score AS my_score,
-                    s.subject_avg AS avg_score,
-                    r.exam_count,
+                    s.total_avg_score AS total_avg_score,
+                    r.exam_count AS exam_count,
                     r.rank_no,
-                    r.total_count,
-                    ROUND((r.rank_no::numeric / NULLIF(r.total_count, 0)) * 100, 0) AS percentile
+                    r.total_member_count,
+                    ROUND((r.rank_no::numeric / NULLIF(r.total_member_count, 0)) * 100, 0) AS top_percent,
+                    CASE
+                        WHEN r.avg_score >= 90 OR ROUND((r.rank_no::numeric / NULLIF(r.total_member_count, 0)) * 100, 0) <= 15
+                            THEN '우수'
+                        WHEN r.avg_score >= 80 OR ROUND((r.rank_no::numeric / NULLIF(r.total_member_count, 0)) * 100, 0) <= 30
+                            THEN '양호'
+                        WHEN r.avg_score >= 70 OR ROUND((r.rank_no::numeric / NULLIF(r.total_member_count, 0)) * 100, 0) <= 50
+                            THEN '보통'
+                        ELSE '보완 필요'
+                    END AS grade_badge,
+                    CASE
+                        WHEN r.avg_score >= 90 OR ROUND((r.rank_no::numeric / NULLIF(r.total_member_count, 0)) * 100, 0) <= 15
+                            THEN CONCAT(subj.subject_name, ' 역량이 매우 우수해요!')
+                        WHEN r.avg_score >= 80 OR ROUND((r.rank_no::numeric / NULLIF(r.total_member_count, 0)) * 100, 0) <= 30
+                            THEN CONCAT(subj.subject_name, ' 역량이 안정적이에요!')
+                        WHEN r.avg_score >= 70 OR ROUND((r.rank_no::numeric / NULLIF(r.total_member_count, 0)) * 100, 0) <= 50
+                            THEN CONCAT(subj.subject_name, ' 기본기가 갖춰져 있어요!')
+                        ELSE CONCAT(subj.subject_name, ' 보완 학습이 필요해요!')
+                    END AS summary_title
                 FROM ranked r
                 JOIN subject_avg s
                   ON s.subject_code = r.subject_code
+                JOIN subject_tb subj
+                  ON subj.subject_code = r.subject_code
                 WHERE r.member_id = %s
                 """,
                 (normalized_member_id,),
@@ -2035,11 +2056,16 @@ def get_analysis(member_id: str, include_commentary: bool = True) -> dict[str, A
     subject_summary_map = {
         str(row["subject_code"]): {
             "myScore": float(row["my_score"]) if row.get("my_score") is not None else None,
-            "avgScore": float(row["avg_score"]) if row.get("avg_score") is not None else None,
+            "avgScore": float(row["total_avg_score"]) if row.get("total_avg_score") is not None else None,
+            "totalAvgScore": float(row["total_avg_score"]) if row.get("total_avg_score") is not None else None,
             "examCount": int(row["exam_count"] or 0),
             "rankNo": int(row["rank_no"] or 0),
-            "totalCount": int(row["total_count"] or 0),
-            "percentile": int(row["percentile"] or 0),
+            "totalCount": int(row["total_member_count"] or 0),
+            "totalMemberCount": int(row["total_member_count"] or 0),
+            "percentile": int(row["top_percent"] or 0),
+            "topPercent": int(row["top_percent"] or 0),
+            "gradeBadge": row["grade_badge"] or "",
+            "summaryTitle": row["summary_title"] or "",
         }
         for row in subject_summary_rows
     }
@@ -3287,42 +3313,198 @@ def save_wrong_note(attempt_id: str, question_ids: list[str] | None = None) -> d
     }
 
 
-def get_saved_wrong_notes() -> dict[str, Any]:
+def get_saved_wrong_notes(member_id: str | None = None) -> dict[str, Any]:
+    normalized_member_id = (member_id or "").strip()
     with get_conn() as conn:
         with conn.cursor(cursor_factory=RealDictCursor) as cur:
-            cur.execute(
-                """
-                SELECT
-                    s.subject_code,
-                    s.subject_name,
-                    s.subject_description,
-                    COUNT(h.exam_question_id) FILTER (
-                        WHERE h.wrong_note_saved = 'Y'
-                    ) AS wrong_count,
-                    COUNT(DISTINCT e.exam_id) FILTER (
-                        WHERE h.wrong_note_saved = 'Y'
-                    ) AS round_count
-                FROM subject_tb s
-                LEFT JOIN exam_tb e ON e.subject_code = s.subject_code
-                LEFT JOIN exam_history_tb h ON h.exam_id = e.exam_id
-                GROUP BY s.subject_code, s.subject_name, s.subject_description
-                ORDER BY s.subject_code
-                """
-            )
-            subjects = [
-                {
-                    "subjectId": row["subject_code"],
-                    "subjectCode": row["subject_code"],
-                    "subjectName": row["subject_name"] or row["subject_code"],
-                    "subjectDescription": row["subject_description"] or row["subject_name"] or row["subject_code"],
-                    "wrongCount": int(row["wrong_count"] or 0),
-                    "roundCount": int(row["round_count"] or 0),
-                }
-                for row in cur.fetchall()
-            ]
+            if normalized_member_id:
+                cur.execute(
+                    """
+                    WITH my_exam AS (
+                        SELECT
+                            e.exam_id,
+                            e.member_id,
+                            e.subject_code,
+                            s.subject_name,
+                            s.subject_description,
+                            e.exam_date,
+                            e.exam_time,
+                            e.exam_round,
+                            e.exam_score,
+                            COUNT(h.exam_question_id) AS question_count,
+                            SUM(CASE WHEN h.is_correct = 'N' THEN 1 ELSE 0 END) AS wrong_count,
+                            ROUND(
+                                SUM(CASE WHEN h.is_correct = 'Y' THEN 1 ELSE 0 END)::numeric
+                                / NULLIF(COUNT(h.exam_question_id), 0) * 100,
+                                0
+                            ) AS correct_rate
+                        FROM exam_tb e
+                        JOIN subject_tb s
+                          ON e.subject_code = s.subject_code
+                        JOIN exam_history_tb h
+                          ON e.exam_id = h.exam_id
+                        WHERE LOWER(e.member_id) = LOWER(%s)
+                        GROUP BY
+                            e.exam_id,
+                            e.member_id,
+                            e.subject_code,
+                            s.subject_name,
+                            s.subject_description,
+                            e.exam_date,
+                            e.exam_time,
+                            e.exam_round,
+                            e.exam_score
+                    ),
+                    ranked_exam AS (
+                        SELECT
+                            e.exam_id,
+                            e.subject_code,
+                            e.exam_score,
+                            PERCENT_RANK() OVER (
+                                PARTITION BY e.subject_code
+                                ORDER BY
+                                    CASE
+                                        WHEN e.exam_score IS NOT NULL
+                                         AND e.exam_score::text ~ '^[0-9]+(\\.[0-9]+)?$'
+                                        THEN CAST(e.exam_score AS DECIMAL(10,2))
+                                        ELSE NULL
+                                    END DESC NULLS LAST
+                            ) AS percent_rank_value
+                        FROM exam_tb e
+                    ),
+                    weak_area AS (
+                        SELECT
+                            h.exam_id,
+                            q.major_unit,
+                            q.minor_unit,
+                            COUNT(*) AS wrong_cnt,
+                            ROW_NUMBER() OVER (
+                                PARTITION BY h.exam_id
+                                ORDER BY COUNT(*) DESC
+                            ) AS rn
+                        FROM exam_history_tb h
+                        JOIN question_tb q
+                          ON h.question_id = q.question_id
+                        WHERE h.is_correct = 'N'
+                        GROUP BY
+                            h.exam_id,
+                            q.major_unit,
+                            q.minor_unit
+                    ),
+                    subject_summary AS (
+                        SELECT
+                            e.subject_code,
+                            COUNT(DISTINCT e.exam_id) AS wrong_set_count,
+                            SUM(CASE WHEN h.wrong_note_saved = 'Y' THEN 1 ELSE 0 END) AS saved_question_count
+                        FROM exam_tb e
+                        JOIN exam_history_tb h
+                          ON e.exam_id = h.exam_id
+                        WHERE LOWER(e.member_id) = LOWER(%s)
+                        GROUP BY e.subject_code
+                    )
+                    SELECT
+                        m.subject_code,
+                        m.subject_name,
+                        m.subject_description,
+                        ss.wrong_set_count,
+                        ss.saved_question_count,
+                        m.exam_id,
+                        m.exam_date,
+                        m.exam_time,
+                        m.exam_round,
+                        m.question_count,
+                        m.correct_rate,
+                        m.wrong_count,
+                        CONCAT(
+                            '상위 ',
+                            ROUND((COALESCE(r.percent_rank_value, 0) * 100)::numeric, 1),
+                            '%%'
+                        ) AS top_percent,
+                        COALESCE(w.minor_unit, w.major_unit, '-') AS weak_area
+                    FROM my_exam m
+                    LEFT JOIN ranked_exam r
+                      ON m.exam_id = r.exam_id
+                    LEFT JOIN weak_area w
+                      ON m.exam_id = w.exam_id
+                     AND w.rn = 1
+                    LEFT JOIN subject_summary ss
+                      ON m.subject_code = ss.subject_code
+                    ORDER BY
+                        m.exam_date DESC NULLS LAST,
+                        m.exam_time DESC NULLS LAST,
+                        m.exam_id DESC
+                    """,
+                    (normalized_member_id, normalized_member_id),
+                )
+                summary_rows = cur.fetchall()
+            else:
+                summary_rows = []
 
+            if normalized_member_id:
+                subject_acc: dict[str, dict[str, Any]] = {}
+                for row in summary_rows:
+                    code = row["subject_code"]
+                    item = subject_acc.setdefault(
+                        code,
+                        {
+                            "subjectId": code,
+                            "subjectCode": code,
+                            "subjectName": row["subject_name"] or code,
+                            "subjectDescription": row["subject_description"] or row["subject_name"] or code,
+                            "wrongCount": int(row["saved_question_count"] or 0),
+                            "roundCount": int(row["wrong_set_count"] or 0),
+                        },
+                    )
+                    item["wrongCount"] = int(row["saved_question_count"] or item["wrongCount"] or 0)
+                    item["roundCount"] = int(row["wrong_set_count"] or item["roundCount"] or 0)
+                subjects = list(subject_acc.values())
+            else:
+                cur.execute(
+                    """
+                    SELECT
+                        s.subject_code,
+                        s.subject_name,
+                        s.subject_description,
+                        COUNT(h.exam_question_id) FILTER (
+                            WHERE h.wrong_note_saved = 'Y'
+                        ) AS wrong_count,
+                        COUNT(DISTINCT e.exam_id) FILTER (
+                            WHERE h.wrong_note_saved = 'Y'
+                        ) AS round_count
+                    FROM subject_tb s
+                    LEFT JOIN exam_tb e ON e.subject_code = s.subject_code
+                    LEFT JOIN exam_history_tb h ON h.exam_id = e.exam_id
+                    GROUP BY s.subject_code, s.subject_name, s.subject_description
+                    ORDER BY s.subject_code
+                    """
+                )
+                subjects = [
+                    {
+                        "subjectId": row["subject_code"],
+                        "subjectCode": row["subject_code"],
+                        "subjectName": row["subject_name"] or row["subject_code"],
+                        "subjectDescription": row["subject_description"] or row["subject_name"] or row["subject_code"],
+                        "wrongCount": int(row["wrong_count"] or 0),
+                        "roundCount": int(row["round_count"] or 0),
+                    }
+                    for row in cur.fetchall()
+                ]
+
+            exam_summary_map = {
+                row["exam_id"]: {
+                    "questionCount": int(row["question_count"] or 0),
+                    "wrongCount": int(row["wrong_count"] or 0),
+                    "correctRate": float(row["correct_rate"] or 0),
+                    "topPercent": row["top_percent"] or "",
+                    "weakKeyword": row["weak_area"] or "-",
+                }
+                for row in summary_rows
+            }
+
+            detail_where = "LOWER(e.member_id) = LOWER(%s) AND h.is_correct = 'N'" if normalized_member_id else "h.wrong_note_saved = 'Y'"
+            detail_params: tuple[Any, ...] = (normalized_member_id,) if normalized_member_id else ()
             cur.execute(
-                """
+                f"""
                 SELECT
                     e.exam_id,
                     e.exam_round,
@@ -3357,14 +3539,16 @@ def get_saved_wrong_notes() -> dict[str, Any]:
                 JOIN question_tb q
                     ON q.question_id = h.question_id
                    AND q.subject_code = e.subject_code
-                WHERE h.wrong_note_saved = 'Y'
-                ORDER BY s.subject_code, e.exam_date DESC, e.exam_time DESC, e.exam_round, h.exam_question_id
-                """
+                WHERE {detail_where}
+                ORDER BY s.subject_code, e.exam_date DESC NULLS LAST, e.exam_time DESC NULLS LAST, e.exam_round, h.exam_question_id
+                """,
+                detail_params,
             )
             rows = cur.fetchall()
 
     notes = []
     for index, row in enumerate(rows):
+        exam_summary = exam_summary_map.get(row["exam_id"], {})
         notes.append(
             {
                 "source": "db",
@@ -3374,6 +3558,12 @@ def get_saved_wrong_notes() -> dict[str, Any]:
                 "attemptId": row["exam_id"],
                 "roundTitle": f"{row['exam_round']}회차" if row["exam_round"] else "응시 결과",
                 "createdAt": _created_at(row),
+                "total": exam_summary.get("questionCount"),
+                "totalCount": exam_summary.get("questionCount"),
+                "wrongCount": exam_summary.get("wrongCount"),
+                "correctRate": exam_summary.get("correctRate"),
+                "topPercent": exam_summary.get("topPercent"),
+                "weakKeyword": exam_summary.get("weakKeyword"),
                 "index": index,
                 "selected": _to_int(row["selected_number"]),
                 "question": {

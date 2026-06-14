@@ -85,6 +85,7 @@ function clearExamSessionState() {
   state.reviewAnswer = null;
   state.wrongSubjectId = null;
   state.wrongOpenDateKey = null;
+  state.wrongRoundPage = 1;
   state.wrongReviewSet = null;
   state.wrongNotes = new Map();
   latestApiResult = null;

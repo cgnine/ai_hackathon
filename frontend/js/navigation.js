@@ -7,6 +7,7 @@ function showScreen(name) {
   if (name === "wrong") {
     state.wrongSubjectId = null;
     state.wrongOpenDateKey = null;
+    state.wrongRoundPage = 1;
   }
   saveState();
   const targetScreen = $(`${name}Screen`);
@@ -286,8 +287,8 @@ async function loadMyExamHistory(page = examHistoryState.page, subjectCode = exa
   examHistoryState.selectedSubjectCode = subjectCode || "all";
   els.myExamHistoryList.innerHTML = `
     <div class="my-history-empty">
-      <strong>응시내역을 불러오는 중입니다.</strong>
-      <p>잠시만 기다려주세요.</p>
+      <strong>AI가 응시내역을 분석중입니다.</strong>
+      <p>잠시만 기다려주십시오.</p>
     </div>
   `;
   if (els.myExamHistoryPagination) els.myExamHistoryPagination.innerHTML = "";

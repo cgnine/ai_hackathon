@@ -29,18 +29,32 @@
     <div class="toast" id="toast" role="status" aria-live="polite"></div>
 
     <section class="screen active" id="wrongScreen">
-      <section class="wrong-subject-section">
-        <div class="subject-grid wrong-subject-grid" id="wrongSubjectGrid"></div>
-
-        <section class="wrong-round-section" id="wrongRoundSection" tabindex="-1" aria-labelledby="selectedWrongSubjectTitle" hidden aria-hidden="true" style="display: none;">
-          <div class="wrong-round-head">
-            <h2 id="selectedWrongSubjectTitle"></h2>
-          </div>
-          <div class="wrong-round-list" id="wrongRoundList"></div>
-        </section>
+      <section class="wrong-page-loading result-loading" id="wrongPageLoading" aria-live="polite">
+        <p class="eyebrow">Wrong Note</p>
+        <p>오답노트를 조회중입니다.<br /><br />잠시만 기다려주십시오.</p>
+        <div class="result-loading-track" aria-hidden="true">
+          <span id="wrongPageLoadingBar"></span>
+        </div>
       </section>
 
-      <div class="wrong-list" id="wrongList"></div>
+      <div class="wrong-content" id="wrongContent" hidden>
+        <section class="wrong-subject-section">
+          <div class="subject-grid wrong-subject-grid" id="wrongSubjectGrid"></div>
+
+          <section class="wrong-round-section" id="wrongRoundSection" tabindex="-1" aria-labelledby="selectedWrongSubjectTitle" hidden aria-hidden="true" style="display: none;">
+            <div class="wrong-round-head">
+              <h2 id="selectedWrongSubjectTitle"></h2>
+              <select class="wrong-round-sort" aria-label="오답 회차 정렬">
+                <option>최신순</option>
+              </select>
+            </div>
+            <div class="wrong-round-list" id="wrongRoundList"></div>
+            <nav class="wrong-round-pagination" id="wrongRoundPagination" aria-label="오답 회차 페이지"></nav>
+          </section>
+        </section>
+
+        <div class="wrong-list" id="wrongList"></div>
+      </div>
     </section>
   </main>
 

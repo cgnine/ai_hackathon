@@ -179,10 +179,9 @@
           <div class="subject-summary-copy">
             <div class="subject-summary-title">
               <strong data-modal-subject>AI</strong>
-              <span>우수</span>
+              <span data-modal-grade-badge>우수</span>
             </div>
-            <b><span data-modal-subject>AI</span> 역량이 매우 우수해요!</b>
-            <p>지속적으로 유지하며 취약 영역을 보완해 보세요.</p>
+            <b data-modal-summary-title><span data-modal-subject>AI</span> 역량이 매우 우수해요!</b>
           </div>
           <div class="subject-score-box">
             <strong><span data-modal-score>92</span><small>점</small></strong>
@@ -268,6 +267,8 @@
       const averageText = modal?.querySelector("[data-modal-average]");
       const percentileText = modal?.querySelector("[data-modal-percentile]");
       const examCountText = modal?.querySelector("[data-modal-exam-count]");
+      const gradeBadgeText = modal?.querySelector("[data-modal-grade-badge]");
+      const summaryTitleText = modal?.querySelector("[data-modal-summary-title]");
       const detailCard = modal?.querySelector(".subject-score-detail");
       const trendSvg = modal?.querySelector(".subject-trend-chart svg");
       const trendX = modal?.querySelector(".subject-trend-chart .trend-x");
@@ -390,12 +391,16 @@
         const average = link.dataset.average || "76";
         const percentile = link.dataset.percentile || "15";
         const examCount = link.dataset.examCount || "8";
+        const gradeBadge = link.dataset.gradeBadge || "우수";
+        const summaryTitle = link.dataset.summaryTitle || `${subject} 역량이 매우 우수해요!`;
         subjectTexts.forEach((el) => { el.textContent = subject; });
         if (scoreText) scoreText.textContent = score;
         if (rateText) rateText.textContent = rate;
         if (averageText) averageText.textContent = `${average}점`;
         if (percentileText) percentileText.textContent = `상위 ${percentile}%`;
         if (examCountText) examCountText.textContent = `${examCount}회`;
+        if (gradeBadgeText) gradeBadgeText.textContent = gradeBadge;
+        if (summaryTitleText) summaryTitleText.textContent = summaryTitle;
         const modalData = window.analysisSubjectModalData?.[subjectCode] || {};
         renderDetailRows(modalData.detail || []);
         renderTrend(modalData.trend || []);

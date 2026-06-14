@@ -1,3 +1,6 @@
+let wrongPageLoadingTimer = null;
+let wrongPageLoadingProgress = 0;
+
 function ensureSampleWrongNotes() {
   const subject = subjects[0];
   let changed = false;
@@ -57,9 +60,12 @@ function buildSampleWrongNotes() {
 async function loadBackendWrongNotes() {
   backendWrongNotesLoading = true;
   backendWrongNotes = null;
+  startWrongPageLoading();
 
   try {
-    const response = await fetch(`${API_BASE}/results/wrong-notes/saved`);
+    const memberId = currentMemberId();
+    const query = memberId ? `?member_id=${encodeURIComponent(memberId)}` : "";
+    const response = await fetch(`${API_BASE}/results/wrong-notes/saved${query}`);
     if (!response.ok) throw new Error(`HTTP ${response.status}`);
     const data = await response.json();
     backendWrongNotes = Array.isArray(data.items) ? data.items : [];
@@ -70,9 +76,41 @@ async function loadBackendWrongNotes() {
     showToast(`DB 오답노트를 불러오지 못했습니다. (${error.message})`);
   } finally {
     backendWrongNotesLoading = false;
+    finishWrongPageLoading();
     renderTopStats();
     renderWrongNotes();
   }
+}
+
+function startWrongPageLoading() {
+  const loading = document.getElementById("wrongPageLoading");
+  const content = document.getElementById("wrongContent");
+  const bar = document.getElementById("wrongPageLoadingBar");
+  wrongPageLoadingProgress = 0;
+  if (loading) loading.hidden = false;
+  if (content) content.hidden = true;
+  if (bar) bar.style.width = "0%";
+
+  clearInterval(wrongPageLoadingTimer);
+  wrongPageLoadingTimer = setInterval(() => {
+    const ceiling = wrongPageLoadingProgress < 45 ? 45 : wrongPageLoadingProgress < 78 ? 78 : 92;
+    const step = wrongPageLoadingProgress < 45 ? 8 : wrongPageLoadingProgress < 78 ? 4 : 1;
+    wrongPageLoadingProgress = Math.min(ceiling, wrongPageLoadingProgress + step);
+    if (bar) bar.style.width = `${wrongPageLoadingProgress}%`;
+  }, 150);
+}
+
+function finishWrongPageLoading() {
+  const loading = document.getElementById("wrongPageLoading");
+  const content = document.getElementById("wrongContent");
+  const bar = document.getElementById("wrongPageLoadingBar");
+  clearInterval(wrongPageLoadingTimer);
+  wrongPageLoadingTimer = null;
+  if (bar) bar.style.width = "100%";
+  window.setTimeout(() => {
+    if (loading) loading.hidden = true;
+    if (content) content.hidden = false;
+  }, 180);
 }
 
 function renderWrongNotes() {
@@ -122,13 +160,15 @@ function renderWrongNotes() {
   if (els.wrongList) els.wrongList.innerHTML = "";
   if (els.wrongSubjectGrid) els.wrongSubjectGrid.innerHTML = "";
   if (els.wrongRoundList) els.wrongRoundList.innerHTML = "";
+  const roundPager = document.getElementById("wrongRoundPagination");
+  if (roundPager) roundPager.innerHTML = "";
   if (els.wrongRoundSection) {
     els.wrongRoundSection.hidden = !selectedGroup;
     els.wrongRoundSection.setAttribute("aria-hidden", String(!selectedGroup));
     els.wrongRoundSection.style.display = selectedGroup ? "grid" : "none";
   }
 
-  if (notes.length === 0) {
+  if (notes.length === 0 && subjectOptions.length === 0) {
     renderWrongEmpty();
     return;
   }
@@ -176,9 +216,9 @@ function renderWrongNotes() {
     card.addEventListener("click", () => {
       state.wrongSubjectId = group.subjectId;
       state.wrongOpenDateKey = null;
+      state.wrongRoundPage = 1;
       saveState();
       renderWrongNotes();
-      focusWrongRoundSection();
     });
     els.wrongSubjectGrid?.appendChild(card);
   });
@@ -200,40 +240,54 @@ function renderWrongNotes() {
     return;
   }
 
-  groupRoundsByDate(selectedGroup.rounds).forEach((dateGroup) => {
-    const section = document.createElement("section");
-    const head = document.createElement("button");
-    const title = document.createElement("span");
-    const count = document.createElement("span");
-    const list = document.createElement("div");
-    const isOpen = state.wrongOpenDateKey === dateGroup.key;
-
-    section.className = `wrong-date-group ${isOpen ? "open" : ""}`;
-    head.type = "button";
-    head.className = "wrong-date-head";
-    head.setAttribute("aria-expanded", String(isOpen));
-    title.textContent = dateGroup.label;
-    count.textContent = `${dateGroup.rounds.length}개 세트`;
-    list.className = "wrong-date-sets";
-    list.dataset.dateKey = dateGroup.key;
-    list.tabIndex = -1;
-    list.hidden = !isOpen;
-    head.addEventListener("click", () => {
-      const willOpen = !isOpen;
-      state.wrongOpenDateKey = isOpen ? null : dateGroup.key;
-      saveState();
-      renderWrongNotes();
-      if (willOpen) focusWrongDateSets(dateGroup.key);
-    });
-    head.append(title, count);
-    section.append(head, list);
-
-    dateGroup.rounds.forEach((roundGroup) => {
-      list.appendChild(createWrongSetCard(selectedGroup, roundGroup));
-    });
-
-    els.wrongRoundList?.appendChild(section);
+  const sortedRounds = selectedGroup.rounds
+    .slice()
+    .sort((a, b) => new Date(b.latestAt || 0) - new Date(a.latestAt || 0));
+  const pageSize = 10;
+  const totalPages = Math.max(1, Math.ceil(sortedRounds.length / pageSize));
+  const currentPage = Math.min(Math.max(1, Number(state.wrongRoundPage || 1)), totalPages);
+  const pageRounds = sortedRounds.slice((currentPage - 1) * pageSize, currentPage * pageSize);
+  state.wrongRoundPage = currentPage;
+  pageRounds.forEach((roundGroup) => {
+    els.wrongRoundList?.appendChild(createWrongSetCard(selectedGroup, roundGroup));
   });
+  renderWrongRoundPagination(currentPage, totalPages);
+}
+
+function renderWrongRoundPagination(page, totalPages) {
+  const pager = document.getElementById("wrongRoundPagination");
+  if (!pager) return;
+  pager.innerHTML = "";
+  if (totalPages <= 1) return;
+
+  const prev = document.createElement("button");
+  prev.type = "button";
+  prev.textContent = "‹";
+  prev.disabled = page <= 1;
+  prev.addEventListener("click", () => moveWrongRoundPage(page - 1));
+  pager.appendChild(prev);
+
+  Array.from({ length: totalPages }, (_, index) => index + 1).forEach((pageNumber) => {
+    const button = document.createElement("button");
+    button.type = "button";
+    button.textContent = String(pageNumber);
+    button.classList.toggle("active", pageNumber === page);
+    button.addEventListener("click", () => moveWrongRoundPage(pageNumber));
+    pager.appendChild(button);
+  });
+
+  const next = document.createElement("button");
+  next.type = "button";
+  next.textContent = "›";
+  next.disabled = page >= totalPages;
+  next.addEventListener("click", () => moveWrongRoundPage(page + 1));
+  pager.appendChild(next);
+}
+
+function moveWrongRoundPage(page) {
+  state.wrongRoundPage = Math.max(1, Number(page) || 1);
+  saveState();
+  renderWrongNotes();
 }
 
 function setSelectedWrongSubjectTitle(title) {
@@ -355,34 +409,70 @@ function focusWrongDateSets(dateKey) {
 }
 
 function createWrongSetCard(selectedGroup, roundGroup) {
-  const button = document.createElement("button");
-  const titleWrap = document.createElement("div");
-  const title = document.createElement("span");
-  const time = document.createElement("small");
-  const actions = document.createElement("div");
-  const startAction = document.createElement("strong");
-  const deleteAction = document.createElement("button");
+  const button = document.createElement("article");
+  const dateCell = document.createElement("div");
+  const dateIcon = document.createElement("span");
+  const dateText = document.createElement("strong");
+  const timeText = document.createElement("small");
+  const roundCell = document.createElement("div");
+  const roundBadge = document.createElement("span");
+  const countText = document.createElement("small");
+  const rateCell = document.createElement("div");
+  const wrongCell = document.createElement("div");
+  const actionCell = document.createElement("div");
+  const retry = document.createElement("span");
+  const deleteButton = document.createElement("button");
+  const totalCount = roundGroup.totalCount || roundGroup.total || roundGroup.notes.length;
+  const wrongCount = roundGroup.wrongCount || roundGroup.notes.length;
+  const correctRate = roundGroup.correctRate ?? Math.max(0, Math.round(((totalCount - wrongCount) / Math.max(totalCount, 1)) * 100));
 
-  button.type = "button";
   button.className = "wrong-set-card";
-  titleWrap.className = "wrong-set-title";
-  title.textContent = roundGroup.roundTitle;
-  time.textContent = `${formatTime(roundGroup.latestAt)} · ${roundGroup.notes.length}문항`;
-  titleWrap.append(title, time);
-  actions.className = "wrong-set-actions";
-  startAction.textContent = "풀기";
-  actions.append(startAction);
-  deleteAction.type = "button";
-  deleteAction.className = "wrong-delete-btn";
-  deleteAction.textContent = "삭제";
-  deleteAction.addEventListener("click", (event) => {
+  button.tabIndex = 0;
+  button.setAttribute("role", "button");
+  dateCell.className = "wrong-set-date-cell";
+  dateIcon.className = "wrong-set-calendar";
+  dateIcon.textContent = "▣";
+  dateText.textContent = formatDotDate(roundGroup.latestAt);
+  timeText.textContent = formatTime(roundGroup.latestAt);
+  dateCell.append(dateIcon, dateText, timeText);
+
+  roundCell.className = "wrong-set-round-cell";
+  roundBadge.textContent = roundGroup.roundTitle;
+  countText.textContent = `${totalCount}문항`;
+  roundCell.append(roundBadge, countText);
+
+  rateCell.className = "wrong-set-metric";
+  rateCell.innerHTML = `<small>정답률</small><strong>${correctRate}%</strong>`;
+  wrongCell.className = "wrong-set-metric wrong";
+  wrongCell.innerHTML = `<small>오답</small><strong><span>${wrongCount}</span>문항</strong>`;
+  actionCell.className = "wrong-set-action-cell";
+  retry.textContent = "다시 풀기";
+  deleteButton.type = "button";
+  deleteButton.className = "wrong-set-delete-btn";
+  deleteButton.setAttribute("aria-label", `${roundGroup.roundTitle} 오답노트 삭제`);
+  deleteButton.textContent = "×";
+  deleteButton.addEventListener("click", (event) => {
     event.stopPropagation();
     deleteWrongReviewSet(selectedGroup, roundGroup);
   });
-  actions.append(deleteAction);
-  button.append(titleWrap, actions);
+  actionCell.append(retry, deleteButton);
+
+  button.append(dateCell, roundCell, rateCell, wrongCell, actionCell);
   button.addEventListener("click", () => startWrongReviewSet(selectedGroup, roundGroup));
+  button.addEventListener("keydown", (event) => {
+    if (event.key !== "Enter" && event.key !== " ") return;
+    event.preventDefault();
+    startWrongReviewSet(selectedGroup, roundGroup);
+  });
   return button;
+}
+
+function getWrongRoundWeakKeyword(roundGroup) {
+  const candidates = (roundGroup.notes || [])
+    .map((note) => note.weakKeyword || note.minorUnit || note.diagnosisArea || note.question?.minorUnit || note.question?.topic || "")
+    .map((value) => String(value || "").trim())
+    .filter(Boolean);
+  return candidates[0] || "오답 복습";
 }
 
 function groupRoundsByDate(rounds) {
@@ -422,7 +512,7 @@ function getRoundOrder(roundTitle = "") {
 }
 
 function deleteWrongReviewSet(subjectGroup, roundGroup) {
-  const message = `${subjectGroup.subjectName} ${roundGroup.roundTitle} 오답 세트 ${roundGroup.notes.length}개 문항을 삭제할까요?`;
+  const message = `${subjectGroup.subjectName} ${roundGroup.roundTitle} 오답노트를 삭제할까요?`;
   if (!window.confirm(message)) return;
 
   const keysToDelete = [];
@@ -433,6 +523,13 @@ function deleteWrongReviewSet(subjectGroup, roundGroup) {
     if (sameProfile && sameSubject && sameRound) keysToDelete.push(key);
   });
   keysToDelete.forEach((key) => state.wrongNotes.delete(key));
+  if (Array.isArray(backendWrongNotes)) {
+    backendWrongNotes = backendWrongNotes.filter((note) => {
+      const sameSubject = (note.subjectId || note.subjectName) === subjectGroup.subjectId;
+      const sameRound = (note.attemptId || note.roundTitle || "manual") === roundGroup.roundKey;
+      return !(sameSubject && sameRound);
+    });
+  }
 
   if (state.wrongReviewSet?.roundKey === roundGroup.roundKey) {
     state.wrongReviewSet = null;
@@ -442,7 +539,7 @@ function deleteWrongReviewSet(subjectGroup, roundGroup) {
   saveState();
   renderTopStats();
   renderWrongNotes();
-  showToast(`${keysToDelete.length}개 문항을 삭제했습니다.`);
+  showToast("오답노트를 삭제했습니다.");
 }
 
 function renderWrongRoundPlaceholder(message) {
@@ -477,6 +574,9 @@ function groupWrongNotes(notes) {
         roundKey,
         roundTitle: note.roundTitle || "직접 저장",
         latestAt: note.createdAt || null,
+        totalCount: Number(note.total || note.totalCount || 0),
+        wrongCount: Number(note.wrongCount || 0),
+        correctRate: note.correctRate ?? null,
         notes: []
       });
     }
@@ -484,6 +584,11 @@ function groupWrongNotes(notes) {
     const roundGroup = subjectGroup.roundMap.get(roundKey);
     subjectGroup.total += 1;
     roundGroup.notes.push(note);
+    roundGroup.totalCount = Math.max(roundGroup.totalCount || 0, Number(note.total || note.totalCount || 0));
+    roundGroup.wrongCount = Math.max(roundGroup.wrongCount || 0, Number(note.wrongCount || 0));
+    if (roundGroup.correctRate === null && note.correctRate !== undefined) {
+      roundGroup.correctRate = note.correctRate;
+    }
     if (new Date(note.createdAt || 0) > new Date(roundGroup.latestAt || 0)) {
       roundGroup.latestAt = note.createdAt;
     }
@@ -526,6 +631,21 @@ function renderWrongEmptyMessage(title, subtitle) {
   `;
   els.wrongList?.appendChild(empty);
   els.wrongRoundList?.appendChild(empty.cloneNode(true));
+}
+
+function renderWrongLoading() {
+  if (!els.wrongList && !els.wrongSubjectGrid) return;
+  if (els.wrongList) els.wrongList.innerHTML = "";
+  if (els.wrongSubjectGrid) els.wrongSubjectGrid.innerHTML = "";
+  if (els.wrongRoundList) els.wrongRoundList.innerHTML = "";
+  const roundPager = document.getElementById("wrongRoundPagination");
+  if (roundPager) roundPager.innerHTML = "";
+  if (els.wrongRoundSection) {
+    els.wrongRoundSection.hidden = true;
+    els.wrongRoundSection.setAttribute("aria-hidden", "true");
+    els.wrongRoundSection.style.display = "none";
+  }
+  renderWrongEmptyMessage("오답노트를 불러오는 중입니다", "");
 }
 
 function renderWrongEmpty() {

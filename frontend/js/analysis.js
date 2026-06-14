@@ -180,6 +180,8 @@ function renderAnalysisReportSubjects(subjectStats = []) {
     const averageScore = Number(summary.avgScore ?? subject.overallAverageScore ?? 0);
     const percentile = Number(summary.percentile ?? 0);
     const examCount = Number(summary.examCount ?? 0);
+    const gradeBadge = summary.gradeBadge || "";
+    const summaryTitle = summary.summaryTitle || "";
     const subjectName = subject.subjectName || subject.subjectCode || "과목";
     const roundedScore = Math.round(score);
     const roundedModalScore = Math.round(modalScore);
@@ -195,6 +197,8 @@ function renderAnalysisReportSubjects(subjectStats = []) {
     row.dataset.average = String(Math.round(averageScore));
     row.dataset.percentile = String(Math.round(percentile));
     row.dataset.examCount = String(Math.round(examCount));
+    row.dataset.gradeBadge = gradeBadge;
+    row.dataset.summaryTitle = summaryTitle;
     if (subject.subjectCode) {
       window.analysisSubjectModalData[subject.subjectCode] = subject.modal || {};
     }

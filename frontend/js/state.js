@@ -44,6 +44,7 @@ const defaultState = {
   examHistorySubjectId: null,
   wrongSubjectId: null,
   wrongOpenDateKey: null,
+  wrongRoundPage: 1,
   wrongReviewSet: null
 };
 
@@ -65,6 +66,7 @@ function loadState() {
       reviewAnswer: saved.reviewAnswer || null,
       wrongSubjectId: saved.wrongSubjectId || null,
       wrongOpenDateKey: saved.wrongOpenDateKey || null,
+      wrongRoundPage: saved.wrongRoundPage || 1,
       wrongReviewSet: saved.wrongReviewSet || null
     };
   } catch {

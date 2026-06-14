@@ -208,6 +208,7 @@ async function initPage() {
   if (page === "wrong") {
     state.wrongSubjectId = null;
     state.wrongOpenDateKey = null;
+    state.wrongRoundPage = 1;
     saveState();
     loadBackendWrongNotes();
   }
