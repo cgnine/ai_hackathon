@@ -200,6 +200,7 @@ function renderHistorySubjectTabs(subjectFilters = [], total = 0, selectedSubjec
 
 function renderMyExamHistory(items, selectedSubjectCode = "all", meta = {}) {
   if (!els.myExamHistoryList) return;
+  renderExamHistorySummary(items);
   renderHistorySubjectTabs(meta.subjectFilters || [], meta.totalAll || meta.total || 0, selectedSubjectCode);
 
   if (!items.length) {
@@ -298,6 +299,7 @@ async function loadMyExamHistory(page = examHistoryState.page, subjectCode = exa
     const items = data.items || [];
     // persist to state for client-side filtering/paging
     state.attemptHistory = items;
+    state.examHistorySummary = data.summary || null;
     saveState();
     // ensure subjects are loaded so tabs show proper names
     if (!Array.isArray(subjects) || subjects.length === 0) {
@@ -308,6 +310,7 @@ async function loadMyExamHistory(page = examHistoryState.page, subjectCode = exa
       }
     }
     renderExamTabs((subjects || []).slice(0, 5));
+    renderExamHistorySummary(items, data.summary || null);
     renderExamHistoryList(items, 1, 8);
   } catch (error) {
     els.myExamHistoryList.innerHTML = `
@@ -400,18 +403,76 @@ function renderExamTabs(list) {
   });
 }
 
+function getExamHistorySubjectCode(item = {}) {
+  return String(item.subjectCode || item.subjectId || item.subjectName || "ALL").toUpperCase();
+}
+
+function getExamHistoryVisual(item = {}) {
+  const code = getExamHistorySubjectCode(item);
+  const map = {
+    AI: { color: "#f97316", soft: "#fff1e8", icon: "AI" },
+    CA: { color: "#8b5cf6", soft: "#f4efff", icon: "CA" },
+    CD: { color: "#10b981", soft: "#eafaf4", icon: "CD" },
+    DE: { color: "#fb923c", soft: "#fff3e8", icon: "DE" },
+    SW: { color: "#4f46e5", soft: "#eef0ff", icon: "SW" },
+    CLOUD: { color: "#ec4899", soft: "#fdf2f8", icon: "☁" }
+  };
+  if (code.includes("CLOUD")) return map.CLOUD;
+  return map[code] || { color: "#2563eb", soft: "#eff6ff", icon: code.slice(0, 2) || "EX" };
+}
+
+function formatExamHistoryScore(value) {
+  const numeric = Number(value || 0);
+  return Number.isInteger(numeric) ? String(numeric) : numeric.toFixed(1);
+}
+
+function renderExamHistorySummary(items = [], summary = null) {
+  const totalTarget = document.getElementById("historyTotalCount");
+  const averageTarget = document.getElementById("historyAverageScore");
+  const bestTarget = document.getElementById("historyBestScore");
+  const minTarget = document.getElementById("historyMinScore");
+  const scores = (items || []).map((item) => Number(item.score || item.totalScore || 0)).filter((score) => Number.isFinite(score));
+  const hasSummary = summary && typeof summary === "object";
+  const total = hasSummary ? Number(summary.totalExamCount || 0) : (items || []).length;
+  const average = hasSummary ? Number(summary.avgScore || 0) : scores.length ? scores.reduce((sum, score) => sum + score, 0) / scores.length : 0;
+  const best = hasSummary ? Number(summary.maxScore || 0) : scores.length ? Math.max(...scores) : 0;
+  const min = hasSummary ? Number(summary.minScore || 0) : scores.length ? Math.min(...scores) : 0;
+
+  if (totalTarget) totalTarget.textContent = String(total);
+  if (averageTarget) averageTarget.textContent = formatExamHistoryScore(average);
+  if (bestTarget) bestTarget.textContent = formatExamHistoryScore(best);
+  if (minTarget) minTarget.textContent = formatExamHistoryScore(min);
+}
+
+function renderExamHistorySegments(score, color) {
+  const numeric = Math.max(0, Math.min(100, Number(score || 0)));
+  const filled = Math.round(numeric / 10);
+  return Array.from({ length: 10 }, (_, index) => (
+    `<span style="${index < filled ? `background:${color}` : ""}"></span>`
+  )).join("");
+}
+
+function renderExamHistoryBadges(item = {}) {
+  const round = item.roundTitle || "1회차";
+  const correct = Number(item.correctCount || item.correct || 0);
+  const total = Number(item.total || 0);
+  const rate = total > 0 ? Math.round((correct / total) * 100) : null;
+  const badges = [round, rate === null ? "실무형 40%" : `정답률 ${rate}%`, "상위 30%"];
+  return badges.map((badge) => `<span>${badge}</span>`).join("");
+}
+
 function renderExamHistoryList(items = [], page = 1, pageSize = 8) {
   const target = document.getElementById('myExamHistoryList');
   const pager = document.getElementById('examHistoryPagination');
   if (!target) return;
 
-  const compactSubjects = ['AI', 'CA', 'CD', 'DE', 'SW'];
-  const isCompactView = Boolean(state.examHistorySubjectId) && compactSubjects.includes(String(state.examHistorySubjectId || '').toUpperCase());
-
   // filter
   const filtered = state.examHistorySubjectId
     ? (items || []).filter(i => String((i.subjectCode || i.subjectId || i.subjectName || '')).toUpperCase() === String(state.examHistorySubjectId || '').toUpperCase())
     : (items || []).slice();
+
+  const useServerSummary = !state.examHistorySubjectId && state.examHistorySummary;
+  renderExamHistorySummary(filtered, useServerSummary ? state.examHistorySummary : null);
 
   // sort by date desc
   filtered.sort((a, b) => new Date(b.createdAt || b.examDate || 0) - new Date(a.createdAt || a.examDate || 0));
@@ -431,42 +492,29 @@ function renderExamHistoryList(items = [], page = 1, pageSize = 8) {
     `;
   } else {
     target.innerHTML = pageItems.map((item) => {
-      if (isCompactView) {
-        const dateText = formatProfileDate(item.createdAt || item.examDate);
-        const round = item.roundTitle || '';
-        const correct = item.correctCount || item.correct || 0;
-        const totalItems = item.total || 0;
-        return `
-          <article class="my-history-card compact">
-            <div>
-              <span class="my-history-compact">${dateText} ${round} ${correct}/${totalItems}문항</span>
-            </div>
-            <div class="my-history-score">
-              <strong>${item.score || item.totalScore || 0}점</strong>
-            </div>
-            <button type="button" data-exam-id="${item.examId || item.id || ''}" class="result-btn" aria-label="진단리포트">
-              <svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true" focusable="false">
-                <path d="M15.5 14h-.79l-.28-.27A6.471 6.471 0 0 0 16 9.5 6.5 6.5 0 1 0 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l4.99 5L20.49 19l-4.99-5zM9.5 14A4.5 4.5 0 1 1 14 9.5 4.5 4.5 0 0 1 9.5 14z" fill="currentColor"/>
-              </svg>
-              <span>진단리포트</span>
-            </button>
-          </article>
-        `;
-      }
+      const score = Number(item.score || item.totalScore || 0);
+      const visual = getExamHistoryVisual(item);
+      const subjectName = item.subjectName || item.subjectCode || "시험 결과";
       return `
-        <article class="my-history-card">
-          <div>
-            <h3>${item.subjectName || item.subjectCode || '시험 결과'}</h3>
-            <span class="my-history-meta">${formatProfileDate(item.createdAt || item.examDate)} ${item.roundTitle || ''} ${item.correctCount || item.correct || 0}/${item.total || 0}문항</span>
+        <article class="my-history-card history-result-card" style="--history-color:${visual.color}; --history-soft:${visual.soft};">
+          <div class="history-subject-icon">${visual.icon}</div>
+          <div class="history-result-main">
+            <h3>${subjectName}</h3>
+            <p class="my-history-date">${formatProfileDate(item.createdAt || item.examDate)}</p>
+            <div class="history-result-badges">${renderExamHistoryBadges(item)}</div>
           </div>
           <div class="my-history-score">
-            <strong>${item.score || item.totalScore || 0}점</strong>
+            <strong>${formatExamHistoryScore(score)}<span>점</span></strong>
+            <div class="history-score-track" aria-label="점수 진행도">
+              ${renderExamHistorySegments(score, visual.color)}
+            </div>
+            <em>${formatExamHistoryScore(score)}%</em>
           </div>
           <button type="button" data-exam-id="${item.examId || item.id || ''}" class="result-btn" aria-label="진단리포트">
             <svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true" focusable="false">
               <path d="M15.5 14h-.79l-.28-.27A6.471 6.471 0 0 0 16 9.5 6.5 6.5 0 1 0 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l4.99 5L20.49 19l-4.99-5zM9.5 14A4.5 4.5 0 1 1 14 9.5 4.5 4.5 0 0 1 9.5 14z" fill="currentColor"/>
             </svg>
-            <span>진단리포트</span>
+            <span>AI 진단리포트</span>
           </button>
         </article>
       `;

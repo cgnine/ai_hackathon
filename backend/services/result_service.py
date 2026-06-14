@@ -1533,6 +1533,7 @@ def get_analysis(member_id: str, include_commentary: bool = True) -> dict[str, A
                 SELECT
                     e.exam_id,
                     e.exam_round,
+                    e.exam_score,
                     e.exam_date,
                     e.exam_time,
                     e.created_at AS exam_created_at,
@@ -2548,6 +2549,8 @@ def get_exam_history(
     safe_page_size = max(1, min(page_size, 50))
     offset = (safe_page - 1) * safe_page_size
     normalized_subject_code = (subject_code or "").strip()
+    if normalized_subject_code.upper() == "ALL":
+        normalized_subject_code = ""
     subject_filter = "AND e.subject_code = %s" if normalized_subject_code else ""
     filter_params: list[Any] = [normalized_member_id]
     if normalized_subject_code:
@@ -2580,14 +2583,43 @@ def get_exam_history(
 
             cur.execute(
                 f"""
-                SELECT COUNT(*) AS total_count
+                SELECT
+                    COUNT(*) AS total_exam_count,
+                    ROUND(
+                        AVG(
+                            CASE
+                                WHEN e.exam_score IS NOT NULL
+                                 AND e.exam_score::text ~ '^[0-9]+(\\.[0-9]+)?$'
+                                THEN CAST(e.exam_score AS DECIMAL(5,2))
+                                ELSE NULL
+                            END
+                        ),
+                        1
+                    ) AS avg_score,
+                    MAX(
+                        CASE
+                            WHEN e.exam_score IS NOT NULL
+                             AND e.exam_score::text ~ '^[0-9]+(\\.[0-9]+)?$'
+                            THEN CAST(e.exam_score AS DECIMAL(5,2))
+                            ELSE NULL
+                        END
+                    ) AS max_score,
+                    MIN(
+                        CASE
+                            WHEN e.exam_score IS NOT NULL
+                             AND e.exam_score::text ~ '^[0-9]+(\\.[0-9]+)?$'
+                            THEN CAST(e.exam_score AS DECIMAL(5,2))
+                            ELSE NULL
+                        END
+                    ) AS min_score
                 FROM exam_tb e
                 WHERE e.member_id = %s
                   {subject_filter}
                 """,
                 tuple(filter_params),
             )
-            total_count = int(cur.fetchone()["total_count"] or 0)
+            summary_row = cur.fetchone() or {}
+            total_count = int(summary_row.get("total_exam_count") or 0)
 
             cur.execute(
                 f"""
@@ -2614,7 +2646,7 @@ def get_exam_history(
                 WHERE e.member_id = %s
                   {subject_filter}
                 GROUP BY
-                    e.exam_id, e.exam_round, e.exam_date, e.exam_time, e.created_at,
+                    e.exam_id, e.exam_round, e.exam_score, e.exam_date, e.exam_time, e.created_at,
                     s.subject_code, s.subject_name, s.subject_description
                 ORDER BY
                     e.exam_date DESC NULLS LAST,
@@ -2632,6 +2664,12 @@ def get_exam_history(
     for row in rows:
         total = int(row["total"] or 0)
         correct_count = int(row["correct_count"] or 0)
+        exam_score = row.get("exam_score")
+        numeric_exam_score = (
+            float(exam_score)
+            if exam_score is not None and str(exam_score).replace(".", "", 1).isdigit()
+            else None
+        )
         items.append(
             {
                 "examId": row["exam_id"],
@@ -2641,7 +2679,7 @@ def get_exam_history(
                 "total": total,
                 "correctCount": correct_count,
                 "wrongCount": total - correct_count,
-                "score": _score(correct_count, total),
+                "score": numeric_exam_score if numeric_exam_score is not None else _score(correct_count, total),
                 "createdAt": _created_at(row),
                 "examDate": row["exam_date"],
                 "examTime": row["exam_time"],
@@ -2658,6 +2696,12 @@ def get_exam_history(
         "totalPages": total_pages,
         "subjectCode": normalized_subject_code or None,
         "subjectFilters": subject_filters,
+        "summary": {
+            "totalExamCount": total_count,
+            "avgScore": float(summary_row["avg_score"]) if summary_row.get("avg_score") is not None else 0,
+            "maxScore": float(summary_row["max_score"]) if summary_row.get("max_score") is not None else 0,
+            "minScore": float(summary_row["min_score"]) if summary_row.get("min_score") is not None else 0,
+        },
     }
 
 
