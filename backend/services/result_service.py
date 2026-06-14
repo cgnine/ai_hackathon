@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import re
 from collections import defaultdict
 from datetime import datetime, timedelta
 from typing import Any
@@ -583,6 +584,172 @@ def _bedrock_analysis_weakness(payload: dict[str, Any], include_commentary: bool
     try:
         raw = bedrock_client.invoke(system_prompt, user_prompt, max_tokens=500)
         return _validate_analysis_weakness(_extract_json_object(raw))
+    except Exception:
+        return fallback
+
+
+def _fallback_modal_keyword(value: Any) -> str:
+    text = str(value or "").strip()
+    if not text:
+        return "미분류"
+    text = re.sub(r"^SECTION\s*\d+\.\s*", "", text, flags=re.IGNORECASE).strip()
+    replacements = (
+        ("에 대한 이해", ""),
+        ("이해하기", ""),
+        ("의 종류 및 정형 데이터와의 비교", ""),
+        ("의 이해", ""),
+        ("개요 및 활용법", ""),
+        ("개요", ""),
+    )
+    for source, target in replacements:
+        text = text.replace(source, target)
+    text = re.sub(r"\s+", " ", text).strip(" -_/")
+    if len(text) > 15:
+        words = text.split()
+        compact = " ".join(words[:2]) if len(words) >= 2 else text[:15]
+        text = compact if len(compact) <= 15 else text[:15]
+    return text or "미분류"
+
+
+def _unique_modal_keywords(values: list[Any]) -> list[str]:
+    keywords: list[str] = []
+    seen: set[str] = set()
+    for value in values:
+        keyword = _fallback_modal_keyword(value)
+        if keyword in seen:
+            continue
+        seen.add(keyword)
+        keywords.append(keyword)
+        if len(keywords) >= 3:
+            break
+    return keywords
+
+
+def _validate_modal_keywords(payload: dict[str, Any], fallback: dict[str, list[str]]) -> dict[str, list[str]]:
+    result: dict[str, list[str]] = {}
+    for key in ("strengths", "weaknesses"):
+        values = payload.get(key)
+        if not isinstance(values, list):
+            result[key] = fallback[key]
+            continue
+        keywords: list[str] = []
+        seen: set[str] = set()
+        for value in values:
+            keyword = str(value or "").strip()
+            if not keyword or keyword in seen or len(keyword) > 15:
+                continue
+            seen.add(keyword)
+            keywords.append(keyword)
+            if len(keywords) >= 3:
+                break
+        result[key] = keywords or fallback[key]
+    return result
+
+
+def _bedrock_modal_keywords(
+    strengths: list[dict[str, Any]],
+    weaknesses: list[dict[str, Any]],
+    include_commentary: bool = True,
+) -> dict[str, list[str]]:
+    strength_units = [item.get("sourceKeyword") or item.get("keyword") for item in strengths]
+    weakness_units = [item.get("sourceKeyword") or item.get("keyword") for item in weaknesses]
+    fallback = {
+        "strengths": _unique_modal_keywords(strength_units),
+        "weaknesses": _unique_modal_keywords(weakness_units),
+    }
+    if not include_commentary:
+        return fallback
+
+    system_prompt = "당신은 KB Masters의 AI 역량 분석기입니다."
+    payload = {
+        "strengths": strength_units,
+        "weaknesses": weakness_units,
+    }
+    user_prompt = (
+        "입력된 강점 영역과 취약 영역을\n"
+        "사용자가 보기 쉬운 화면용 키워드로 변환하세요.\n\n"
+        "규칙\n\n"
+        "- SECTION 번호 제거\n"
+        "- 핵심 의미 유지\n"
+        "- 구현, 이론, 실습, 평가, 튜닝 등 구분 의미가 있는 단어는 유지\n"
+        "- 중복 키워드 생성 금지\n"
+        "- 2~15자 이내\n"
+        "- 설명문 작성 금지\n"
+        "- 문장 작성 금지\n"
+        "- 키워드만 반환\n\n"
+        "예시\n\n"
+        "입력\n"
+        "\"SECTION 02. 회귀모델에 대한 이해\"\n\n"
+        "출력\n"
+        "\"회귀모델\"\n\n"
+        "입력\n"
+        "\"SECTION 01. 모델 하이퍼파라미터 튜닝 이해하기\"\n\n"
+        "출력\n"
+        "\"하이퍼파라미터 튜닝\"\n\n"
+        f"입력 데이터\n{json.dumps(payload, ensure_ascii=False, indent=2)}\n\n"
+        "출력 형식\n"
+        "{\n"
+        '  "strengths": [\n'
+        '    "",\n'
+        '    "",\n'
+        '    ""\n'
+        "  ],\n"
+        '  "weaknesses": [\n'
+        '    "",\n'
+        '    "",\n'
+        '    ""\n'
+        "  ]\n"
+        "}"
+    )
+    try:
+        raw = bedrock_client.invoke(system_prompt, user_prompt, max_tokens=220)
+        return _validate_modal_keywords(_extract_json_object(raw), fallback)
+    except Exception:
+        return fallback
+
+
+def _fallback_modal_comment(payload: dict[str, Any]) -> str:
+    subject_name = str(payload.get("subjectName") or "이 과목")
+    strengths = payload.get("strengths") if isinstance(payload.get("strengths"), list) else []
+    weaknesses = payload.get("weaknesses") if isinstance(payload.get("weaknesses"), list) else []
+    strength = str((strengths[0] or {}).get("keyword") or "기본 개념") if strengths else "기본 개념"
+    weak_labels = [
+        str(item.get("keyword") or "").strip()
+        for item in weaknesses[:2]
+        if str(item.get("keyword") or "").strip()
+    ]
+    weak_text = ", ".join(weak_labels) if weak_labels else "취약 영역"
+    return _truncate_commentary_sentence(
+        f"{subject_name}에서는 {strength}에서 강점이 보입니다. 보완할 영역은 {weak_text}입니다. 지금 흐름을 유지하며 쉬운 문제부터 다시 풀면 점수를 안정적으로 올릴 수 있어요.",
+        150,
+    )
+
+
+def _bedrock_modal_comment(payload: dict[str, Any], include_commentary: bool = True) -> str:
+    fallback = _fallback_modal_comment(payload)
+    if not include_commentary:
+        return fallback
+
+    system_prompt = "당신은 KB Masters의 AI 학습 코치입니다."
+    user_prompt = (
+        "사용자의 과목 분석 결과를 바탕으로\n"
+        "개인 맞춤형 코멘트를 작성하세요.\n\n"
+        "규칙\n\n"
+        "- 3~4문장\n"
+        "- 150자 이내\n"
+        "- 긍정적인 어조\n"
+        "- 강점 1개 이상 언급\n"
+        "- 취약 영역 1~2개 언급\n"
+        "- 학습 동기 부여 포함\n"
+        "- 과장 금지\n"
+        "- 한국어\n\n"
+        "출력은 순수 텍스트만 반환\n\n"
+        f"입력 데이터\n{json.dumps(payload, ensure_ascii=False, indent=2)}"
+    )
+    try:
+        raw = bedrock_client.invoke(system_prompt, user_prompt, max_tokens=220)
+        text = str(raw or "").strip().strip('"')
+        return _truncate_commentary_sentence(text, 150) or fallback
     except Exception:
         return fallback
 
@@ -1453,6 +1620,191 @@ def get_analysis(member_id: str, include_commentary: bool = True) -> dict[str, A
 
             cur.execute(
                 """
+                WITH member_avg AS (
+                    SELECT
+                        member_id,
+                        subject_code,
+                        ROUND(AVG(CAST(exam_score AS DECIMAL(5,2))), 1) AS avg_score,
+                        COUNT(*) AS exam_count
+                    FROM exam_tb
+                    WHERE exam_score IS NOT NULL
+                      AND exam_score::text ~ '^[0-9]+(\\.[0-9]+)?$'
+                    GROUP BY member_id, subject_code
+                ),
+                ranked AS (
+                    SELECT
+                        member_id,
+                        subject_code,
+                        avg_score,
+                        exam_count,
+                        RANK() OVER (
+                            PARTITION BY subject_code
+                            ORDER BY avg_score DESC
+                        ) AS rank_no,
+                        COUNT(*) OVER (PARTITION BY subject_code) AS total_count
+                    FROM member_avg
+                ),
+                subject_avg AS (
+                    SELECT
+                        subject_code,
+                        ROUND(AVG(CAST(exam_score AS DECIMAL(5,2))), 1) AS subject_avg
+                    FROM exam_tb
+                    WHERE exam_score IS NOT NULL
+                      AND exam_score::text ~ '^[0-9]+(\\.[0-9]+)?$'
+                    GROUP BY subject_code
+                )
+                SELECT
+                    r.subject_code,
+                    r.avg_score AS my_score,
+                    s.subject_avg AS avg_score,
+                    r.exam_count,
+                    r.rank_no,
+                    r.total_count,
+                    ROUND((r.rank_no::numeric / NULLIF(r.total_count, 0)) * 100, 0) AS percentile
+                FROM ranked r
+                JOIN subject_avg s
+                  ON s.subject_code = r.subject_code
+                WHERE r.member_id = %s
+                """,
+                (normalized_member_id,),
+            )
+            subject_summary_rows = cur.fetchall()
+
+            cur.execute(
+                """
+                SELECT
+                    e.subject_code,
+                    CASE
+                        WHEN COALESCE(NULLIF(q.question_type, ''), '') IN ('실무', '실무형') THEN '실무형'
+                        WHEN COALESCE(NULLIF(q.question_type, ''), '') IN ('이론', '이론형', '객관식') THEN '이론형'
+                        WHEN COALESCE(BTRIM(q.question_content2), '') <> '' THEN '실무형'
+                        ELSE '이론형'
+                    END AS question_type,
+                    ROUND(
+                        AVG(
+                            CASE
+                                WHEN h.is_correct = 'Y' THEN 100
+                                ELSE 0
+                            END
+                        ),
+                        1
+                    ) AS correct_rate
+                FROM exam_history_tb h
+                JOIN exam_tb e
+                  ON h.exam_id = e.exam_id
+                JOIN question_tb q
+                  ON h.question_id = q.question_id
+                 AND q.subject_code = e.subject_code
+                WHERE e.member_id = %s
+                GROUP BY
+                    e.subject_code,
+                    CASE
+                        WHEN COALESCE(NULLIF(q.question_type, ''), '') IN ('실무', '실무형') THEN '실무형'
+                        WHEN COALESCE(NULLIF(q.question_type, ''), '') IN ('이론', '이론형', '객관식') THEN '이론형'
+                        WHEN COALESCE(BTRIM(q.question_content2), '') <> '' THEN '실무형'
+                        ELSE '이론형'
+                    END
+                """,
+                (normalized_member_id,),
+            )
+            subject_detail_rows = cur.fetchall()
+
+            cur.execute(
+                """
+                WITH ranked_exam AS (
+                    SELECT
+                        subject_code,
+                        exam_round,
+                        CAST(exam_score AS DECIMAL(5,2)) AS exam_score,
+                        exam_date,
+                        ROW_NUMBER() OVER (
+                            PARTITION BY subject_code
+                            ORDER BY
+                                CASE
+                                    WHEN exam_round::text ~ '^[0-9]+(\\.[0-9]+)?$'
+                                    THEN CAST(exam_round AS DECIMAL(10,2))
+                                    ELSE 0
+                                END DESC,
+                                exam_date DESC,
+                                exam_id DESC
+                        ) AS row_no
+                    FROM exam_tb
+                    WHERE member_id = %s
+                      AND exam_score IS NOT NULL
+                      AND exam_score::text ~ '^[0-9]+(\\.[0-9]+)?$'
+                )
+                SELECT subject_code, exam_round, exam_score, exam_date
+                FROM ranked_exam
+                WHERE row_no <= 5
+                ORDER BY subject_code, row_no DESC
+                """,
+                (normalized_member_id,),
+            )
+            subject_trend_rows = cur.fetchall()
+
+            cur.execute(
+                """
+                WITH unit_rates AS (
+                    SELECT
+                        e.subject_code,
+                        COALESCE(NULLIF(q.minor_unit, ''), '미분류') AS keyword,
+                        ROUND(
+                            AVG(
+                                CASE
+                                    WHEN h.is_correct = 'Y' THEN 100
+                                    ELSE 0
+                                END
+                            ),
+                            1
+                        ) AS correct_rate,
+                        COUNT(*) AS answer_count
+                    FROM exam_history_tb h
+                    JOIN exam_tb e
+                      ON h.exam_id = e.exam_id
+                    JOIN question_tb q
+                      ON h.question_id = q.question_id
+                     AND q.subject_code = e.subject_code
+                    WHERE e.member_id = %s
+                    GROUP BY e.subject_code, keyword
+                    HAVING COUNT(*) >= 2
+                ),
+                strong_units AS (
+                    SELECT
+                        subject_code,
+                        keyword,
+                        correct_rate,
+                        ROW_NUMBER() OVER (
+                            PARTITION BY subject_code
+                            ORDER BY correct_rate DESC, answer_count DESC, keyword
+                        ) AS row_no
+                    FROM unit_rates
+                ),
+                weak_units AS (
+                    SELECT
+                        subject_code,
+                        keyword,
+                        correct_rate,
+                        ROW_NUMBER() OVER (
+                            PARTITION BY subject_code
+                            ORDER BY correct_rate ASC, answer_count DESC, keyword
+                        ) AS row_no
+                    FROM unit_rates
+                )
+                SELECT 'strong' AS list_type, subject_code, keyword, correct_rate, row_no
+                FROM strong_units
+                WHERE row_no <= 3
+                UNION ALL
+                SELECT 'weak' AS list_type, subject_code, keyword, correct_rate, row_no
+                FROM weak_units
+                WHERE row_no <= 3
+                ORDER BY subject_code, list_type, row_no
+                """,
+                (normalized_member_id,),
+            )
+            subject_unit_rows = cur.fetchall()
+
+            cur.execute(
+                """
                 WITH unit_stats AS (
                     SELECT
                         q.minor_unit,
@@ -1622,11 +1974,83 @@ def get_analysis(member_id: str, include_commentary: bool = True) -> dict[str, A
         str(row["subject_code"]): int(row["average_score"] or 0)
         for row in subject_average_rows
     }
+    subject_summary_map = {
+        str(row["subject_code"]): {
+            "myScore": float(row["my_score"]) if row.get("my_score") is not None else None,
+            "avgScore": float(row["avg_score"]) if row.get("avg_score") is not None else None,
+            "examCount": int(row["exam_count"] or 0),
+            "rankNo": int(row["rank_no"] or 0),
+            "totalCount": int(row["total_count"] or 0),
+            "percentile": int(row["percentile"] or 0),
+        }
+        for row in subject_summary_rows
+    }
+    subject_detail_map: dict[str, list[dict[str, Any]]] = defaultdict(list)
+    for row in subject_detail_rows:
+        subject_detail_map[str(row["subject_code"])].append(
+            {
+                "questionType": row["question_type"] or "미분류",
+                "correctRate": float(row["correct_rate"] or 0),
+            }
+        )
+    subject_trend_map: dict[str, list[dict[str, Any]]] = defaultdict(list)
+    for row in subject_trend_rows:
+        subject_trend_map[str(row["subject_code"])].append(
+            {
+                "examRound": row["exam_round"],
+                "examScore": float(row["exam_score"] or 0),
+                "examDate": row["exam_date"].isoformat() if hasattr(row["exam_date"], "isoformat") else row["exam_date"],
+            }
+        )
+    subject_strong_map: dict[str, list[dict[str, Any]]] = defaultdict(list)
+    subject_weak_map: dict[str, list[dict[str, Any]]] = defaultdict(list)
+    for row in subject_unit_rows:
+        target_map = subject_strong_map if row["list_type"] == "strong" else subject_weak_map
+        target_map[str(row["subject_code"])].append(
+            {
+                "keyword": row["keyword"] or "미분류",
+                "sourceKeyword": row["keyword"] or "미분류",
+                "correctRate": float(row["correct_rate"] or 0),
+            }
+        )
+    for subject_code in set(subject_strong_map) | set(subject_weak_map):
+        keyword_payload = _bedrock_modal_keywords(
+            subject_strong_map.get(subject_code, []),
+            subject_weak_map.get(subject_code, []),
+            include_commentary=include_commentary,
+        )
+        for item, keyword in zip(subject_strong_map.get(subject_code, []), keyword_payload["strengths"]):
+            item["keyword"] = keyword
+        for item, keyword in zip(subject_weak_map.get(subject_code, []), keyword_payload["weaknesses"]):
+            item["keyword"] = keyword
+    subject_modal_ai_map: dict[str, dict[str, Any]] = {}
+    for subject_code in set(subject_strong_map) | set(subject_weak_map) | set(subject_detail_map) | set(subject_trend_map):
+        subject_item = subject_map.get(subject_code, {})
+        modal_payload = {
+            "subjectCode": subject_code,
+            "subjectName": subject_item.get("subjectName") or subject_code,
+            "summary": subject_summary_map.get(subject_code),
+            "detail": subject_detail_map.get(subject_code, []),
+            "trend": subject_trend_map.get(subject_code, []),
+            "strengths": subject_strong_map.get(subject_code, []),
+            "weaknesses": subject_weak_map.get(subject_code, []),
+        }
+        subject_modal_ai_map[subject_code] = {
+            "comment": _bedrock_modal_comment(modal_payload, include_commentary=include_commentary),
+        }
     subject_stats = []
     for item in subject_map.values():
         item["score"] = _score(item["correct"], item["answered"])
         item["accuracy"] = item["score"]
         item["overallAverageScore"] = subject_average_map.get(item["subjectCode"], 0)
+        item["summary"] = subject_summary_map.get(item["subjectCode"])
+        item["modal"] = {
+            "detail": subject_detail_map.get(item["subjectCode"], []),
+            "trend": subject_trend_map.get(item["subjectCode"], []),
+            "strongUnits": subject_strong_map.get(item["subjectCode"], []),
+            "weakUnits": subject_weak_map.get(item["subjectCode"], []),
+            "comment": subject_modal_ai_map.get(item["subjectCode"], {}).get("comment"),
+        }
         subject_stats.append(item)
     subject_stats.sort(key=lambda item: subject_order.get(item["subjectCode"], len(subject_order)))
 

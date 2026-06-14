@@ -144,10 +144,7 @@
             <h2><span class="analysis-warning">!</span>취약 영역 실시간 문제 출제</h2>
             <div class="analysis-generate-layout">
               <div class="analysis-generate-copy">
-                <p>AI가 Data Engineering 취약 영역을 분석하여<br />맞춤형 문제를 생성합니다.</p>
-                <select aria-label="취약 영역 선택">
-                  <option>Data Engineering · 실무형</option>
-                </select>
+                <p>AI가 취약 영역을 분석하여<br />맞춤형 문제를 생성합니다.</p>
                 <button type="button" onclick="location.href='ai-recommend.html'">맞춤 문제 생성하기 <span>›</span></button>
               </div>
               <div class="analysis-illustration" aria-hidden="true">
@@ -192,9 +189,9 @@
             <em>(정답률 <span data-modal-rate>92</span>%)</em>
           </div>
           <div class="subject-summary-stats">
-            <div><span>전체 평균</span><strong>76점</strong></div>
-            <div><span>백분위</span><strong>상위 15%</strong></div>
-            <div><span>응시 횟수</span><strong>8회</strong></div>
+            <div><span>전체 평균</span><strong data-modal-average>76점</strong></div>
+            <div><span>백분위</span><strong data-modal-percentile>상위 15%</strong></div>
+            <div><span>응시 횟수</span><strong data-modal-exam-count>8회</strong></div>
           </div>
         </section>
 
@@ -257,15 +254,6 @@
           </section>
         </div>
 
-        <section class="subject-strategy-card">
-          <h3><span class="analysis-warning subject-section-icon">!</span>AI 추천 학습 전략</h3>
-          <p>취약 영역을 집중 학습하면 이 과목에서 5점 이상 더 상승할 수 있어요!</p>
-          <div>
-            <span>RAG 개념 학습 <b>20문제</b></span>
-            <span>벡터 DB 실습 <b>15문제</b></span>
-            <span>모델 평가 문제 <b>10문제</b></span>
-          </div>
-        </section>
       </div>
     </section>
   </div>
@@ -277,16 +265,143 @@
       const subjectTexts = modal?.querySelectorAll("[data-modal-subject]") ?? [];
       const scoreText = modal?.querySelector("[data-modal-score]");
       const rateText = modal?.querySelector("[data-modal-rate]");
+      const averageText = modal?.querySelector("[data-modal-average]");
+      const percentileText = modal?.querySelector("[data-modal-percentile]");
+      const examCountText = modal?.querySelector("[data-modal-exam-count]");
+      const detailCard = modal?.querySelector(".subject-score-detail");
+      const trendSvg = modal?.querySelector(".subject-trend-chart svg");
+      const trendX = modal?.querySelector(".subject-trend-chart .trend-x");
+      const strongList = modal?.querySelector(".subject-list-card.strong");
+      const weakList = modal?.querySelector(".subject-list-card.weak");
+      const commentCard = modal?.querySelector(".subject-comment-card");
       const closeButtons = modal?.querySelectorAll("[data-subject-close]") ?? [];
+
+      function roundedPercent(value) {
+        const number = Number(value);
+        return Number.isFinite(number) ? Math.round(number) : 0;
+      }
+
+      function renderDetailRows(detail = []) {
+        if (!detailCard) return;
+        detailCard.querySelectorAll(".subject-detail-row").forEach((row) => row.remove());
+        ["실무형", "이론형"].forEach((type) => {
+          const item = detail.find((entry) => entry.questionType === type);
+          const rate = roundedPercent(item?.correctRate);
+          const row = document.createElement("div");
+          row.className = "subject-detail-row";
+
+          const title = document.createElement("strong");
+          title.textContent = type;
+          const track = document.createElement("span");
+          const bar = document.createElement("i");
+          bar.style.width = `${Math.max(0, Math.min(100, rate))}%`;
+          track.appendChild(bar);
+          const score = document.createElement("em");
+          score.textContent = `${rate}%`;
+          const note = document.createElement("small");
+          note.textContent = "정답률";
+
+          row.append(title, track, score, note);
+          detailCard.appendChild(row);
+        });
+      }
+
+      function renderTrend(trend = []) {
+        if (!trendSvg || !trendX) return;
+        const items = trend.slice(-5);
+        if (!items.length) {
+          trendSvg.innerHTML = "";
+          trendX.innerHTML = "<span>-</span><span>-</span><span>-</span><span>-</span><span>-</span>";
+          return;
+        }
+        const xPositions = items.length === 1
+          ? [260]
+          : items.map((_, index) => 48 + (444 * index / (items.length - 1)));
+        const points = items.map((item, index) => {
+          const score = Math.max(0, Math.min(100, Number(item.examScore) || 0));
+          return {
+            x: xPositions[index],
+            y: 176 - (score * 1.5),
+          };
+        });
+        trendSvg.innerHTML = "";
+        const line = document.createElementNS("http://www.w3.org/2000/svg", "polyline");
+        line.setAttribute("points", points.map((point) => `${point.x.toFixed(1)},${point.y.toFixed(1)}`).join(" "));
+        trendSvg.appendChild(line);
+        points.forEach((point) => {
+          const circle = document.createElementNS("http://www.w3.org/2000/svg", "circle");
+          circle.setAttribute("cx", point.x.toFixed(1));
+          circle.setAttribute("cy", point.y.toFixed(1));
+          circle.setAttribute("r", "6");
+          trendSvg.appendChild(circle);
+        });
+        trendX.innerHTML = "";
+        items.forEach((item) => {
+          const label = document.createElement("span");
+          label.textContent = item.examRound ? `${item.examRound}회` : "-";
+          trendX.appendChild(label);
+        });
+      }
+
+      function renderUnitList(target, items = []) {
+        if (!target) return;
+        target.querySelectorAll("p").forEach((row) => row.remove());
+        if (!items.length) {
+          const empty = document.createElement("p");
+          const label = document.createElement("span");
+          label.textContent = "분석 가능한 영역이 없습니다";
+          const value = document.createElement("strong");
+          value.textContent = "-";
+          empty.append(label, value);
+          target.appendChild(empty);
+          return;
+        }
+        items.slice(0, 3).forEach((item) => {
+          const row = document.createElement("p");
+          const label = document.createElement("span");
+          label.textContent = item.keyword || "미분류";
+          const value = document.createElement("strong");
+          value.textContent = `${roundedPercent(item.correctRate)}%`;
+          row.append(label, value);
+          target.appendChild(row);
+        });
+      }
+
+      function renderAiComment(comment, subject) {
+        if (!commentCard) return;
+        commentCard.querySelectorAll("p").forEach((row) => row.remove());
+        const image = commentCard.querySelector(".subject-comment-image");
+        const text = String(comment || `${subject} 과목의 강점은 유지하고 취약 영역은 쉬운 문제부터 다시 점검해 보세요. 꾸준히 이어가면 다음 점수에서 변화를 만들 수 있어요.`).trim();
+        const paragraph = document.createElement("p");
+        paragraph.textContent = text;
+        if (image) {
+          commentCard.insertBefore(paragraph, image);
+        } else {
+          commentCard.appendChild(paragraph);
+        }
+      }
 
       function openSubjectModal(link) {
         if (!modal) return;
+        const subjectCode = link.dataset.subjectCode || "";
         const subject = link.dataset.subject || "AI";
         const score = link.dataset.score || "92";
         const rate = link.dataset.rate || score;
+        const average = link.dataset.average || "76";
+        const percentile = link.dataset.percentile || "15";
+        const examCount = link.dataset.examCount || "8";
         subjectTexts.forEach((el) => { el.textContent = subject; });
         if (scoreText) scoreText.textContent = score;
         if (rateText) rateText.textContent = rate;
+        if (averageText) averageText.textContent = `${average}점`;
+        if (percentileText) percentileText.textContent = `상위 ${percentile}%`;
+        if (examCountText) examCountText.textContent = `${examCount}회`;
+        const modalData = window.analysisSubjectModalData?.[subjectCode] || {};
+        renderDetailRows(modalData.detail || []);
+        renderTrend(modalData.trend || []);
+        renderUnitList(strongList, modalData.strongUnits || []);
+        renderUnitList(weakList, modalData.weakUnits || []);
+        renderAiComment(modalData.comment, subject);
         modal.classList.add("is-open");
         modal.setAttribute("aria-hidden", "false");
         document.body.classList.add("modal-open");

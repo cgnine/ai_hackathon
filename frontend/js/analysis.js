@@ -172,18 +172,32 @@ function renderAnalysisReportSubjects(subjectStats = []) {
   }
 
   list.innerHTML = "";
+  window.analysisSubjectModalData = {};
   subjects.forEach((subject) => {
-    const score = Number(subject.score || subject.accuracy || 0);
+    const summary = subject.summary || {};
+    const score = Number(summary.myScore ?? subject.score ?? subject.accuracy ?? 0);
+    const modalScore = Number(summary.myScore ?? score);
+    const averageScore = Number(summary.avgScore ?? subject.overallAverageScore ?? 0);
+    const percentile = Number(summary.percentile ?? 0);
+    const examCount = Number(summary.examCount ?? 0);
     const subjectName = subject.subjectName || subject.subjectCode || "과목";
     const roundedScore = Math.round(score);
+    const roundedModalScore = Math.round(modalScore);
     const safeScore = Math.max(0, Math.min(100, roundedScore));
     const row = document.createElement("a");
     row.href = "#";
     row.className = "analysis-subject-line";
     row.dataset.subjectModal = "";
+    row.dataset.subjectCode = subject.subjectCode || "";
     row.dataset.subject = subjectName;
-    row.dataset.score = String(roundedScore);
-    row.dataset.rate = String(roundedScore);
+    row.dataset.score = String(roundedModalScore);
+    row.dataset.rate = String(roundedModalScore);
+    row.dataset.average = String(Math.round(averageScore));
+    row.dataset.percentile = String(Math.round(percentile));
+    row.dataset.examCount = String(Math.round(examCount));
+    if (subject.subjectCode) {
+      window.analysisSubjectModalData[subject.subjectCode] = subject.modal || {};
+    }
     row.innerHTML = `
       <strong></strong>
       <span class="analysis-subject-bar"><i></i></span>

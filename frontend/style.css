@@ -6444,8 +6444,9 @@ body[data-page="analysis"] .page-shell {
 
 .analysis-generate-copy {
   display: grid;
-  gap: 14px;
+  gap: 10px;
   min-width: 0;
+  padding-top: 8px;
 }
 
 .analysis-generate-copy p {
@@ -6456,36 +6457,29 @@ body[data-page="analysis"] .page-shell {
   line-height: 1.65;
 }
 
-.analysis-generate-copy select {
-  width: min(100%, 320px);
-  min-height: 42px;
-  padding: 0 14px;
-  border: 1px solid var(--line);
-  border-radius: 6px;
-  background: #ffffff;
-  color: #243553;
-  font-size: 0.9rem;
-  font-weight: 400;
-}
-
 .analysis-generate-copy button {
   display: inline-flex;
   width: min(100%, 320px);
   min-height: 50px;
+  margin-top: 18px;
   align-items: center;
   justify-content: center;
   gap: 18px;
+  padding: 0 18px;
   border: 0;
   border-radius: 5px;
   background: var(--navy);
   color: #ffffff;
   font-size: 0.92rem;
   font-weight: 600;
+  line-height: 1;
+  text-align: center;
 }
 
 .analysis-generate-copy button span {
   font-size: 1.6rem;
   font-weight: 400;
+  line-height: 1;
 }
 
 .analysis-illustration {
@@ -6809,8 +6803,7 @@ body.modal-open {
   background: #ffffff;
 }
 
-.subject-modal-card h3,
-.subject-strategy-card h3 {
+.subject-modal-card h3 {
   display: flex;
   align-items: center;
   gap: 8px;
@@ -6821,8 +6814,7 @@ body.modal-open {
   letter-spacing: -0.02em;
 }
 
-.subject-modal-card h3::before,
-.subject-strategy-card h3::before {
+.subject-modal-card h3::before {
   display: inline-grid !important;
   flex: 0 0 18px;
   width: 18px !important;
@@ -6986,6 +6978,7 @@ body.modal-open {
 
 .subject-comment-card p {
   margin: 0;
+  padding-right: 82px;
   color: #243553;
   font-size: 0.88rem;
   font-weight: 400;
@@ -7003,46 +6996,6 @@ body.modal-open {
   object-fit: contain;
 }
 
-.subject-strategy-card {
-  display: grid;
-  gap: 10px;
-  padding: 18px 30px 18px;
-  border-radius: 10px;
-  background: linear-gradient(100deg, #fff8ea, #fffaf2);
-}
-
-.subject-strategy-card p {
-  margin: 0;
-  color: #243553;
-  font-size: 0.86rem;
-  font-weight: 400;
-}
-
-.subject-strategy-card div {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 16px;
-  margin-top: 6px;
-}
-
-.subject-strategy-card span {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  min-height: 42px;
-  padding: 0 30px;
-  border-radius: 6px;
-  background: #ffffff;
-  color: #050505;
-  font-size: 0.9rem;
-  font-weight: 600;
-}
-
-.subject-strategy-card b {
-  color: #243553;
-  font-weight: 500;
-}
-
 @media (max-width: 1100px) {
   .subject-analysis-summary,
   .subject-analysis-grid,
@@ -7050,8 +7003,7 @@ body.modal-open {
     grid-template-columns: 1fr;
   }
 
-  .subject-summary-stats,
-  .subject-strategy-card div {
+  .subject-summary-stats {
     grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 }
@@ -7085,8 +7037,7 @@ body.modal-open {
     padding-inline: 0;
   }
 
-  .subject-summary-stats,
-  .subject-strategy-card div {
+  .subject-summary-stats {
     grid-template-columns: 1fr;
   }
 
@@ -7102,9 +7053,6 @@ body.modal-open {
     max-width: 100%;
   }
 
-  .subject-strategy-card span {
-    padding-inline: 16px;
-  }
 }
 
 @media (max-width: 1180px) {
