@@ -963,9 +963,10 @@ body[data-page="ranking"] .nav-btn:hover {
 
 .ranking-list li {
   display: grid;
-  grid-template-columns: 34px minmax(0, 1fr) auto;
+  grid-template-columns: 34px max-content auto max-content;
   align-items: center;
-  gap: 12px;
+  column-gap: 18px;
+  row-gap: 8px;
   min-height: 52px;
   padding: 0 14px;
   border: 0;
@@ -1013,9 +1014,23 @@ body[data-page="ranking"] .nav-btn:hover {
   color: #334155;
   font-size: 0.98rem;
   font-weight: 500;
+  justify-self: start;
+}
+
+.ranking-affiliation {
+  color: #64748b;
+  font-size: 0.78rem;
+  font-weight: 600;
+  justify-self: start;
+  white-space: nowrap;
+}
+
+.ranking-affiliation.is-empty {
+  min-width: 0;
 }
 
 .ranking-list strong {
+  justify-self: end;
   color: #1d4ed8;
   font-size: 0.96rem;
   font-weight: 600;
@@ -1747,9 +1762,20 @@ body[data-page="ranking"] .nav-btn:hover {
   text-align: center;
 }
 
+.rival-avatar {
+  box-sizing: border-box;
+  overflow: hidden;
+  padding: 4px;
+  border: 2px solid #e5e7eb;
+  background: #fff;
+  object-fit: contain;
+  object-position: center;
+}
+
 .rival-profile p {
-  color: #2563eb;
-  font-size: 0.82rem;
+  color: #64748b;
+  font-size: 0.78rem;
+  font-weight: 600;
 }
 
 .rival-score-summary {
@@ -1870,7 +1896,8 @@ body[data-page="ranking"] .nav-btn:hover {
 }
 
 .ranking-table-card .ranking-list li {
-  grid-template-columns: 36px minmax(0, 1fr) 70px;
+  grid-template-columns: 36px max-content auto 70px;
+  column-gap: 16px;
   min-height: 48px;
 }
 

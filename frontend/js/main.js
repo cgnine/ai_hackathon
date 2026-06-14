@@ -16,29 +16,44 @@ function setCurrentMonthTitle(monthLabel) {
   title.textContent = `${currentMonth} 랭킹`;
 }
 
+function isKbDataSystemMember(memberId) {
+  return String(memberId || "").trim().toUpperCase().startsWith("D");
+}
+
+function renderRankingAffiliation(target, memberId, hasScore) {
+  if (!target) return;
+  const showAffiliation = hasScore && isKbDataSystemMember(memberId);
+  target.textContent = showAffiliation ? "KB데이타시스템" : "\u00a0";
+  target.classList.toggle("is-empty", !showAffiliation);
+}
+
 function renderMonthlyRanking(items) {
   const list = document.getElementById("monthlyRankingList");
   if (!list) return;
 
   monthlyRankingItems = Array.isArray(items) ? items.slice(0, 10) : [];
-  const rows = Array.from({ length: 7 }, (_, index) => monthlyRankingItems[index] || { rank: index + 1 });
+  const visibleCount = document.body?.dataset.page === "ranking" ? 7 : 5;
+  const rows = Array.from({ length: visibleCount }, (_, index) => monthlyRankingItems[index] || { rank: index + 1 });
   list.replaceChildren();
 
   rows.forEach((item, index) => {
     const row = document.createElement("li");
     const rank = document.createElement("span");
     const name = document.createElement("span");
+    const affiliation = document.createElement("span");
     const score = document.createElement("strong");
     const hasScore = item.memberName || item.memberId;
 
     rank.className = "ranking-rank";
     name.className = "ranking-name";
+    affiliation.className = "ranking-affiliation";
     row.classList.toggle("ranking-placeholder", !hasScore);
     rank.textContent = item.rank || index + 1;
     name.textContent = hasScore ? (item.memberName || item.memberId) : "\u00a0";
+    renderRankingAffiliation(affiliation, item.memberId, hasScore);
     score.textContent = hasScore ? formatMonthlyScore(item.averageScore) : "\u00a0";
 
-    row.append(rank, name, score);
+    row.append(rank, name, affiliation, score);
     list.appendChild(row);
   });
 
@@ -56,17 +71,20 @@ function renderRankingMoreList() {
     const row = document.createElement("li");
     const rank = document.createElement("span");
     const name = document.createElement("span");
+    const affiliation = document.createElement("span");
     const score = document.createElement("strong");
     const hasScore = item.memberName || item.memberId;
 
     rank.className = "ranking-rank";
     name.className = "ranking-name";
+    affiliation.className = "ranking-affiliation";
     row.classList.toggle("ranking-placeholder", !hasScore);
     rank.textContent = item.rank || index + 1;
     name.textContent = hasScore ? (item.memberName || item.memberId) : "\u00a0";
+    renderRankingAffiliation(affiliation, item.memberId, hasScore);
     score.textContent = hasScore ? formatMonthlyScore(item.averageScore) : "\u00a0";
 
-    row.append(rank, name, score);
+    row.append(rank, name, affiliation, score);
     list.appendChild(row);
   });
 }
@@ -207,8 +225,14 @@ function renderRankingRival(rival) {
   const rivalScore = formatRankingNumber(rival.rivalScore);
   const scoreGap = formatRankingNumber(rival.scoreGap);
   const avatar = document.getElementById("rankingRivalAvatar");
+  const affiliation = document.getElementById("rankingRivalAffiliation");
 
-  if (avatar) avatar.textContent = String(rivalName).trim().slice(0, 1) || "?";
+  if (avatar) avatar.alt = `${displayRivalName} 프로필 이미지`;
+  if (affiliation) {
+    const showAffiliation = isKbDataSystemMember(rival.rivalId);
+    affiliation.textContent = showAffiliation ? "KB데이타시스템" : "";
+    affiliation.hidden = !showAffiliation;
+  }
   setRankingText("rankingRivalName", displayRivalName);
   setRankingText("rankingRivalRank", rivalRank);
   setRankingText("rankingRivalScore", rivalScore);
