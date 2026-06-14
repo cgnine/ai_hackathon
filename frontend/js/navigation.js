@@ -460,8 +460,14 @@ function renderExamHistoryBadges(item = {}) {
   const round = item.roundTitle || "1회차";
   const correct = Number(item.correctCount || item.correct || 0);
   const total = Number(item.total || 0);
+  const practicalRate = Number(item.practicalRate ?? 0);
+  const percentile = Number(item.percentile ?? 0);
   const rate = total > 0 ? Math.round((correct / total) * 100) : null;
-  const badges = [round, rate === null ? "실무형 40%" : `정답률 ${rate}%`, "상위 30%"];
+  const badges = [
+    round,
+    `실무형 ${Number.isFinite(practicalRate) ? Math.round(practicalRate) : 0}%`,
+    `상위 ${Number.isFinite(percentile) ? Math.round(percentile) : 0}%`
+  ];
   return badges.map((badge) => `<span>${badge}</span>`).join("");
 }
 

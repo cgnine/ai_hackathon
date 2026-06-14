@@ -501,14 +501,14 @@ def _bedrock_ranking_learning_recommendations(pattern: dict[str, Any]) -> list[s
 
 def _compact_analysis_headline(value: str) -> str:
     text = " ".join(str(value or "").replace("…", "").split()).rstrip(".。!?！？")
-    if len(text) <= 25:
+    if len(text) <= 15:
         return text
-    return "강점 유지, 취약 보완"
+    return "강점 유지"
 
 
 def _compact_analysis_comment(value: str) -> str:
     text = " ".join(str(value or "").replace("…", "").split())
-    if len(text) <= 70:
+    if len(text) <= 60:
         return text
     sentences = []
     for chunk in text.replace("!", ".").replace("?", ".").split("."):
@@ -518,9 +518,9 @@ def _compact_analysis_comment(value: str) -> str:
     compact = ". ".join(sentences[:2])
     if compact:
         compact = compact.rstrip(".") + "."
-    if len(compact) <= 70:
+    if len(compact) <= 60:
         return compact
-    return "강점 과목은 유지하세요. 취약 과목은 핵심 개념과 오답 단원을 복습하세요."
+    return "강점 과목은 유지하고 취약 과목은 핵심 개념부터 보완하세요."
 
 
 def _build_analysis_comment_report(
@@ -1235,15 +1235,18 @@ def _bedrock_analysis_ai_summary(
         ],
     }
     user_prompt = (
-        "AI 총평 작성 규칙\n"
-        "1. aiOverview.headline은 25자 이내의 짧은 1문장으로 작성\n"
-        "2. aiOverview.comment는 정확히 2문장, 총 70자 이내로 작성\n"
-        "3. 긴 과목명은 쓰지 말고 subjectCode만 사용\n"
-        "4. 강점, 보완점, 향후 방향만 간결히 작성\n"
-        "5. 과목은 최대 2개까지만 언급\n"
-        "6. 점수 나열 금지\n"
-        "7. headline은 명사형 요약으로 작성하고 마침표와 말줄임표를 쓰지 않음\n"
-        "8. comment는 두 문장 모두 완결된 짧은 문장으로 작성하고 말줄임표를 쓰지 않음\n\n"
+        "AI 총평(aiOverview) 작성 규칙\n"
+        "1. headline은 15자 이내로 작성\n"
+        "2. comment는 최대 2문장으로 작성\n"
+        "3. comment는 60자 이내로 작성\n"
+        "4. 강점 과목을 반드시 언급\n"
+        "5. 취약 과목을 반드시 언급\n"
+        "6. 전체 평균 또는 백분위 정보를 반영\n"
+        "7. 점수를 단순 나열하지 않음\n"
+        "8. 과도한 칭찬 금지\n"
+        "9. 줄바꿈 없이 작성\n"
+        "10. 자연스럽고 긍정적인 어조 사용\n"
+        "11. aiOverview는 JSON 객체 안의 headline, comment에만 작성\n\n"
         "AI 코멘트 작성 규칙\n"
         "1. aiComment는 comment, strengthAnalysis, weaknessCause, trendInsight, nextAction을 모두 작성\n"
         "2. strengthAnalysis는 강점 과목과 안정적인 이유를 2문장으로 작성\n"
@@ -2658,76 +2661,88 @@ def get_exam_history(
 
             cur.execute(
                 f"""
-                SELECT
-                    COUNT(*) AS total_exam_count,
-                    ROUND(
-                        AVG(
-                            CASE
-                                WHEN e.exam_score IS NOT NULL
-                                 AND e.exam_score::text ~ '^[0-9]+(\\.[0-9]+)?$'
-                                THEN CAST(e.exam_score AS DECIMAL(5,2))
-                                ELSE NULL
-                            END
-                        ),
-                        1
-                    ) AS avg_score,
-                    MAX(
+                WITH exam_scores AS (
+                    SELECT
+                        e.exam_id,
+                        e.subject_code,
                         CASE
                             WHEN e.exam_score IS NOT NULL
                              AND e.exam_score::text ~ '^[0-9]+(\\.[0-9]+)?$'
                             THEN CAST(e.exam_score AS DECIMAL(5,2))
                             ELSE NULL
-                        END
-                    ) AS max_score,
-                    MIN(
+                        END AS score
+                    FROM exam_tb e
+                ),
+                ranked_exam AS (
+                    SELECT
+                        exam_id,
+                        ROUND(
+                            (PERCENT_RANK() OVER (
+                                PARTITION BY subject_code
+                                ORDER BY score DESC NULLS LAST
+                            ) * 100)::numeric,
+                            1
+                        ) AS percentile
+                    FROM exam_scores
+                ),
+                exam_base AS (
+                    SELECT
+                        e.exam_id,
+                        e.exam_round,
+                        e.exam_date,
+                        e.exam_time,
+                        e.created_at AS exam_created_at,
+                        e.created_at,
+                        s.subject_code,
+                        COALESCE(s.subject_name, s.subject_description, s.subject_code) AS subject_name,
                         CASE
                             WHEN e.exam_score IS NOT NULL
                              AND e.exam_score::text ~ '^[0-9]+(\\.[0-9]+)?$'
                             THEN CAST(e.exam_score AS DECIMAL(5,2))
                             ELSE NULL
-                        END
-                    ) AS min_score
-                FROM exam_tb e
-                WHERE e.member_id = %s
-                  {subject_filter}
-                """,
-                tuple(filter_params),
-            )
-            summary_row = cur.fetchone() or {}
-            total_count = int(summary_row.get("total_exam_count") or 0)
-
-            cur.execute(
-                f"""
+                        END AS score,
+                        COUNT(h.exam_question_id) AS total,
+                        COUNT(h.exam_question_id) FILTER (
+                            WHERE h.selected_number::text ~ '^[0-9]+$'
+                              AND q.answer_number::text ~ '^[0-9]+$'
+                              AND h.selected_number::integer = q.answer_number::integer
+                        ) AS correct_count,
+                        ROUND(
+                            COUNT(h.exam_question_id) FILTER (
+                                WHERE COALESCE(q.question_type, '') LIKE '%%실무%%'
+                                   OR COALESCE(q.question_content2, '') <> ''
+                            )::numeric
+                            / NULLIF(COUNT(h.exam_question_id), 0)
+                            * 100,
+                            0
+                        ) AS practical_rate
+                    FROM exam_tb e
+                    JOIN subject_tb s ON s.subject_code = e.subject_code
+                    LEFT JOIN exam_history_tb h ON h.exam_id = e.exam_id
+                    LEFT JOIN question_tb q
+                        ON q.question_id = h.question_id
+                       AND q.subject_code = e.subject_code
+                    WHERE LOWER(e.member_id) = LOWER(%s)
+                      {subject_filter}
+                    GROUP BY
+                        e.exam_id, e.exam_round, e.exam_score, e.exam_date, e.exam_time, e.created_at,
+                        s.subject_code, s.subject_name, s.subject_description
+                )
                 SELECT
-                    e.exam_id,
-                    e.exam_round,
-                    e.exam_date,
-                    e.exam_time,
-                    e.created_at AS exam_created_at,
-                    s.subject_code,
-                    COALESCE(s.subject_name, s.subject_description, s.subject_code) AS subject_name,
-                    COUNT(h.exam_question_id) AS total,
-                    COUNT(h.exam_question_id) FILTER (
-                        WHERE h.selected_number::text ~ '^[0-9]+$'
-                          AND q.answer_number::text ~ '^[0-9]+$'
-                          AND h.selected_number::integer = q.answer_number::integer
-                    ) AS correct_count
-                FROM exam_tb e
-                JOIN subject_tb s ON s.subject_code = e.subject_code
-                JOIN exam_history_tb h ON h.exam_id = e.exam_id
-                JOIN question_tb q
-                    ON q.question_id = h.question_id
-                   AND q.subject_code = e.subject_code
-                WHERE e.member_id = %s
-                  {subject_filter}
-                GROUP BY
-                    e.exam_id, e.exam_round, e.exam_score, e.exam_date, e.exam_time, e.created_at,
-                    s.subject_code, s.subject_name, s.subject_description
+                    b.*,
+                    COALESCE(r.percentile, 0) AS percentile,
+                    COUNT(*) OVER() AS total_exam_count,
+                    ROUND(AVG(b.score) OVER(), 1) AS avg_score,
+                    MAX(b.score) OVER() AS max_score,
+                    MIN(b.score) OVER() AS min_score
+                FROM exam_base b
+                LEFT JOIN ranked_exam r
+                  ON r.exam_id = b.exam_id
                 ORDER BY
-                    e.exam_date DESC NULLS LAST,
-                    e.exam_time DESC NULLS LAST,
-                    e.created_at DESC NULLS LAST,
-                    e.exam_id DESC
+                    b.exam_date DESC NULLS LAST,
+                    b.exam_time DESC NULLS LAST,
+                    b.created_at DESC NULLS LAST,
+                    b.exam_id DESC
                 LIMIT %s
                 OFFSET %s
                 """,
@@ -2736,10 +2751,12 @@ def get_exam_history(
             rows = cur.fetchall()
 
     items = []
+    first_row = rows[0] if rows else {}
+    total_count = int(first_row.get("total_exam_count") or 0)
     for row in rows:
         total = int(row["total"] or 0)
         correct_count = int(row["correct_count"] or 0)
-        exam_score = row.get("exam_score")
+        exam_score = row.get("score")
         numeric_exam_score = (
             float(exam_score)
             if exam_score is not None and str(exam_score).replace(".", "", 1).isdigit()
@@ -2755,6 +2772,8 @@ def get_exam_history(
                 "correctCount": correct_count,
                 "wrongCount": total - correct_count,
                 "score": numeric_exam_score if numeric_exam_score is not None else _score(correct_count, total),
+                "percentile": float(row["percentile"] or 0),
+                "practicalRate": float(row["practical_rate"] or 0),
                 "createdAt": _created_at(row),
                 "examDate": row["exam_date"],
                 "examTime": row["exam_time"],
@@ -2773,9 +2792,9 @@ def get_exam_history(
         "subjectFilters": subject_filters,
         "summary": {
             "totalExamCount": total_count,
-            "avgScore": float(summary_row["avg_score"]) if summary_row.get("avg_score") is not None else 0,
-            "maxScore": float(summary_row["max_score"]) if summary_row.get("max_score") is not None else 0,
-            "minScore": float(summary_row["min_score"]) if summary_row.get("min_score") is not None else 0,
+            "avgScore": float(first_row["avg_score"]) if first_row.get("avg_score") is not None else 0,
+            "maxScore": float(first_row["max_score"]) if first_row.get("max_score") is not None else 0,
+            "minScore": float(first_row["min_score"]) if first_row.get("min_score") is not None else 0,
         },
     }
 
