@@ -1258,9 +1258,10 @@ body[data-page="ranking"] .nav-btn:hover {
   color: #15803d;
 }
 
-.ranking-strength-tags em {
-  background: #f3f0f8;
-  color: #4b5563;
+.ranking-strength-tags .ranking-keyword {
+  background: #f3f0f8 !important;
+  color: #4b5563 !important;
+  font-weight: 700;
 }
 
 .ranking-strength-tags .weak b {
@@ -1712,13 +1713,16 @@ body[data-page="ranking"] .nav-btn:hover {
 }
 
 .ranking-goal-coach {
+  display: flex;
+  min-height: 72px;
+  align-items: center;
   padding: 14px 16px;
   border: 1px solid #fde68a;
   border-radius: 8px;
   background: #fffaf0;
   color: #07135f;
   font-size: 0.88rem;
-  font-weight: 800;
+  font-weight: 400;
   line-height: 1.55;
 }
 
@@ -1781,6 +1785,12 @@ body[data-page="ranking"] .nav-btn:hover {
   font-weight: 800;
 }
 
+.rival-score-summary p strong span,
+.rival-score-summary > div > strong span {
+  font-size: inherit;
+  font-weight: inherit;
+}
+
 .rival-score-summary em {
   padding: 5px 10px;
   border-radius: 6px;
@@ -1807,8 +1817,8 @@ body[data-page="ranking"] .nav-btn:hover {
   display: flex;
   align-items: center;
   gap: 12px;
-  min-height: 46px;
-  padding: 0 14px;
+  min-height: 96px;
+  padding: 14px;
   border: 1px solid #e5eaf0;
   border-radius: 7px;
   background: #fff;
@@ -1822,10 +1832,11 @@ body[data-page="ranking"] .nav-btn:hover {
 }
 
 .rival-growth-note strong {
+  display: block;
   color: #07135f;
   font-size: 0.84rem;
   font-weight: 800;
-  line-height: 1.4;
+  line-height: 1.55;
 }
 
 .rival-table {
@@ -1880,11 +1891,11 @@ body[data-page="ranking"] .nav-btn:hover {
 
 .learning-list li {
   display: grid;
-  grid-template-columns: 42px 1fr;
-  gap: 12px;
+  grid-template-columns: 18px 1fr;
+  gap: 10px;
   align-items: center;
-  min-height: 66px;
-  padding: 10px 0;
+  min-height: 50px;
+  padding: 8px 0;
   border-bottom: 1px solid #edf2f7;
 }
 
@@ -1894,13 +1905,15 @@ body[data-page="ranking"] .nav-btn:hover {
 
 .learning-icon {
   display: grid;
-  width: 34px;
-  height: 34px;
+  width: 14px;
+  height: 14px;
   place-items: center;
-  border-radius: 8px;
-  background: #eff6ff;
-  color: #2563eb;
+  border-radius: 999px;
+  background: #fff2b8;
+  color: #d59b00;
+  font-size: 1rem;
   font-weight: 800;
+  line-height: 1;
 }
 
 .learning-list strong {
@@ -4317,6 +4330,20 @@ body[data-page="mock"] .choice-btn.selected {
 
 .report-eyebrow {
   margin-bottom: -4px;
+}
+
+.result-report-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.result-report-head h2 {
+  margin: 6px 0 0;
+  color: #06143a;
+  font-size: clamp(1.24rem, 1.8vw, 1.58rem);
+  font-weight: 800;
 }
 
 .report-top {

@@ -21,7 +21,7 @@ function renderMonthlyRanking(items) {
   if (!list) return;
 
   monthlyRankingItems = Array.isArray(items) ? items.slice(0, 10) : [];
-  const rows = Array.from({ length: 5 }, (_, index) => monthlyRankingItems[index] || { rank: index + 1 });
+  const rows = Array.from({ length: 7 }, (_, index) => monthlyRankingItems[index] || { rank: index + 1 });
   list.replaceChildren();
 
   rows.forEach((item, index) => {
@@ -138,6 +138,12 @@ function setRankingText(id, value) {
   if (target) target.textContent = value;
 }
 
+function maskKoreanName(name) {
+  const text = String(name || "").trim();
+  if (text.length < 3) return text || "-";
+  return `${text[0]}O${text.slice(2)}`;
+}
+
 function renderRankingSubjectTargets(subjectTargets) {
   const items = Array.isArray(subjectTargets) ? subjectTargets.slice(0, 2) : [];
   if (!items.length) return;
@@ -196,19 +202,20 @@ function renderRankingRival(rival) {
   if (!rival) return;
 
   const rivalName = rival.rivalName || rival.rivalId || "-";
+  const displayRivalName = maskKoreanName(rivalName);
   const rivalRank = Number(rival.rivalRank) || 0;
   const rivalScore = formatRankingNumber(rival.rivalScore);
   const scoreGap = formatRankingNumber(rival.scoreGap);
   const avatar = document.getElementById("rankingRivalAvatar");
 
   if (avatar) avatar.textContent = String(rivalName).trim().slice(0, 1) || "?";
-  setRankingText("rankingRivalName", rivalName);
+  setRankingText("rankingRivalName", displayRivalName);
   setRankingText("rankingRivalRank", rivalRank);
   setRankingText("rankingRivalScore", rivalScore);
   setRankingText("rankingRivalScoreGap", scoreGap);
   setRankingText(
     "rankingRivalNote",
-    rival.rivalCoachMessage || `${rivalName}님과 평균 점수 차이가 ${scoreGap}점으로 가장 가깝습니다.`
+    rival.rivalCoachMessage || `${displayRivalName}님과 평균 점수 차이가 ${scoreGap}점으로 가장 가깝습니다.`
   );
 
   const comparisons = Array.isArray(rival.subjectComparisons) ? rival.subjectComparisons : [];
@@ -231,7 +238,7 @@ function renderRankingRival(rival) {
 
   const rivalRow = document.createElement("tr");
   const rivalLabel = document.createElement("th");
-  rivalLabel.textContent = rivalName;
+  rivalLabel.textContent = displayRivalName;
   rivalRow.appendChild(rivalLabel);
 
   comparisons.forEach((item) => {
@@ -262,6 +269,8 @@ function renderRankingStrengthKeywords(keywords) {
   const weakLabel = document.createElement("b");
   const weakValue = document.createElement("em");
 
+  strongValue.className = "ranking-keyword";
+  weakValue.className = "ranking-keyword";
   strongLabel.textContent = "강점";
   strongValue.textContent = strongKeyword;
   strong.append(strongLabel, strongValue);
@@ -278,8 +287,8 @@ function renderRankingLearningPattern(pattern) {
   const list = document.getElementById("rankingLearningList");
   if (!list) return;
 
-  const recommendations = Array.isArray(pattern.recommendations) ? pattern.recommendations.slice(0, 3) : [];
-  if (recommendations.length === 3) {
+  const recommendations = Array.isArray(pattern.recommendations) ? pattern.recommendations.slice(0, 4) : [];
+  if (recommendations.length === 4) {
     list.replaceChildren();
     recommendations.forEach((recommendation) => {
       const row = document.createElement("li");
@@ -288,7 +297,7 @@ function renderRankingLearningPattern(pattern) {
       const title = document.createElement("strong");
 
       icon.className = "learning-icon";
-      icon.textContent = "AI";
+      icon.textContent = "•";
       title.textContent = recommendation;
       copy.appendChild(title);
       row.append(icon, copy);
@@ -298,26 +307,10 @@ function renderRankingLearningPattern(pattern) {
   }
 
   const items = [
-    {
-      icon: "◇",
-      title: `상위권 평균 ${formatRankingNumber(pattern.avgExamCount)}회 응시`,
-      description: "꾸준한 실전 응시로 점수 안정성을 높여요."
-    },
-    {
-      icon: "□",
-      title: `평균 ${formatRankingNumber(pattern.avgSubjectCount)}개 과목 학습`,
-      description: "여러 과목을 균형 있게 반복 학습해요."
-    },
-    {
-      icon: "☆",
-      title: `실무형 문제 비중 ${formatRankingNumber(pattern.avgPracticalRate)}%`,
-      description: "실무형 문제를 중심으로 감각을 키워요."
-    },
-    {
-      icon: "◇",
-      title: `${pattern.weakSubject || "취약 과목"} 집중 보완`,
-      description: `현재 평균 ${formatRankingNumber(pattern.weakSubjectScore)}점 영역을 우선 학습해요.`
-    }
+    `상위권 평균 ${formatRankingNumber(pattern.avgExamCount)}회 응시`,
+    `평균 ${formatRankingNumber(pattern.avgSubjectCount)}개 과목 학습`,
+    `실무형 문제 비중 ${formatRankingNumber(pattern.avgPracticalRate)}%`,
+    `${pattern.weakSubject || "취약 과목"} 집중 보완`
   ];
 
   list.replaceChildren();
@@ -326,13 +319,11 @@ function renderRankingLearningPattern(pattern) {
     const icon = document.createElement("span");
     const copy = document.createElement("div");
     const title = document.createElement("strong");
-    const description = document.createElement("p");
 
     icon.className = "learning-icon";
-    icon.textContent = item.icon;
-    title.textContent = item.title;
-    description.textContent = item.description;
-    copy.append(title, description);
+    icon.textContent = "•";
+    title.textContent = item;
+    copy.appendChild(title);
     row.append(icon, copy);
     list.appendChild(row);
   });

@@ -158,10 +158,10 @@ def _fallback_ranking_goal_coach(
     gap = int(gap_score) if float(gap_score).is_integer() else gap_score
     if subjects:
         subject_text = "와 ".join(subjects)
-        message = f"현재 {target_rank}위까지 {gap}점 차이입니다. {subject_text} 학습을 강화해 보세요."
+        message = f"현재 {target_rank}위까지 {gap}점 차이입니다. {subject_text} 강화해 보세요."
     else:
-        message = f"현재 {target_rank}위까지 {gap}점 차이입니다. 핵심 과목을 꾸준히 보완해 보세요."
-    return _truncate_commentary_sentence(message, 50)
+        message = f"현재 {target_rank}위까지 {gap}점 차이입니다. 핵심 과목을 보완해 보세요."
+    return message if len(message) <= 40 else f"목표 순위까지 {gap}점 남았습니다."
 
 
 def _bedrock_ranking_goal_coach(
@@ -182,17 +182,21 @@ def _bedrock_ranking_goal_coach(
     ]
     system_prompt = "당신은 KB Masters의 AI 성장 코치입니다."
     user_prompt = (
-        "사용자의 현재 순위, 목표 순위, 점수 차이, 추천 과목을 분석하여 목표 달성을 위한 학습 전략을 제안하세요.\n\n"
+        "사용자의 현재 순위, 목표 순위, 점수 차이, 추천 과목을 분석하여\n"
+        "목표 달성을 위한 학습 전략을 작성하세요.\n\n"
         "규칙\n\n"
-        "* 2문장 이하\n"
-        "* 50자 이내\n"
-        "* 현재 순위 또는 목표 순위를 반드시 포함\n"
-        "* 점수 차이를 반드시 포함\n"
-        "* 추천 과목은 최대 2개만 언급\n"
-        "* 긍정적이고 실천 가능한 조언 작성\n"
-        "* 제목 없이 문장만 출력\n\n"
+        "- 정확히 2문장 이하\n"
+        "- 전체 40자 이내\n"
+        "- 현재 순위 또는 목표 순위를 포함\n"
+        "- 점수 차이를 포함\n"
+        "- 추천 과목은 최대 2개\n"
+        "- 자연스럽게 문장을 마무리\n"
+        "- 문장 중간에 끊기지 않도록 작성\n"
+        "- 과장된 표현 금지\n"
+        "- 제목 없이 문장만 출력\n\n"
         "예시\n\n"
-        "현재 20위까지 3점 차이입니다. SW와 Cloud 학습을 우선 강화해 보세요.\n\n"
+        "현재 20위까지 3점 차이입니다.\n"
+        "SW와 Cloud 학습을 강화해 보세요.\n\n"
         "목표 순위까지 2점 남았습니다. AI 과목을 집중 학습해 보세요.\n\n"
         "데이터\n"
         + json.dumps(
@@ -218,7 +222,7 @@ def _bedrock_ranking_goal_coach(
         return fallback
     if ("위" not in text) or ("점" not in text):
         return fallback
-    return _truncate_commentary_sentence(text, 50)
+    return text if len(text) <= 40 else fallback
 
 
 def _fallback_ranking_goal_actions(subject_targets: list[dict[str, Any]]) -> list[dict[str, str]]:
@@ -364,8 +368,8 @@ def _fallback_ranking_rival_coach(
     if subject:
         message = f"현재 {gap_text}점 차이의 라이벌입니다. {subject} 보완으로 추격 가능합니다."
     else:
-        message = f"현재 {gap_text}점 차이의 라이벌입니다. 꾸준히 풀면 추격 가능합니다."
-    return _truncate_commentary_sentence(message, 50)
+        message = f"현재 {gap_text}점 차이의 라이벌입니다. 꾸준히 추격해 보세요."
+    return message if len(message) <= 40 else f"현재 {gap_text}점 차이의 라이벌입니다."
 
 
 def _bedrock_ranking_rival_coach(
@@ -385,17 +389,21 @@ def _bedrock_ranking_rival_coach(
     ]
     system_prompt = "당신은 KB Masters의 AI 경쟁 분석가입니다."
     user_prompt = (
-        "사용자와 라이벌의 순위 및 점수를 비교하여 라이벌 추천 이유를 작성하세요.\n\n"
+        "사용자와 라이벌의 순위 및 점수 차이를 분석하여\n"
+        "라이벌 추천 이유를 작성하세요.\n\n"
         "규칙\n\n"
-        "* 2문장 이하\n"
-        "* 50자 이내\n"
-        "* 점수 차이를 반드시 포함\n"
-        "* 경쟁 의식을 유발하되 긍정적 표현 사용\n"
-        "* 비교 과목은 최대 1개만 언급\n"
-        "* 제목 없이 문장만 출력\n\n"
+        "- 정확히 2문장 이하\n"
+        "- 전체 40자 이내\n"
+        "- 점수 차이를 반드시 포함\n"
+        "- 자연스럽게 문장을 마무리\n"
+        "- 문장 중간에 끊기지 않도록 작성\n"
+        "- 경쟁 의식을 유발하되 긍정적 표현 사용\n"
+        "- 제목 없이 문장만 출력\n\n"
         "예시\n\n"
-        "현재 2점 차이의 라이벌입니다. SW 과목을 보완하면 충분히 추격 가능합니다.\n\n"
-        "가장 유사한 성장 패턴을 보이는 사용자입니다. 3점 차이로 충분히 도전 가능한 구간입니다.\n\n"
+        "현재 2점 차이의 라이벌입니다.\n"
+        "SW 보완으로 추격 가능합니다.\n\n"
+        "현재 가장 가까운 경쟁자입니다.\n"
+        "AI 학습을 우선 추천합니다.\n\n"
         "데이터\n"
         + json.dumps(
             {
@@ -420,7 +428,7 @@ def _bedrock_ranking_rival_coach(
     gap_text = format_ranking_number(float(rival_row["score_gap"] or 0))
     if gap_text not in text:
         return fallback
-    return _truncate_commentary_sentence(text, 50)
+    return text if len(text) <= 40 else fallback
 
 
 def _fallback_ranking_learning_recommendations(pattern: dict[str, Any]) -> list[str]:
@@ -431,6 +439,7 @@ def _fallback_ranking_learning_recommendations(pattern: dict[str, Any]) -> list[
         f"{exam_count}회 이상 응시하기"[:20],
         f"{weak_subject} 문제 풀기"[:20],
         f"실무형 {practical_rate}% 유지"[:20],
+        "오답노트 저장 활용",
     ]
 
 
@@ -440,32 +449,35 @@ def _validate_ranking_learning_recommendations(
 ) -> list[str]:
     items = []
     blocked_words = ("복습했다", "먼저 풀었다", "반복 학습했다")
-    for item in payload[:3]:
+    for item in payload[:4]:
         text = " ".join(str(item or "").split())
         if not text or any(word in text for word in blocked_words):
             continue
         items.append(text[:20])
-    return items if len(items) == 3 else fallback
+    return items if len(items) == 4 else fallback
 
 
 def _bedrock_ranking_learning_recommendations(pattern: dict[str, Any]) -> list[str]:
     fallback = _fallback_ranking_learning_recommendations(pattern)
     system_prompt = "당신은 KB Masters의 AI 학습 추천 코치입니다."
     user_prompt = (
-        "상위권 학습자들의 학습 패턴과 사용자의 취약 과목을 분석하여 실천 가능한 학습 추천 3가지를 작성하세요.\n\n"
+        "상위권 학습자들의 학습 패턴과 사용자의 취약 과목을 분석하여\n"
+        "실천 가능한 학습 추천을 작성하세요.\n\n"
         "규칙\n\n"
-        "* 정확히 3개 작성\n"
-        "* 각 항목은 20자 이내\n"
-        "* 행동 중심 문장 사용\n"
-        "* 숫자가 있으면 적극 활용\n"
-        "* DB에서 확인할 수 없는 내용 작성 금지\n"
-        "* \"복습했다\", \"먼저 풀었다\", \"반복 학습했다\" 등의 표현 금지\n"
-        "* JSON 배열만 출력\n\n"
+        "- 정확히 4개 작성\n"
+        "- 각 항목은 20자 이내\n"
+        "- 행동 중심 문장 사용\n"
+        "- 숫자가 있으면 활용\n"
+        "- DB에서 확인할 수 없는 내용 작성 금지\n"
+        "- \"복습했다\", \"먼저 풀었다\", \"반복 학습했다\" 등의 표현 금지\n"
+        "- 추천 문구만 출력\n"
+        "- JSON 배열만 출력\n\n"
         "출력 예시\n\n"
         "[\n"
-        "\"주 3회 이상 응시 추천\",\n"
-        "\"Cloud 중심 문제 풀이\",\n"
-        "\"실무형 문제 60% 유지\"\n"
+        "  \"주 3회 이상 응시 추천\",\n"
+        "  \"Cloud 중심 문제 풀이\",\n"
+        "  \"실무형 문제 60% 유지\",\n"
+        "  \"오답노트 저장 활용\"\n"
         "]\n\n"
         "데이터\n"
         + json.dumps(
