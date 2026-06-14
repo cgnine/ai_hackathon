@@ -2517,6 +2517,73 @@ body[data-page="exam-history"] .page-shell {
   padding-top: 30px;
 }
 
+body[data-page="exam-history"]:not(.history-ready) .account-layout {
+  display: none;
+}
+
+body[data-page="exam-history"].history-ready .history-page-loading {
+  display: none;
+}
+
+.history-page-loading {
+  display: grid;
+  min-height: 360px;
+  place-items: center;
+  align-content: center;
+  gap: 14px;
+  padding: 48px 24px;
+  border: 1px solid #e7edf6;
+  border-radius: 8px;
+  background: #fff;
+  text-align: center;
+  box-shadow: 0 18px 42px rgba(15, 23, 42, 0.04);
+}
+
+.history-page-loading .eyebrow,
+.history-page-loading p,
+.history-page-loading strong {
+  margin: 0;
+}
+
+.history-page-loading .eyebrow {
+  color: #2563eb;
+  font-size: 0.78rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.history-page-loading strong {
+  color: #071341;
+  font-size: 1.2rem;
+  font-weight: 800;
+}
+
+.history-page-loading p:not(.eyebrow) {
+  color: #64748b;
+  font-size: 0.9rem;
+}
+
+.history-page-loading .result-loading-track {
+  width: min(320px, 100%);
+  margin-top: 6px;
+}
+
+.history-page-loading .result-loading-track span {
+  width: 72%;
+  animation: historyLoadingPulse 1.2s ease-in-out infinite alternate;
+}
+
+@keyframes historyLoadingPulse {
+  from {
+    width: 28%;
+  }
+
+  to {
+    width: 88%;
+  }
+}
+
 body[data-page="exam-history"] .account-layout {
   display: grid;
   grid-template-columns: 220px minmax(0, 1fr);
@@ -2553,10 +2620,10 @@ body[data-page="exam-history"] .my-history-head h2 {
 
 .history-summary-card {
   display: flex;
-  min-height: 118px;
+  min-height: 104px;
   align-items: center;
-  gap: 16px;
-  padding: 22px;
+  gap: 12px;
+  padding: 20px;
   border: 1px solid #e7edf6;
   border-radius: 8px;
   background: #fff;
@@ -2565,31 +2632,32 @@ body[data-page="exam-history"] .my-history-head h2 {
 
 .history-summary-icon {
   display: grid;
-  width: 58px;
-  height: 58px;
+  width: 14px;
+  height: 14px;
   place-items: center;
-  border-radius: 50%;
-  font-size: 1.52rem;
-  font-weight: 900;
+  border-radius: 999px;
+  font-size: 1rem;
+  font-weight: 800;
+  line-height: 1;
 }
 
 .history-summary-card.total .history-summary-icon {
-  background: #edf5ff;
+  background: transparent;
   color: #2563eb;
 }
 
 .history-summary-card.average .history-summary-icon {
-  background: #eaf8f1;
+  background: transparent;
   color: #10b981;
 }
 
 .history-summary-card.best .history-summary-icon {
-  background: #fff2e7;
+  background: transparent;
   color: #f97316;
 }
 
 .history-summary-card.lowest .history-summary-icon {
-  background: #f1f5f9;
+  background: transparent;
   color: #64748b;
 }
 
@@ -2606,12 +2674,13 @@ body[data-page="exam-history"] .my-history-head h2 {
   gap: 2px;
   margin-top: 4px;
   color: #071341;
-  font-size: 1.1rem;
-  font-weight: 800;
+  font-size: 0.95rem;
+  font-weight: 700;
 }
 
 .history-summary-card strong b {
-  font-size: 2rem;
+  font-size: 1.58rem;
+  font-weight: 700;
   line-height: 1;
 }
 
@@ -2713,8 +2782,8 @@ body[data-page="exam-history"] .my-history-score strong {
   display: flex;
   align-items: baseline;
   color: #071341;
-  font-size: 1.88rem;
-  font-weight: 900;
+  font-size: 1.72rem;
+  font-weight: 700;
   line-height: 1;
 }
 
@@ -2722,7 +2791,7 @@ body[data-page="exam-history"] .my-history-score strong span {
   margin-left: 2px;
   color: #071341;
   font-size: 0.9rem;
-  font-weight: 800;
+  font-weight: 600;
 }
 
 .history-score-track {
@@ -6425,7 +6494,7 @@ body[data-page="analysis"] .page-shell {
   grid-template-columns: minmax(220px, 0.82fr) 150px minmax(620px, 2.2fr);
   align-items: center;
   gap: 18px;
-  min-height: 242px;
+  min-height: 258px;
   padding: 28px 34px;
 }
 
@@ -6450,6 +6519,8 @@ body[data-page="analysis"] .page-shell {
   font-size: clamp(0.86rem, 1vw, 0.96rem);
   font-weight: 400;
   line-height: 1.6;
+  min-height: calc(1.6em * 3);
+  overflow: visible;
 }
 
 .analysis-stamp {

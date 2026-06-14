@@ -278,6 +278,7 @@ async function loadMyExamHistory(page = examHistoryState.page, subjectCode = exa
   const memberId = currentMemberId();
   if (!memberId) {
     renderMyExamHistory([]);
+    document.body.classList.add("history-ready");
     return;
   }
 
@@ -312,6 +313,7 @@ async function loadMyExamHistory(page = examHistoryState.page, subjectCode = exa
     renderExamTabs((subjects || []).slice(0, 5));
     renderExamHistorySummary(items, data.summary || null);
     renderExamHistoryList(items, 1, 8);
+    document.body.classList.add("history-ready");
   } catch (error) {
     els.myExamHistoryList.innerHTML = `
       <div class="my-history-empty error">
@@ -319,6 +321,7 @@ async function loadMyExamHistory(page = examHistoryState.page, subjectCode = exa
         <p>${error.message}</p>
       </div>
     `;
+    document.body.classList.add("history-ready");
   }
 }
 
@@ -687,6 +690,7 @@ function renderMyInfoPage() {
 
 function renderExamHistoryPage() {
   // Ensure the 'ALL' tab is selected by default when opening the Exam History page
+  document.body.classList.remove("history-ready");
   state.examHistorySubjectId = null;
   saveState();
   loadMyExamHistory();

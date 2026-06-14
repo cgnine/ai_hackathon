@@ -601,10 +601,19 @@ def _bedrock_analysis_weakness(payload: dict[str, Any], include_commentary: bool
 
 
 def _fallback_modal_keyword(value: Any) -> str:
-    text = str(value or "").strip()
+    weak_minor_units = {"도입 효과", "개요", "활용 사례", "정의", "특징"}
+    if isinstance(value, dict):
+        major = str(value.get("majorUnit") or value.get("major_unit") or "").strip()
+        minor = str(value.get("minorUnit") or value.get("minor_unit") or value.get("keyword") or "").strip()
+        minor = re.sub(r"^SECTION\s*\d+\.\s*", "", minor, flags=re.IGNORECASE).strip()
+        minor = re.sub(r"^\d+\.\s*", "", minor).strip()
+        text = major if minor in weak_minor_units and major else minor or major
+    else:
+        text = str(value or "").strip()
     if not text:
         return "미분류"
     text = re.sub(r"^SECTION\s*\d+\.\s*", "", text, flags=re.IGNORECASE).strip()
+    text = re.sub(r"^\d+\.\s*", "", text).strip()
     replacements = (
         ("에 대한 이해", ""),
         ("이해하기", ""),
@@ -648,7 +657,7 @@ def _validate_modal_keywords(payload: dict[str, Any], fallback: dict[str, list[s
         seen: set[str] = set()
         for value in values:
             keyword = str(value or "").strip()
-            if not keyword or keyword in seen or len(keyword) > 15:
+            if len(keyword) < 2 or keyword in seen or len(keyword) > 15:
                 continue
             seen.add(keyword)
             keywords.append(keyword)
@@ -663,8 +672,20 @@ def _bedrock_modal_keywords(
     weaknesses: list[dict[str, Any]],
     include_commentary: bool = True,
 ) -> dict[str, list[str]]:
-    strength_units = [item.get("sourceKeyword") or item.get("keyword") for item in strengths]
-    weakness_units = [item.get("sourceKeyword") or item.get("keyword") for item in weaknesses]
+    strength_units = [
+        {
+            "major_unit": item.get("majorUnit") or "",
+            "minor_unit": item.get("minorUnit") or item.get("sourceKeyword") or item.get("keyword") or "",
+        }
+        for item in strengths
+    ]
+    weakness_units = [
+        {
+            "major_unit": item.get("majorUnit") or "",
+            "minor_unit": item.get("minorUnit") or item.get("sourceKeyword") or item.get("keyword") or "",
+        }
+        for item in weaknesses
+    ]
     fallback = {
         "strengths": _unique_modal_keywords(strength_units),
         "weaknesses": _unique_modal_keywords(weakness_units),
@@ -679,34 +700,45 @@ def _bedrock_modal_keywords(
     }
     user_prompt = (
         "입력된 강점 영역과 취약 영역을\n"
-        "사용자가 보기 쉬운 화면용 키워드로 변환하세요.\n\n"
+        "사용자 화면에 표시할 분석 키워드로 변환하세요.\n\n"
         "규칙\n\n"
-        "- SECTION 번호 제거\n"
-        "- 핵심 의미 유지\n"
-        "- 구현, 이론, 실습, 평가, 튜닝 등 구분 의미가 있는 단어는 유지\n"
-        "- 중복 키워드 생성 금지\n"
-        "- 2~15자 이내\n"
-        "- 설명문 작성 금지\n"
-        "- 문장 작성 금지\n"
-        "- 키워드만 반환\n\n"
+        "1. SECTION 번호는 제거된 상태이다.\n"
+        "2. 핵심 의미를 유지한다.\n"
+        "3. 구현, 이론, 실무, 운영, 설계, 보안, 평가, 튜닝 등\n"
+        "   학습 영역을 구분하는 단어는 유지한다.\n"
+        "4. 서로 다른 학습 영역을 하나로 합치지 않는다.\n"
+        "5. minor_unit이 충분히 의미를 가지면 minor_unit을 사용한다.\n"
+        "6. minor_unit이 \"도입 효과\", \"개요\", \"활용 사례\",\n"
+        "   \"정의\", \"특징\" 처럼 의미가 약한 경우에는\n"
+        "   major_unit을 사용한다.\n"
+        "7. 출력은 2~15자 이내.\n"
+        "8. 설명문 작성 금지.\n"
+        "9. 중복 키워드 생성 금지.\n\n"
         "예시\n\n"
         "입력\n"
-        "\"SECTION 02. 회귀모델에 대한 이해\"\n\n"
+        "major_unit: 클라우드 보안\n"
+        "minor_unit: 도입 효과\n\n"
         "출력\n"
-        "\"회귀모델\"\n\n"
+        "클라우드 보안\n\n"
         "입력\n"
-        "\"SECTION 01. 모델 하이퍼파라미터 튜닝 이해하기\"\n\n"
+        "major_unit: 클라우드\n"
+        "minor_unit: 클라우드 실무\n\n"
         "출력\n"
-        "\"하이퍼파라미터 튜닝\"\n\n"
+        "클라우드 실무\n\n"
+        "입력\n"
+        "major_unit: 머신러닝\n"
+        "minor_unit: 회귀모델에 대한 이해\n\n"
+        "출력\n"
+        "회귀모델\n\n"
         f"입력 데이터\n{json.dumps(payload, ensure_ascii=False, indent=2)}\n\n"
-        "출력 형식\n"
+        "JSON 형식으로 반환\n"
         "{\n"
-        '  "strengths": [\n'
+        '  "strengths":[\n'
         '    "",\n'
         '    "",\n'
         '    ""\n'
         "  ],\n"
-        '  "weaknesses": [\n'
+        '  "weaknesses":[\n'
         '    "",\n'
         '    "",\n'
         '    ""\n'
@@ -1760,7 +1792,18 @@ def get_analysis(member_id: str, include_commentary: bool = True) -> dict[str, A
                 WITH unit_rates AS (
                     SELECT
                         e.subject_code,
-                        COALESCE(NULLIF(q.minor_unit, ''), '미분류') AS keyword,
+                        COALESCE(NULLIF(q.major_unit, ''), '미분류') AS major_unit,
+                        TRIM(
+                            REGEXP_REPLACE(
+                                REGEXP_REPLACE(
+                                    COALESCE(NULLIF(q.minor_unit, ''), '미분류'),
+                                    '^SECTION[[:space:]]*[0-9]+\\.[[:space:]]*',
+                                    ''
+                                ),
+                                '^[0-9]+\\.[[:space:]]*',
+                                ''
+                            )
+                        ) AS minor_unit,
                         ROUND(
                             AVG(
                                 CASE
@@ -1778,36 +1821,38 @@ def get_analysis(member_id: str, include_commentary: bool = True) -> dict[str, A
                       ON h.question_id = q.question_id
                      AND q.subject_code = e.subject_code
                     WHERE e.member_id = %s
-                    GROUP BY e.subject_code, keyword
+                    GROUP BY e.subject_code, q.major_unit, q.minor_unit
                     HAVING COUNT(*) >= 2
                 ),
                 strong_units AS (
                     SELECT
                         subject_code,
-                        keyword,
+                        major_unit,
+                        minor_unit,
                         correct_rate,
                         ROW_NUMBER() OVER (
                             PARTITION BY subject_code
-                            ORDER BY correct_rate DESC, answer_count DESC, keyword
+                            ORDER BY correct_rate DESC, answer_count DESC, major_unit, minor_unit
                         ) AS row_no
                     FROM unit_rates
                 ),
                 weak_units AS (
                     SELECT
                         subject_code,
-                        keyword,
+                        major_unit,
+                        minor_unit,
                         correct_rate,
                         ROW_NUMBER() OVER (
                             PARTITION BY subject_code
-                            ORDER BY correct_rate ASC, answer_count DESC, keyword
+                            ORDER BY correct_rate ASC, answer_count DESC, major_unit, minor_unit
                         ) AS row_no
                     FROM unit_rates
                 )
-                SELECT 'strong' AS list_type, subject_code, keyword, correct_rate, row_no
+                SELECT 'strong' AS list_type, subject_code, major_unit, minor_unit, correct_rate, row_no
                 FROM strong_units
                 WHERE row_no <= 3
                 UNION ALL
-                SELECT 'weak' AS list_type, subject_code, keyword, correct_rate, row_no
+                SELECT 'weak' AS list_type, subject_code, major_unit, minor_unit, correct_rate, row_no
                 FROM weak_units
                 WHERE row_no <= 3
                 ORDER BY subject_code, list_type, row_no
@@ -2019,10 +2064,14 @@ def get_analysis(member_id: str, include_commentary: bool = True) -> dict[str, A
     subject_weak_map: dict[str, list[dict[str, Any]]] = defaultdict(list)
     for row in subject_unit_rows:
         target_map = subject_strong_map if row["list_type"] == "strong" else subject_weak_map
+        major_unit = row["major_unit"] or "미분류"
+        minor_unit = row["minor_unit"] or major_unit
         target_map[str(row["subject_code"])].append(
             {
-                "keyword": row["keyword"] or "미분류",
-                "sourceKeyword": row["keyword"] or "미분류",
+                "keyword": minor_unit,
+                "sourceKeyword": minor_unit,
+                "majorUnit": major_unit,
+                "minorUnit": minor_unit,
                 "correctRate": float(row["correct_rate"] or 0),
             }
         )

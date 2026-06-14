@@ -29,6 +29,15 @@
     <div class="toast" id="toast" role="status" aria-live="polite"></div>
 
     <section class="screen active" id="examHistoryScreen">
+      <section class="history-page-loading" id="historyPageLoading" aria-live="polite">
+        <p class="eyebrow">Exam History</p>
+        <strong>응시내역을 불러오는 중입니다.</strong>
+        <p>잠시만 기다려주세요.</p>
+        <div class="result-loading-track" aria-hidden="true">
+          <span></span>
+        </div>
+      </section>
+
       <div class="account-layout">
         <aside class="account-sidebar" aria-label="계정 메뉴">
           <strong>내 정보</strong>
@@ -49,28 +58,28 @@
 
           <div class="history-summary-grid" aria-label="응시 요약">
             <article class="history-summary-card total">
-              <span class="history-summary-icon">▣</span>
+              <span class="history-summary-icon">•</span>
               <div>
                 <span>총 응시</span>
                 <strong><b id="historyTotalCount">0</b>회</strong>
               </div>
             </article>
             <article class="history-summary-card average">
-              <span class="history-summary-icon">↗</span>
+              <span class="history-summary-icon">•</span>
               <div>
                 <span>평균 점수</span>
                 <strong><b id="historyAverageScore">0</b>점</strong>
               </div>
             </article>
             <article class="history-summary-card best">
-              <span class="history-summary-icon">♕</span>
+              <span class="history-summary-icon">•</span>
               <div>
                 <span>최고 점수</span>
                 <strong><b id="historyBestScore">0</b>점</strong>
               </div>
             </article>
             <article class="history-summary-card lowest">
-              <span class="history-summary-icon">↓</span>
+              <span class="history-summary-icon">•</span>
               <div>
                 <span>최저 점수</span>
                 <strong><b id="historyMinScore">0</b>점</strong>
