@@ -2052,6 +2052,12 @@ body[data-page="ranking"] .nav-btn:hover {
   color: #8b96a8;
 }
 
+.main-footer-contact span {
+  margin-left: 72px;
+  color: #8b96a8;
+  white-space: nowrap;
+}
+
 .account-layout {
   display: grid;
   grid-template-columns: 240px minmax(0, 1fr);
@@ -9234,6 +9240,7 @@ body[data-page="main"].main-stats-loading [data-main-dynamic-stat] {
   body[data-page="main"] .main-footer-copy {
     padding: 8px 0;
   }
+
 }
 
 @media (max-width: 1180px) {
