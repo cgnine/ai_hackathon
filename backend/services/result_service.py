@@ -2504,6 +2504,21 @@ def get_result(attempt_id: str, exam_question_ids: list[str] | None = None) -> d
                     h.wrong_note_saved,
                     q.question_id,
                     q.major_unit,
+                    TRIM(
+                        REPLACE(
+                            REPLACE(
+                                regexp_replace(
+                                    COALESCE(q.major_unit, ''),
+                                    '^.*\\.',
+                                    ''
+                                ),
+                                'SECTION ',
+                                ''
+                            ),
+                            'Chapter ',
+                            ''
+                        )
+                    ) AS radar_label,
                     q.minor_unit,
                     q.question_type,
                     q.question_content,
@@ -2553,7 +2568,7 @@ def get_result(attempt_id: str, exam_question_ids: list[str] | None = None) -> d
                 ],
                 "difficulty": row["minor_unit"] or "-",
                 "questionType": _question_type(row),
-                "diagnosisArea": row["major_unit"] or "-",
+                "diagnosisArea": row["radar_label"] or row["major_unit"] or "-",
                 "minorUnit": row["minor_unit"] or "-",
                 "selected": selected,
                 "answer": answer,

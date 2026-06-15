@@ -5257,13 +5257,14 @@ body[data-page="mock"] .choice-btn.selected {
 
 .diagnosis-chart {
   display: grid;
-  min-height: 310px;
+  min-height: 390px;
   place-items: center;
 }
 
 .diagnosis-chart svg {
-  width: min(100%, 380px);
+  width: min(100%, 430px);
   height: auto;
+  overflow: visible;
 }
 
 .chart-footnote {
@@ -5286,7 +5287,7 @@ body[data-page="mock"] .choice-btn.selected {
 
 .diagnosis-radar-label {
   fill: var(--muted);
-  font-size: 10px;
+  font-size: 10.5px;
   font-weight: 800;
   dominant-baseline: middle;
 }
@@ -5298,10 +5299,20 @@ body[data-page="mock"] .choice-btn.selected {
 }
 
 .diagnosis-radar-value {
-  fill: #4b5563;
-  font-size: 10.5px;
-  font-weight: 800;
+  fill: #111827;
+  font-size: 11px;
+  font-weight: 900;
+  paint-order: stroke;
+  stroke: #ffffff;
+  stroke-width: 4px;
+  stroke-linejoin: round;
   text-anchor: middle;
+}
+
+.diagnosis-radar-dot {
+  fill: var(--primary);
+  stroke: #ffffff;
+  stroke-width: 2;
 }
 
 .wrong-review-section {

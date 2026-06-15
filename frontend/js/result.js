@@ -524,9 +524,10 @@ function renderDiagnosisCommentCards(comments) {
 }
 
 function renderDiagnosisRadar(axes) {
-  const center = 160;
-  const maxRadius = 74;
-  const labelRadius = 122;
+  const center = 200;
+  const maxRadius = 82;
+  const valueRadius = maxRadius + 18;
+  const labelRadius = maxRadius + 60;
   const count = axes.length;
   const axisPoints = axes.map((axis, index) => {
     const angle = (-90 + index * (360 / count)) * Math.PI / 180;
@@ -535,14 +536,13 @@ function renderDiagnosisRadar(axes) {
     const scoreRadius = maxRadius * (axis.score / 100);
     const scoreX = center + Math.cos(angle) * scoreRadius;
     const scoreY = center + Math.sin(angle) * scoreRadius;
-    const valueRadius = Math.min(maxRadius - 14, Math.max(scoreRadius + 10, 30));
     const valueX = center + Math.cos(angle) * valueRadius;
     const valueY = center + Math.sin(angle) * valueRadius;
     const rawLabelX = center + Math.cos(angle) * labelRadius;
     const rawLabelY = center + Math.sin(angle) * labelRadius;
-    const labelX = Math.min(292, Math.max(28, rawLabelX));
-    const labelY = Math.min(294, Math.max(26, rawLabelY));
-    const labelAnchor = Math.cos(angle) > 0.45 ? "end" : Math.cos(angle) < -0.45 ? "start" : "middle";
+    const labelX = Math.min(368, Math.max(32, rawLabelX));
+    const labelY = Math.min(366, Math.max(34, rawLabelY));
+    const labelAnchor = Math.cos(angle) > 0.35 ? "start" : Math.cos(angle) < -0.35 ? "end" : "middle";
     return { axis, outerX, outerY, scoreX, scoreY, valueX, valueY, labelX, labelY, labelAnchor };
   });
 
@@ -563,14 +563,18 @@ function renderDiagnosisRadar(axes) {
   const scoreMarkup = axisPoints.map((point) => `
     <text x="${point.valueX}" y="${point.valueY + 3}" class="diagnosis-radar-value">${point.axis.score}</text>
   `).join("");
+  const dotMarkup = axisPoints.map((point) => `
+    <circle cx="${point.scoreX}" cy="${point.scoreY}" r="3.8" class="diagnosis-radar-dot" />
+  `).join("");
 
   const scorePoints = axisPoints.map((point) => `${point.scoreX},${point.scoreY}`).join(" ");
 
   els.diagnosisChart.innerHTML = `
-    <svg viewBox="0 0 320 320" role="img" aria-label="출제 영역 진단 레이더 차트">
+    <svg viewBox="0 0 400 400" role="img" aria-label="출제 영역 진단 레이더 차트">
       ${grid}
       ${axesMarkup}
       <polygon points="${scorePoints}" class="diagnosis-radar-score" />
+      ${dotMarkup}
       ${scoreMarkup}
     </svg>
   `;
@@ -607,7 +611,7 @@ function splitRadarLabel(name) {
 
 function renderRadarLabel(point) {
   const lines = splitRadarLabel(point.axis.name);
-  const lineHeight = 10;
+  const lineHeight = 12;
   const startY = point.labelY - ((lines.length - 1) * lineHeight) / 2;
   const tspans = lines.map((line, index) => (
     `<tspan x="${point.labelX}" y="${startY + index * lineHeight}">${line}</tspan>`
