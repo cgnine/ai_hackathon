@@ -159,7 +159,7 @@ function setRankingText(id, value) {
 function maskKoreanName(name) {
   const text = String(name || "").trim();
   if (text.length < 3) return text || "-";
-  return `${text[0]}O${text.slice(2)}`;
+  return `${text[0]}○${text.slice(2)}`;
 }
 
 function renderRankingSubjectTargets(subjectTargets) {
