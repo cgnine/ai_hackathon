@@ -263,7 +263,7 @@ function hasResultAiCommentary(result) {
   );
 }
 
-async function loadResultWithAiCommentary(attemptId, examHistoryIds = [], options = {}) {
+async function loadResultWithAiCommentary(attemptId, examHistoryIds = []) {
   const historyQuery = Array.isArray(examHistoryIds) && examHistoryIds.length
     ? `?history_ids=${encodeURIComponent(examHistoryIds.join(","))}`
     : "";
@@ -273,7 +273,6 @@ async function loadResultWithAiCommentary(attemptId, examHistoryIds = [], option
   if (!response.ok) throw new Error(`HTTP ${response.status}`);
 
   const result = await response.json();
-  if (options.readOnlyDiagnosis) return result;
   if (hasResultAiCommentary(result)) return result;
 
   try {
@@ -831,9 +830,7 @@ async function loadBackendResultPage() {
   }
 
   try {
-    const result = await loadResultWithAiCommentary(attemptId, examHistoryIds, {
-      readOnlyDiagnosis: navigation?.readOnlyDiagnosis === true
-    });
+    const result = await loadResultWithAiCommentary(attemptId, examHistoryIds);
     if (!result) {
       renderResultEmptyState();
       return;

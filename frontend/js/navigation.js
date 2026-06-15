@@ -237,8 +237,7 @@ function renderMyExamHistory(items, selectedSubjectCode = "all", meta = {}) {
     button.addEventListener("click", () => {
       saveResultNavigation({
         examId: button.dataset.examId,
-        examHistoryIds: [],
-        readOnlyDiagnosis: true
+        examHistoryIds: []
       });
       window.location.href = PAGE_URLS.result;
     });
@@ -534,7 +533,7 @@ function renderExamHistoryList(items = [], page = 1, pageSize = 8) {
     // attach click handlers
     target.querySelectorAll('[data-exam-id]').forEach((button) => {
       button.addEventListener('click', () => {
-        saveResultNavigation({ examId: button.dataset.examId, examHistoryIds: [], readOnlyDiagnosis: true });
+        saveResultNavigation({ examId: button.dataset.examId, examHistoryIds: [] });
         window.location.href = PAGE_URLS.result;
       });
     });
