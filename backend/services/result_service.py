@@ -2862,6 +2862,37 @@ def get_monthly_ranking(limit: int = 10) -> dict[str, Any]:
     }
 
 
+def get_main_stats() -> dict[str, int]:
+    with get_conn() as conn:
+        with conn.cursor(cursor_factory=RealDictCursor) as cur:
+            cur.execute(
+                """
+                SELECT
+                    (SELECT COUNT(*) FROM question_tb) AS question_count,
+                    (SELECT COUNT(*) FROM exam_tb) AS exam_count,
+                    (SELECT COUNT(*)
+                       FROM exam_tb
+                      WHERE diagnosis_content IS NOT NULL
+                        AND diagnosis_content <> '') AS report_count
+                """
+            )
+            row = cur.fetchone() or {}
+            cur.execute("SELECT to_regclass('public.pdf_tb') AS pdf_table")
+            pdf_table = (cur.fetchone() or {}).get("pdf_table")
+            if pdf_table:
+                cur.execute("SELECT COUNT(*) AS pdf_count FROM pdf_tb")
+                pdf_count = int((cur.fetchone() or {}).get("pdf_count") or 0)
+            else:
+                pdf_count = 0
+
+    return {
+        "questionCount": int(row.get("question_count") or 0),
+        "pdfCount": pdf_count,
+        "examCount": int(row.get("exam_count") or 0),
+        "reportCount": int(row.get("report_count") or 0),
+    }
+
+
 def get_ranking_goal(member_id: str) -> dict[str, Any]:
     normalized_member_id = member_id.strip()
     if not normalized_member_id:

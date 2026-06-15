@@ -156,6 +156,36 @@ function setRankingText(id, value) {
   if (target) target.textContent = value;
 }
 
+function formatMainCount(value) {
+  const numeric = Number(value) || 0;
+  return numeric.toLocaleString("ko-KR");
+}
+
+function setMainStatText(id, value) {
+  const target = document.getElementById(id);
+  if (target) target.textContent = formatMainCount(value);
+}
+
+async function loadMainStats() {
+  if (!document.getElementById("mainQuestionCount")) {
+    document.body?.classList.remove("main-stats-loading");
+    return;
+  }
+
+  try {
+    const response = await fetch(`${API_BASE}/results/main/stats`);
+    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+    const data = await response.json();
+    setMainStatText("mainQuestionCount", data.questionCount);
+    setMainStatText("mainExamCount", data.examCount);
+    setMainStatText("mainReportCount", data.reportCount);
+  } catch {
+    // Keep the static fallback values on the landing page.
+  } finally {
+    document.body?.classList.remove("main-stats-loading");
+  }
+}
+
 function maskKoreanName(name) {
   const text = String(name || "").trim();
   if (text.length < 3) return text || "-";
@@ -524,3 +554,4 @@ function initMainMiniLogin() {
 initMainMiniLogin();
 initRankingMoreModal();
 initRankingPage();
+loadMainStats();

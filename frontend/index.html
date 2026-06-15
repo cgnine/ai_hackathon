@@ -8,7 +8,7 @@
   <link rel="stylesheet" href="style.css" />
 </head>
 
-<body data-page="main">
+<body data-page="main" class="main-stats-loading">
   <header class="topbar">
     <a class="brand" href="index.html" aria-label="KB 역량진단 모의고사">
       <img class="brand-logo" src="assets/brand/kb-masters-logo.png" alt="KB MASTERS" />
@@ -20,62 +20,127 @@
   </header>
 
   <main class="main-landing">
+    <section class="main-intro" aria-label="KB Masters 소개">
+      <p class="main-eyebrow"><span>AI</span> 기반 맞춤 학습 플랫폼</p>
+      <h1><span>AI</span>가 당신의 <mark>성장</mark>을 함께합니다.</h1>
+
+      <div class="main-feature-list">
+        <article>
+          <span class="main-feature-icon quiz">▣</span>
+          <div>
+            <strong>AI 문제출제</strong>
+            <p>실무형 문제를 AI가 자동으로 생성합니다.</p>
+          </div>
+        </article>
+        <article>
+          <span class="main-feature-icon analysis">⌘</span>
+          <div>
+            <strong>AI 약점 분석</strong>
+            <p>데이터 기반으로 강점과 약점을 정확히 분석합니다.</p>
+          </div>
+        </article>
+        <article>
+          <span class="main-feature-icon coach">♙</span>
+          <div>
+            <strong>AI 학습 추천</strong>
+            <p>개인에게 최적화된 학습 콘텐츠를 추천합니다.</p>
+          </div>
+        </article>
+      </div>
+
+      <a class="main-start-btn" href="login.html">
+        AI 문제 풀기 시작하기
+        <b>›</b>
+      </a>
+    </section>
+
     <section class="main-hero" aria-label="KB 역량진단 메인">
       <img class="main-hero-image" src="assets/brand/main-hero.png" alt="KB 스타 마스터즈 역량평가" />
     </section>
 
-    <div class="main-side-panel">
-      <form class="main-mini-login" id="mainMiniLoginForm" aria-label="간편 로그인">
-        <div class="main-mini-login-fields">
-          <input id="mainMiniMemberId" type="text" autocomplete="username" placeholder="사번" required />
-          <input id="mainMiniPassword" type="password" autocomplete="current-password" placeholder="비밀번호" required />
-        </div>
-        <button type="submit">로그인</button>
-        <div class="main-mini-login-links" aria-label="계정 메뉴">
-          <a href="signup.html">회원가입</a>
-          <a href="reset-password.html">비밀번호 재설정</a>
-        </div>
-        <p id="mainMiniLoginMessage" aria-live="polite"></p>
-      </form>
+    <section class="main-dashboard" aria-label="메인 현황">
+      <div class="main-right-top">
+        <aside class="main-ranking" id="rankingSection" aria-label="응시 랭킹">
+          <div class="main-ranking-head">
+            <span class="main-ranking-crown">♛</span>
+            <strong id="monthlyRankingTitle">랭킹</strong>
+          </div>
+          <ol class="ranking-list" id="monthlyRankingList">
+            <li class="ranking-placeholder">
+              <span class="ranking-rank">1</span>
+              <span class="ranking-name">&nbsp;</span>
+              <span class="ranking-affiliation is-empty">&nbsp;</span>
+              <strong>&nbsp;</strong>
+            </li>
+            <li class="ranking-placeholder">
+              <span class="ranking-rank">2</span>
+              <span class="ranking-name">&nbsp;</span>
+              <span class="ranking-affiliation is-empty">&nbsp;</span>
+              <strong>&nbsp;</strong>
+            </li>
+            <li class="ranking-placeholder">
+              <span class="ranking-rank">3</span>
+              <span class="ranking-name">&nbsp;</span>
+              <span class="ranking-affiliation is-empty">&nbsp;</span>
+              <strong>&nbsp;</strong>
+            </li>
+            <li class="ranking-placeholder">
+              <span class="ranking-rank">4</span>
+              <span class="ranking-name">&nbsp;</span>
+              <span class="ranking-affiliation is-empty">&nbsp;</span>
+              <strong>&nbsp;</strong>
+            </li>
+            <li class="ranking-placeholder">
+              <span class="ranking-rank">5</span>
+              <span class="ranking-name">&nbsp;</span>
+              <span class="ranking-affiliation is-empty">&nbsp;</span>
+              <strong>&nbsp;</strong>
+            </li>
+          </ol>
+        </aside>
 
-      <aside class="main-ranking" id="rankingSection" aria-label="응시 랭킹">
-        <div class="main-ranking-head">
-          <span id="monthlyRankingTitle">랭킹</span>
-        </div>
-        <ol class="ranking-list" id="monthlyRankingList">
-          <li class="ranking-placeholder">
-            <span class="ranking-rank">1</span>
-            <span class="ranking-name">&nbsp;</span>
-            <span class="ranking-affiliation is-empty">&nbsp;</span>
-            <strong>&nbsp;</strong>
-          </li>
-          <li class="ranking-placeholder">
-            <span class="ranking-rank">2</span>
-            <span class="ranking-name">&nbsp;</span>
-            <span class="ranking-affiliation is-empty">&nbsp;</span>
-            <strong>&nbsp;</strong>
-          </li>
-          <li class="ranking-placeholder">
-            <span class="ranking-rank">3</span>
-            <span class="ranking-name">&nbsp;</span>
-            <span class="ranking-affiliation is-empty">&nbsp;</span>
-            <strong>&nbsp;</strong>
-          </li>
-          <li class="ranking-placeholder">
-            <span class="ranking-rank">4</span>
-            <span class="ranking-name">&nbsp;</span>
-            <span class="ranking-affiliation is-empty">&nbsp;</span>
-            <strong>&nbsp;</strong>
-          </li>
-          <li class="ranking-placeholder">
-            <span class="ranking-rank">5</span>
-            <span class="ranking-name">&nbsp;</span>
-            <span class="ranking-affiliation is-empty">&nbsp;</span>
-            <strong>&nbsp;</strong>
-          </li>
-        </ol>
-      </aside>
-    </div>
+        <form class="main-mini-login" id="mainMiniLoginForm" aria-label="간편 로그인">
+          <h2>로그인</h2>
+          <div class="main-mini-login-fields">
+            <label>
+              <input id="mainMiniMemberId" type="text" autocomplete="username" placeholder="사번" required />
+            </label>
+            <label>
+              <input id="mainMiniPassword" type="password" autocomplete="current-password" placeholder="비밀번호" required />
+            </label>
+          </div>
+          <button type="submit">로그인</button>
+          <div class="main-mini-login-links" aria-label="계정 메뉴">
+            <a href="signup.html">회원가입</a>
+            <a href="reset-password.html">비밀번호 재설정</a>
+          </div>
+          <p id="mainMiniLoginMessage" aria-live="polite"></p>
+        </form>
+      </div>
+
+      <div class="main-stat-grid" aria-label="서비스 현황">
+        <article>
+          <span class="main-stat-icon yellow">▤</span>
+          <p>생성된 문제</p>
+          <strong><span id="mainQuestionCount" data-main-dynamic-stat>-</span><em>개</em></strong>
+        </article>
+        <article>
+          <span class="main-stat-icon green">▰</span>
+          <p>등록된 PDF</p>
+          <strong><span id="mainPdfCount">5</span><em>개</em></strong>
+        </article>
+        <article>
+          <span class="main-stat-icon purple">♟</span>
+          <p>누적 응시</p>
+          <strong><span id="mainExamCount" data-main-dynamic-stat>-</span><em>회</em></strong>
+        </article>
+        <article>
+          <span class="main-stat-icon orange">▥</span>
+          <p>AI 분석 리포트</p>
+          <strong><span id="mainReportCount" data-main-dynamic-stat>-</span><em>건</em></strong>
+        </article>
+      </div>
+    </section>
   </main>
 
   <footer class="main-footer">

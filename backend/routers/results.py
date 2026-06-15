@@ -74,6 +74,11 @@ async def get_ranking_goal(member_id: str):
     return result_service.get_ranking_goal(member_id)
 
 
+@router.get("/main/stats")
+async def get_main_stats():
+    return result_service.get_main_stats()
+
+
 @router.get("/analysis")
 async def get_analysis(member_id: str, include_commentary: bool = True):
     return result_service.get_analysis(member_id, include_commentary=include_commentary)
