@@ -16,14 +16,21 @@ function setCurrentMonthTitle(monthLabel) {
   title.textContent = `${currentMonth} 랭킹`;
 }
 
-function isKbDataSystemMember(memberId) {
-  return String(memberId || "").trim().toUpperCase().startsWith("D");
+function getMemberCompanyName(memberId) {
+  const prefix = String(memberId || "").trim().toUpperCase().slice(0, 1);
+  const companies = {
+    A: "KB\uC99D\uAD8C",
+    B: "KB\uAD6D\uBBFC\uC740\uD589",
+    C: "KB\uC190\uD574\uBCF4\uD5D8",
+    D: "KB\uB370\uC774\uD0C0\uC2DC\uC2A4\uD15C"
+  };
+  return companies[prefix] || "";
 }
 
 function renderRankingAffiliation(target, memberId, hasScore) {
   if (!target) return;
-  const showAffiliation = hasScore && isKbDataSystemMember(memberId);
-  target.textContent = showAffiliation ? "KB데이타시스템" : "\u00a0";
+  const showAffiliation = hasScore ? getMemberCompanyName(memberId) : "";
+  target.textContent = showAffiliation || "\u00a0";
   target.classList.toggle("is-empty", !showAffiliation);
 }
 
@@ -259,8 +266,8 @@ function renderRankingRival(rival) {
 
   if (avatar) avatar.alt = `${displayRivalName} 프로필 이미지`;
   if (affiliation) {
-    const showAffiliation = isKbDataSystemMember(rival.rivalId);
-    affiliation.textContent = showAffiliation ? "KB데이타시스템" : "";
+    const showAffiliation = getMemberCompanyName(rival.rivalId);
+    affiliation.textContent = showAffiliation;
     affiliation.hidden = !showAffiliation;
   }
   setRankingText("rankingRivalName", displayRivalName);
