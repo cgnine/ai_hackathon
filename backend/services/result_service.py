@@ -2675,15 +2675,31 @@ def get_exam_history(
                 ),
                 ranked_exam AS (
                     SELECT
-                        exam_id,
-                        ROUND(
-                            (PERCENT_RANK() OVER (
-                                PARTITION BY subject_code
-                                ORDER BY score DESC NULLS LAST
-                            ) * 100)::numeric,
-                            1
-                        ) AS percentile
-                    FROM exam_scores
+                        es.exam_id,
+                        CASE
+                            WHEN es.score IS NULL THEN 100
+                            ELSE LEAST(
+                                100,
+                                CEIL(
+                                    (
+                                        SELECT COUNT(*)
+                                        FROM exam_scores x
+                                        WHERE x.subject_code = es.subject_code
+                                          AND x.score > es.score
+                                    ) * 100.0
+                                    / NULLIF(
+                                        (
+                                            SELECT COUNT(*)
+                                            FROM exam_scores x
+                                            WHERE x.subject_code = es.subject_code
+                                              AND x.score IS NOT NULL
+                                        ),
+                                        0
+                                    )
+                                ) + 1
+                            )
+                        END AS percentile
+                    FROM exam_scores es
                 ),
                 exam_base AS (
                     SELECT
