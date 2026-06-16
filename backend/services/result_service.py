@@ -867,6 +867,14 @@ def _created_at(row: dict[str, Any]) -> str:
     return row.get("exam_created_at") or row.get("created_at") or ""
 
 
+def _as_browser_datetime(value: Any) -> str:
+    if not value:
+        return ""
+    if hasattr(value, "isoformat"):
+        return value.isoformat()
+    return str(value).replace(" ", "T", 1)
+
+
 def _choices_from_row(row: dict[str, Any]) -> list[str]:
     return [
         choice
@@ -3400,26 +3408,29 @@ def get_wrong_items(attempt_id: str) -> dict[str, Any]:
 
 
 def save_wrong_note(attempt_id: str, question_ids: list[str] | None = None) -> dict[str, Any]:
+    saved_at = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     with get_conn() as conn:
         with conn.cursor() as cur:
             if question_ids:
                 cur.execute(
                     """
                     UPDATE exam_history_tb
-                    SET wrong_note_saved = 'Y'
+                    SET wrong_note_saved = 'Y',
+                        created_at = %s
                     WHERE exam_id = %s
                       AND question_id = ANY(%s)
                     """,
-                    (attempt_id, question_ids),
+                    (saved_at, attempt_id, question_ids),
                 )
             else:
                 cur.execute(
                     """
                     UPDATE exam_history_tb
-                    SET wrong_note_saved = 'Y'
+                    SET wrong_note_saved = 'Y',
+                        created_at = %s
                     WHERE exam_id = %s
                     """,
-                    (attempt_id,),
+                    (saved_at, attempt_id),
                 )
             updated_count = cur.rowcount
 
@@ -3427,6 +3438,7 @@ def save_wrong_note(attempt_id: str, question_ids: list[str] | None = None) -> d
         "attemptId": attempt_id,
         "updatedCount": updated_count,
         "questionIds": question_ids or [],
+        "savedAt": saved_at,
     }
 
 
@@ -3633,6 +3645,7 @@ def get_saved_wrong_notes(member_id: str | None = None) -> dict[str, Any]:
                     s.subject_name,
                     s.subject_description,
                     h.exam_question_id,
+                    h.created_at AS history_created_at,
                     h.selected_number,
                     h.answer_number AS selected_answer_number,
                     h.is_correct,
@@ -3657,7 +3670,13 @@ def get_saved_wrong_notes(member_id: str | None = None) -> dict[str, Any]:
                     ON q.question_id = h.question_id
                    AND q.subject_code = e.subject_code
                 WHERE {detail_where}
-                ORDER BY s.subject_code, e.exam_date DESC NULLS LAST, e.exam_time DESC NULLS LAST, e.exam_round, h.exam_question_id
+                ORDER BY
+                    s.subject_code,
+                    h.created_at DESC NULLS LAST,
+                    e.exam_date DESC NULLS LAST,
+                    e.exam_time DESC NULLS LAST,
+                    e.exam_round,
+                    h.exam_question_id
                 """,
                 detail_params,
             )
@@ -3674,7 +3693,7 @@ def get_saved_wrong_notes(member_id: str | None = None) -> dict[str, Any]:
                 "subjectName": row["subject_name"] or row["subject_description"],
                 "attemptId": row["exam_id"],
                 "roundTitle": f"{row['exam_round']}회차" if row["exam_round"] else "응시 결과",
-                "createdAt": _created_at(row),
+                "createdAt": _as_browser_datetime(row["history_created_at"]) or _created_at(row),
                 "total": exam_summary.get("questionCount"),
                 "totalCount": exam_summary.get("questionCount"),
                 "wrongCount": exam_summary.get("wrongCount"),
