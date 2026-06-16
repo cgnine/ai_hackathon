@@ -1869,6 +1869,21 @@ body[data-page="ranking"] .nav-btn:hover {
   padding: 0;
 }
 
+body[data-page="main"] .ranking-list.is-rolling {
+  animation: rankingPageFade 420ms ease both;
+}
+
+@keyframes rankingPageFade {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
 .ranking-table-card .ranking-list li {
   grid-template-columns: 36px max-content auto 70px;
   column-gap: 16px;

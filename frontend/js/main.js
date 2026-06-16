@@ -9,8 +9,15 @@ let rankingLoadingTimer = null;
 let rankingLoadingProgress = 0;
 let monthlyRankingItems = [];
 let monthlyRankingPage = 1;
+let mainRankingAutoRollTimer = null;
+let mainRankingAutoRollPaused = false;
+let mainRankingResumeTimer = null;
+let mainRankingAutoRollInitialized = false;
 const RANKING_PAGE_SIZE = 17;
 const RANKING_MAX_ITEMS = 50;
+const MAIN_RANKING_PAGE_SIZE = 5;
+const MAIN_RANKING_MAX_ITEMS = 10;
+const MAIN_RANKING_AUTO_ROLL_MS = 4500;
 
 function setCurrentMonthTitle(monthLabel) {
   const title = document.getElementById("monthlyRankingTitle");
@@ -42,18 +49,27 @@ function renderMonthlyRanking(items) {
   const list = document.getElementById("monthlyRankingList");
   if (!list) return;
 
-  const isRankingPage = document.body?.dataset.page === "ranking";
-  monthlyRankingItems = Array.isArray(items) ? items.slice(0, isRankingPage ? RANKING_MAX_ITEMS : 10) : [];
-  const visibleCount = isRankingPage ? RANKING_PAGE_SIZE : 5;
-  const pageCount = isRankingPage ? Math.ceil(RANKING_MAX_ITEMS / RANKING_PAGE_SIZE) : 1;
+  const pageType = document.body?.dataset.page;
+  const isRankingPage = pageType === "ranking";
+  const isMainPage = pageType === "main";
+  const maxItems = isRankingPage ? RANKING_MAX_ITEMS : MAIN_RANKING_MAX_ITEMS;
+  const pageSize = isRankingPage ? RANKING_PAGE_SIZE : MAIN_RANKING_PAGE_SIZE;
+  const isPagedRanking = isRankingPage || isMainPage;
+  monthlyRankingItems = Array.isArray(items) ? items.slice(0, maxItems) : [];
+  const pageCount = isPagedRanking ? Math.max(1, Math.ceil(maxItems / pageSize)) : 1;
   const safePage = Math.max(1, Math.min(monthlyRankingPage, pageCount));
   monthlyRankingPage = safePage;
-  const startIndex = isRankingPage ? (safePage - 1) * RANKING_PAGE_SIZE : 0;
-  const endIndex = isRankingPage ? Math.min(startIndex + RANKING_PAGE_SIZE, RANKING_MAX_ITEMS) : visibleCount;
+  const startIndex = isPagedRanking ? (safePage - 1) * pageSize : 0;
+  const endIndex = isPagedRanking ? Math.min(startIndex + pageSize, maxItems) : pageSize;
   const rows = Array.from({ length: endIndex - startIndex }, (_, index) => {
     const itemIndex = startIndex + index;
     return monthlyRankingItems[itemIndex] || { rank: itemIndex + 1 };
   });
+  if (isMainPage) {
+    list.classList.remove("is-rolling");
+    void list.offsetWidth;
+    list.classList.add("is-rolling");
+  }
   list.replaceChildren();
 
   rows.forEach((item, index) => {
@@ -100,6 +116,39 @@ function renderRankingPagination() {
     });
     pagination.appendChild(button);
   }
+}
+
+function pageCountForMainRanking() {
+  return Math.max(1, Math.ceil(Math.min(monthlyRankingItems.length, MAIN_RANKING_MAX_ITEMS) / MAIN_RANKING_PAGE_SIZE));
+}
+
+function pauseMainRankingAutoRoll(duration = 0) {
+  mainRankingAutoRollPaused = true;
+  if (!duration) return;
+  window.clearTimeout(mainRankingResumeTimer);
+  mainRankingResumeTimer = window.setTimeout(() => {
+    mainRankingAutoRollPaused = false;
+  }, duration);
+}
+
+function initMainRankingAutoRoll() {
+  if (document.body?.dataset.page !== "main" || mainRankingAutoRollInitialized) return;
+  const card = document.querySelector(".main-ranking");
+  if (!card) return;
+  mainRankingAutoRollInitialized = true;
+
+  card.addEventListener("mouseenter", () => pauseMainRankingAutoRoll());
+  card.addEventListener("mouseleave", () => {
+    mainRankingAutoRollPaused = false;
+  });
+
+  window.clearInterval(mainRankingAutoRollTimer);
+  mainRankingAutoRollTimer = window.setInterval(() => {
+    if (mainRankingAutoRollPaused || monthlyRankingItems.length <= MAIN_RANKING_PAGE_SIZE) return;
+    const pageCount = pageCountForMainRanking();
+    monthlyRankingPage = monthlyRankingPage >= pageCount ? 1 : monthlyRankingPage + 1;
+    renderMonthlyRanking(monthlyRankingItems);
+  }, MAIN_RANKING_AUTO_ROLL_MS);
 }
 
 function renderRankingMoreList() {
@@ -596,5 +645,6 @@ function initMainMiniLogin() {
 
 initMainMiniLogin();
 initRankingMoreModal();
+initMainRankingAutoRoll();
 initRankingPage();
 loadMainStats();
