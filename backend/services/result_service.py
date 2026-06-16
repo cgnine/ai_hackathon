@@ -261,6 +261,42 @@ def format_ranking_number(value: Any) -> str:
     return str(int(numeric)) if numeric.is_integer() else f"{numeric:.1f}"
 
 
+def _compact_ranking_subject_name(value: Any) -> str:
+    text = " ".join(str(value or "").split())
+    normalized = text.lower()
+    if "cloud for architect" in normalized:
+        return "CA"
+    if "cloud for developer" in normalized:
+        return "CD"
+    if "ai engineering" in normalized:
+        return "AI"
+    if "data engineering" in normalized:
+        return "DE"
+    if "software engineering" in normalized:
+        return "SW"
+    return text
+
+
+def _normalize_learning_recommendation(value: Any) -> str:
+    text = " ".join(str(value or "").split())
+    replacements = {
+        "Cloud for Architect(Pro)": "CA",
+        "Cloud for Architect(": "CA",
+        "Cloud for Architect": "CA",
+        "Cloud for Developer(Pro)": "CD",
+        "Cloud for Developer(": "CD",
+        "Cloud for Developer": "CD",
+        "AI Engineering": "AI",
+        "Data Engineering": "DE",
+        "Software Engineering": "SW",
+    }
+    for source, target in replacements.items():
+        text = text.replace(source, target)
+    if len(text) <= 20:
+        return text
+    return text[:20].rstrip(" (")
+
+
 def _extract_json_array(text: str) -> list[Any]:
     decoder = json.JSONDecoder()
     stripped = str(text or "").strip()
@@ -435,6 +471,7 @@ def _fallback_ranking_learning_recommendations(pattern: dict[str, Any]) -> list[
     exam_count = format_ranking_number(float(pattern["avg_exam_count"] or 0))
     practical_rate = format_ranking_number(float(pattern["avg_practical_rate"] or 0))
     weak_subject = str(pattern["weak_subject"] or "취약 과목").strip()
+    weak_subject = _compact_ranking_subject_name(weak_subject)
     return [
         f"{exam_count}회 이상 응시하기"[:20],
         f"{weak_subject} 문제 풀기"[:20],
@@ -453,7 +490,7 @@ def _validate_ranking_learning_recommendations(
         text = " ".join(str(item or "").split())
         if not text or any(word in text for word in blocked_words):
             continue
-        items.append(text[:20])
+        items.append(_normalize_learning_recommendation(text))
     return items if len(items) == 4 else fallback
 
 
@@ -486,7 +523,7 @@ def _bedrock_ranking_learning_recommendations(pattern: dict[str, Any]) -> list[s
                 "avgSubjectCount": float(pattern["avg_subject_count"] or 0),
                 "avgPracticalRate": float(pattern["avg_practical_rate"] or 0),
                 "avgWrongNoteSavedCount": float(pattern["avg_wrong_note_saved_count"] or 0),
-                "weakSubject": pattern["weak_subject"],
+                "weakSubject": _compact_ranking_subject_name(pattern["weak_subject"]),
                 "weakSubjectScore": float(pattern["weak_subject_score"] or 0),
             },
             ensure_ascii=False,
