@@ -2868,7 +2868,7 @@ def get_exam_history(
 
 
 def get_monthly_ranking(limit: int = 10) -> dict[str, Any]:
-    safe_limit = max(1, min(limit, 10))
+    safe_limit = max(1, min(limit, 50))
     now = datetime.now()
 
     with get_conn() as conn:

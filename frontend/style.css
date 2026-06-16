@@ -1067,6 +1067,12 @@ body[data-page="ranking"] .nav-btn:hover {
   align-content: start;
 }
 
+.ranking-table-card {
+  grid-row: span 2;
+  grid-template-rows: auto auto 1fr;
+  min-height: 1006px;
+}
+
 .ranking-card-head {
   display: flex;
   align-items: center;
@@ -1859,6 +1865,7 @@ body[data-page="ranking"] .nav-btn:hover {
 }
 
 .ranking-table-card .ranking-list {
+  align-self: start;
   padding: 0;
 }
 
@@ -1871,6 +1878,45 @@ body[data-page="ranking"] .nav-btn:hover {
 .ranking-table-card .ranking-more-btn {
   align-self: end;
   width: 100%;
+}
+
+.ranking-pagination {
+  align-self: end;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 12px 0;
+}
+
+.ranking-pagination:empty {
+  display: none;
+}
+
+.ranking-pagination button {
+  display: inline-grid;
+  min-width: 28px;
+  height: 28px;
+  place-items: center;
+  padding: 0 6px;
+  border: 0;
+  border-radius: 4px;
+  background: transparent;
+  color: #60a5fa;
+  font-size: 0.86rem;
+  font-weight: 400;
+  cursor: pointer;
+}
+
+.ranking-pagination button.active {
+  background: transparent;
+  color: #60a5fa;
+  font-weight: 600;
+}
+
+.ranking-pagination button:hover,
+.ranking-pagination button:focus-visible {
+  outline: none;
 }
 
 .ranking-learning-card .ranking-card-head {
@@ -8112,6 +8158,12 @@ body.modal-open {
   .ranking-dashboard,
   .skill-metrics {
     grid-template-columns: 1fr;
+  }
+
+  .ranking-table-card {
+    grid-row: auto;
+    grid-template-rows: none;
+    min-height: 0;
   }
 
   .wrong-subject-grid {

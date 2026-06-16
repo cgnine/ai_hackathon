@@ -8,6 +8,9 @@ const MAIN_AUTH_TTL_MS = 12 * 60 * 60 * 1000;
 let rankingLoadingTimer = null;
 let rankingLoadingProgress = 0;
 let monthlyRankingItems = [];
+let monthlyRankingPage = 1;
+const RANKING_PAGE_SIZE = 17;
+const RANKING_MAX_ITEMS = 50;
 
 function setCurrentMonthTitle(monthLabel) {
   const title = document.getElementById("monthlyRankingTitle");
@@ -39,9 +42,18 @@ function renderMonthlyRanking(items) {
   const list = document.getElementById("monthlyRankingList");
   if (!list) return;
 
-  monthlyRankingItems = Array.isArray(items) ? items.slice(0, 10) : [];
-  const visibleCount = document.body?.dataset.page === "ranking" ? 7 : 5;
-  const rows = Array.from({ length: visibleCount }, (_, index) => monthlyRankingItems[index] || { rank: index + 1 });
+  const isRankingPage = document.body?.dataset.page === "ranking";
+  monthlyRankingItems = Array.isArray(items) ? items.slice(0, isRankingPage ? RANKING_MAX_ITEMS : 10) : [];
+  const visibleCount = isRankingPage ? RANKING_PAGE_SIZE : 5;
+  const pageCount = isRankingPage ? Math.ceil(RANKING_MAX_ITEMS / RANKING_PAGE_SIZE) : 1;
+  const safePage = Math.max(1, Math.min(monthlyRankingPage, pageCount));
+  monthlyRankingPage = safePage;
+  const startIndex = isRankingPage ? (safePage - 1) * RANKING_PAGE_SIZE : 0;
+  const endIndex = isRankingPage ? Math.min(startIndex + RANKING_PAGE_SIZE, RANKING_MAX_ITEMS) : visibleCount;
+  const rows = Array.from({ length: endIndex - startIndex }, (_, index) => {
+    const itemIndex = startIndex + index;
+    return monthlyRankingItems[itemIndex] || { rank: itemIndex + 1 };
+  });
   list.replaceChildren();
 
   rows.forEach((item, index) => {
@@ -56,7 +68,7 @@ function renderMonthlyRanking(items) {
     name.className = "ranking-name";
     affiliation.className = "ranking-affiliation";
     row.classList.toggle("ranking-placeholder", !hasScore);
-    rank.textContent = item.rank || index + 1;
+    rank.textContent = item.rank || startIndex + index + 1;
     name.textContent = hasScore ? (item.memberName || item.memberId) : "\u00a0";
     renderRankingAffiliation(affiliation, item.memberId, hasScore);
     score.textContent = hasScore ? formatMonthlyScore(item.averageScore) : "\u00a0";
@@ -66,6 +78,28 @@ function renderMonthlyRanking(items) {
   });
 
   renderTopRankingPodium(items);
+  renderRankingPagination();
+}
+
+function renderRankingPagination() {
+  const pagination = document.getElementById("rankingPagination");
+  if (!pagination) return;
+
+  pagination.replaceChildren();
+  const pageCount = Math.ceil(RANKING_MAX_ITEMS / RANKING_PAGE_SIZE);
+  for (let page = 1; page <= pageCount; page += 1) {
+    const button = document.createElement("button");
+    button.type = "button";
+    button.textContent = page;
+    button.classList.toggle("active", page === monthlyRankingPage);
+    button.setAttribute("aria-label", `${page}페이지`);
+    button.setAttribute("aria-current", page === monthlyRankingPage ? "page" : "false");
+    button.addEventListener("click", () => {
+      monthlyRankingPage = page;
+      renderMonthlyRanking(monthlyRankingItems);
+    });
+    pagination.appendChild(button);
+  }
 }
 
 function renderRankingMoreList() {
@@ -477,9 +511,10 @@ async function initRankingPage() {
 
 async function loadMonthlyRanking() {
   setCurrentMonthTitle();
+  const limit = document.body?.dataset.page === "ranking" ? RANKING_MAX_ITEMS : 10;
 
   try {
-    const response = await fetch(`${API_BASE}/results/ranking/monthly?limit=10`);
+    const response = await fetch(`${API_BASE}/results/ranking/monthly?limit=${limit}`);
     if (!response.ok) throw new Error(`HTTP ${response.status}`);
     const data = await response.json();
     setCurrentMonthTitle(data.monthLabel);

@@ -87,8 +87,11 @@
             <li class="ranking-placeholder"><span class="ranking-rank">5</span><span class="ranking-name">&nbsp;</span><span class="ranking-affiliation is-empty">&nbsp;</span><strong>&nbsp;</strong></li>
             <li class="ranking-placeholder"><span class="ranking-rank">6</span><span class="ranking-name">&nbsp;</span><span class="ranking-affiliation is-empty">&nbsp;</span><strong>&nbsp;</strong></li>
             <li class="ranking-placeholder"><span class="ranking-rank">7</span><span class="ranking-name">&nbsp;</span><span class="ranking-affiliation is-empty">&nbsp;</span><strong>&nbsp;</strong></li>
+            <li class="ranking-placeholder"><span class="ranking-rank">8</span><span class="ranking-name">&nbsp;</span><span class="ranking-affiliation is-empty">&nbsp;</span><strong>&nbsp;</strong></li>
+            <li class="ranking-placeholder"><span class="ranking-rank">9</span><span class="ranking-name">&nbsp;</span><span class="ranking-affiliation is-empty">&nbsp;</span><strong>&nbsp;</strong></li>
+            <li class="ranking-placeholder"><span class="ranking-rank">10</span><span class="ranking-name">&nbsp;</span><span class="ranking-affiliation is-empty">&nbsp;</span><strong>&nbsp;</strong></li>
           </ol>
-          <button class="ranking-more-btn" type="button">더보기 <span>→</span></button>
+          <div class="ranking-pagination" id="rankingPagination" aria-label="전체 랭킹 페이지"></div>
         </article>
 
         <article class="ranking-card ranking-goal-card">
@@ -118,47 +121,6 @@
           </ul>
         </article>
 
-        <article class="ranking-card ranking-rival-card">
-          <div class="ranking-card-head">
-            <h2>AI 라이벌 추천</h2>
-          </div>
-          <div class="rival-layout">
-            <div class="rival-profile">
-              <img class="podium-avatar rival-avatar" id="rankingRivalAvatar" src="assets/ranking/ranking-rival-avatar.png" alt="라이벌 프로필 이미지">
-              <p id="rankingRivalAffiliation" hidden>KB데이타시스템</p>
-              <strong id="rankingRivalName">김○수</strong>
-            </div>
-            <div class="rival-score-summary">
-              <div>
-                <p><strong><span id="rankingRivalRank">2</span>위</strong><strong><span id="rankingRivalScore">75.7</span>점</strong></p>
-                <em>평균 점수 유사</em>
-              </div>
-              <div>
-                <span>나와 점수 차이</span>
-                <strong><span id="rankingRivalScoreGap">26.3</span>점</strong>
-              </div>
-            </div>
-          </div>
-          <table class="rival-table" id="rankingRivalTable">
-            <thead id="rankingRivalTableHead">
-              <tr>
-                <th></th>
-                <th>AI</th>
-                <th>CA</th>
-                <th>Cloud</th>
-              </tr>
-            </thead>
-            <tbody id="rankingRivalTableBody">
-              <tr><th>나</th><td>49.4</td><td>51.2</td><td>45.0</td></tr>
-              <tr><th>김○수</th><td>75.7</td><td>76.0</td><td>73.4</td></tr>
-            </tbody>
-          </table>
-          <div class="rival-growth-note">
-            <span aria-hidden="true">↗</span>
-            <strong id="rankingRivalNote">2등과 26.3점 차이입니다. AI와 CA 집중으로 역전 가능합니다.</strong>
-          </div>
-        </article>
-
         <article class="ranking-card ranking-learning-card">
           <div class="ranking-card-head">
             <h2>AI 학습 추천</h2>
@@ -175,16 +137,6 @@
       </section>
     </div>
 
-    <section class="ranking-modal" id="rankingMoreModal" aria-label="전체 랭킹 TOP10" hidden>
-      <div class="ranking-modal-backdrop" data-ranking-modal-close></div>
-      <div class="ranking-modal-dialog" role="dialog" aria-modal="true" aria-labelledby="rankingMoreTitle">
-        <div class="ranking-modal-head">
-          <h2 id="rankingMoreTitle">전체 랭킹 TOP10</h2>
-          <button type="button" class="ranking-modal-close" aria-label="닫기" data-ranking-modal-close>×</button>
-        </div>
-        <ol class="ranking-list ranking-modal-list" id="rankingMoreList"></ol>
-      </div>
-    </section>
   </main>
 
   <footer class="main-footer">
