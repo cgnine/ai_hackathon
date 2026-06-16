@@ -22,7 +22,8 @@ function getMemberCompanyName(memberId) {
     A: "KB\uC99D\uAD8C",
     B: "KB\uAD6D\uBBFC\uC740\uD589",
     C: "KB\uC190\uD574\uBCF4\uD5D8",
-    D: "KB\uB370\uC774\uD0C0\uC2DC\uC2A4\uD15C"
+    D: "KB\uB370\uC774\uD0C0\uC2DC\uC2A4\uD15C",
+    E: "KB\uB77C\uC774\uD504\uC0DD\uBA85"
   };
   return companies[prefix] || "";
 }

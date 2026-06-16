@@ -34,55 +34,19 @@ function formatProfileDate(value) {
   return normalized || "-";
 }
 
-function escapeProfileHtml(value) {
-  return String(value ?? "")
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;")
-    .replace(/'/g, "&#39;");
-}
-
-async function loadProfileMenuSummary(target, latestExamTarget = null) {
+async function loadProfileLatestExam(latestExamTarget = null) {
   const memberId = currentMemberId();
-  if (!memberId || !target) return;
-
-  target.innerHTML = renderProfileInsightSummary();
+  if (!memberId || !latestExamTarget) return;
 
   try {
     const response = await fetch(`${API_BASE}/results/analysis?member_id=${encodeURIComponent(memberId)}&include_commentary=false`);
     if (!response.ok) throw new Error(`HTTP ${response.status}`);
     const data = await response.json();
     const summary = data.summary || {};
-    if (latestExamTarget) {
-      latestExamTarget.textContent = formatProfileDate(summary.latestExamAt);
-    }
-    target.innerHTML = renderProfileInsightSummary(summary);
+    latestExamTarget.textContent = formatProfileDate(summary.latestExamAt);
   } catch {
-    target.innerHTML = renderProfileInsightSummary();
+    latestExamTarget.textContent = "-";
   }
-}
-
-function renderProfileInsightSummary(summary = {}) {
-  const averageScore = Number(summary.averageScore || 0);
-  const wrongTotal = Number(summary.wrongTotal || 0);
-  const keywords = summary.strengthKeywords || {};
-  const strength = keywords.strongKeyword || (averageScore >= 70 ? "Cloud Computing" : "AI 기초");
-  const needsReview = keywords.weakKeyword || (wrongTotal > 0 ? "Security" : "실무형 문제");
-
-  return `
-    <div class="profile-insight-summary">
-      <strong>AI 분석 요약</strong>
-      <div class="profile-insight-tags">
-        <span class="good">강점</span>
-        <span>${escapeProfileHtml(strength)}</span>
-      </div>
-      <div class="profile-insight-tags">
-        <span class="warn">보완 필요</span>
-        <span>${escapeProfileHtml(needsReview)}</span>
-      </div>
-    </div>
-  `;
 }
 
 function renderProfileButton() {
@@ -94,7 +58,6 @@ function renderProfileButton() {
   const button = document.createElement("button");
   const menu = document.createElement("div");
   const header = document.createElement("div");
-  const summary = document.createElement("div");
   const menuList = document.createElement("div");
   const logoutButton = document.createElement("button");
   const memberName = currentMemberName() || state.profileName || profiles[0] || "응시자";
@@ -129,7 +92,6 @@ function renderProfileButton() {
       </div>
     </div>
   `;
-  summary.className = "profile-summary-card";
   menuList.className = "profile-menu-list";
   menuList.innerHTML = `
     <a href="${PAGE_URLS.myInfo}">내정보</a>
@@ -147,7 +109,7 @@ function renderProfileButton() {
     const nextOpen = menu.hidden;
     menu.hidden = !nextOpen;
     button.setAttribute("aria-expanded", String(nextOpen));
-    if (nextOpen) loadProfileMenuSummary(summary, menu.querySelector("[data-profile-latest-exam]"));
+    if (nextOpen) loadProfileLatestExam(menu.querySelector("[data-profile-latest-exam]"));
   });
 
   menu.addEventListener("click", (event) => event.stopPropagation());
@@ -157,7 +119,7 @@ function renderProfileButton() {
     button.setAttribute("aria-expanded", "false");
   });
 
-  menu.append(header, summary, menuList, logoutButton);
+  menu.append(header, menuList, logoutButton);
   actions.replaceChildren(button, menu);
   if (!actions.parentElement) topbar.insertBefore(actions, stats || null);
 }
