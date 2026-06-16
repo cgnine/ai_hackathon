@@ -459,7 +459,6 @@ function renderExamHistoryList(items = [], page = 1, pageSize = 8) {
     target.innerHTML = `
       <div class="my-history-empty">
         <strong>응시내역이 없습니다.</strong>
-        <p>선택한 과목의 응시내역이 없습니다.</p>
       </div>
     `;
   } else {

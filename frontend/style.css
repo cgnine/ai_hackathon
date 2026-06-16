@@ -3508,7 +3508,7 @@ body[data-page="exam-history"] .pagination {
   align-items: center;
   gap: 8px;
   color: #071341;
-  font-size: 1.14rem;
+  font-size: 1.42rem;
   font-weight: 800;
 }
 
@@ -3746,7 +3746,7 @@ body[data-page="exam-history"] .pagination {
 
 .wrong-set-card {
   display: grid;
-  grid-template-columns: minmax(220px, 1.35fr) minmax(110px, 0.75fr) minmax(96px, 0.65fr) minmax(96px, 0.65fr) minmax(150px, 0.85fr);
+  grid-template-columns: minmax(220px, 1.35fr) minmax(110px, 0.75fr) minmax(96px, 0.65fr) minmax(96px, 0.65fr) minmax(128px, 0.68fr);
   width: 100%;
   min-height: 86px;
   align-items: center;
@@ -3871,8 +3871,11 @@ body[data-page="exam-history"] .pagination {
 
 .wrong-set-action-cell {
   display: flex;
-  gap: 8px;
-  justify-content: flex-end;
+  align-items: center;
+  gap: 6px;
+  justify-content: center;
+  justify-self: stretch;
+  min-width: 128px;
 }
 
 .wrong-set-action-cell span {
@@ -3890,14 +3893,14 @@ body[data-page="exam-history"] .pagination {
 
 .wrong-set-delete-btn {
   display: inline-grid;
-  width: 24px;
-  height: 24px;
+  width: 16px;
+  height: 16px;
   place-items: center;
   border: 1px solid #ef4444;
   border-radius: 50%;
   background: #fff;
   color: #ef4444;
-  font-size: 0.56rem;
+  font-size: 0.42rem;
   font-weight: 500;
   line-height: 1;
 }
@@ -7510,14 +7513,12 @@ body.modal-open {
   height: 210px;
   margin-top: 14px;
   padding: 14px 8px 22px 36px;
-  background:
-    linear-gradient(#e8eef6 1px, transparent 1px) 36px 24px / calc((100% - 44px) / 4) 38px,
-    linear-gradient(90deg, #e8eef6 1px, transparent 1px) 36px 24px / calc((100% - 44px) / 4) 100%;
+  background: #fff;
 }
 
 .subject-trend-chart svg {
   width: 100%;
-  height: 166px;
+  height: 190px;
   overflow: visible;
 }
 
@@ -7532,11 +7533,7 @@ body.modal-open {
 }
 
 .trend-y {
-  position: absolute;
-  left: 0;
-  color: #06143a;
-  font-size: 0.76rem;
-  font-weight: 700;
+  display: none;
 }
 
 .trend-y.y100 { top: 4px; }
@@ -7544,14 +7541,36 @@ body.modal-open {
 .trend-y.y60 { top: 82px; }
 .trend-y.y40 { top: 121px; }
 .trend-y.y20 { top: 160px; }
+.trend-y.y0 { top: 194px; }
+
+.subject-trend-chart .trend-point-label {
+  fill: #06143a;
+  font-size: 13px;
+  font-weight: 800;
+  text-anchor: middle;
+}
+
+.subject-trend-chart .trend-grid-line {
+  stroke: #e8eef6;
+  stroke-width: 1;
+}
+
+.subject-trend-chart .trend-axis-label {
+  fill: #06143a;
+  font-size: 12px;
+  font-weight: 700;
+  text-anchor: middle;
+}
+
+.subject-trend-chart .trend-x-label {
+  fill: #06143a;
+  font-size: 13px;
+  font-weight: 700;
+  text-anchor: middle;
+}
 
 .trend-x {
-  display: grid;
-  grid-template-columns: repeat(5, 1fr);
-  color: #06143a;
-  font-size: 0.82rem;
-  font-weight: 700;
-  text-align: center;
+  display: none;
 }
 
 .subject-insight-grid {
@@ -7690,6 +7709,8 @@ body.modal-open {
 
   .wrong-set-action-cell {
     justify-content: flex-end;
+    justify-self: stretch;
+    min-width: 0;
   }
 }
 

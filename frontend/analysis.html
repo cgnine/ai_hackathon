@@ -230,6 +230,7 @@
               <span class="trend-y y60">60</span>
               <span class="trend-y y40">40</span>
               <span class="trend-y y20">20</span>
+              <span class="trend-y y0">0</span>
               <svg viewBox="0 0 520 210" preserveAspectRatio="none">
                 <polyline points="48,138 160,105 270,89 382,66 492,52"></polyline>
                 <circle cx="48" cy="138" r="6"></circle>
@@ -321,22 +322,49 @@
       function renderTrend(trend = []) {
         if (!trendSvg || !trendX) return;
         const items = trend.slice(-5);
+        const chart = {
+          left: 48,
+          right: 492,
+          top: 18,
+          bottom: 188,
+        };
+        const scoreToY = (score) => chart.bottom - ((chart.bottom - chart.top) * score / 100);
+        const createSvg = (tagName, attrs = {}) => {
+          const element = document.createElementNS("http://www.w3.org/2000/svg", tagName);
+          Object.entries(attrs).forEach(([key, value]) => element.setAttribute(key, String(value)));
+          return element;
+        };
+        trendSvg.innerHTML = "";
+        [100, 80, 60, 40, 20, 0].forEach((score) => {
+          const y = scoreToY(score);
+          trendSvg.appendChild(createSvg("line", {
+            x1: chart.left,
+            y1: y.toFixed(1),
+            x2: chart.right,
+            y2: y.toFixed(1),
+            class: "trend-grid-line",
+          }));
+          trendSvg.appendChild(createSvg("text", {
+            x: 20,
+            y: (y + 4).toFixed(1),
+            class: "trend-axis-label",
+          })).textContent = score;
+        });
         if (!items.length) {
-          trendSvg.innerHTML = "";
-          trendX.innerHTML = "<span>-</span><span>-</span><span>-</span><span>-</span><span>-</span>";
+          trendX.innerHTML = "";
           return;
         }
         const xPositions = items.length === 1
-          ? [260]
-          : items.map((_, index) => 48 + (444 * index / (items.length - 1)));
+          ? [(chart.left + chart.right) / 2]
+          : items.map((_, index) => chart.left + ((chart.right - chart.left) * index / (items.length - 1)));
         const points = items.map((item, index) => {
           const score = Math.max(0, Math.min(100, Number(item.examScore) || 0));
           return {
             x: xPositions[index],
-            y: 176 - (score * 1.5),
+            y: scoreToY(score),
+            score,
           };
         });
-        trendSvg.innerHTML = "";
         const line = document.createElementNS("http://www.w3.org/2000/svg", "polyline");
         line.setAttribute("points", points.map((point) => `${point.x.toFixed(1)},${point.y.toFixed(1)}`).join(" "));
         trendSvg.appendChild(line);
@@ -346,12 +374,20 @@
           circle.setAttribute("cy", point.y.toFixed(1));
           circle.setAttribute("r", "6");
           trendSvg.appendChild(circle);
+          const scoreLabel = document.createElementNS("http://www.w3.org/2000/svg", "text");
+          scoreLabel.setAttribute("x", point.x.toFixed(1));
+          scoreLabel.setAttribute("y", Math.max(12, point.y - 10).toFixed(1));
+          scoreLabel.setAttribute("class", "trend-point-label");
+          scoreLabel.textContent = Math.round(point.score);
+          trendSvg.appendChild(scoreLabel);
         });
         trendX.innerHTML = "";
-        items.forEach((item) => {
-          const label = document.createElement("span");
-          label.textContent = item.examRound ? `${item.examRound}회` : "-";
-          trendX.appendChild(label);
+        points.forEach((point, index) => {
+          trendSvg.appendChild(createSvg("text", {
+            x: point.x.toFixed(1),
+            y: 207,
+            class: "trend-x-label",
+          })).textContent = `${index + 1}\uD68C`;
         });
       }
 

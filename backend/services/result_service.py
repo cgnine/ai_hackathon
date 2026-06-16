@@ -1781,15 +1781,16 @@ def get_analysis(member_id: str, include_commentary: bool = True) -> dict[str, A
                 SELECT
                     e.subject_code,
                     CASE
-                        WHEN COALESCE(NULLIF(q.question_type, ''), '') IN ('실무', '실무형') THEN '실무형'
-                        WHEN COALESCE(NULLIF(q.question_type, ''), '') IN ('이론', '이론형', '객관식') THEN '이론형'
-                        WHEN COALESCE(BTRIM(q.question_content2), '') <> '' THEN '실무형'
+                        WHEN COALESCE(q.question_type, '') LIKE '%%실무%%'
+                          OR COALESCE(BTRIM(q.question_content2), '') <> '' THEN '실무형'
                         ELSE '이론형'
                     END AS question_type,
                     ROUND(
                         AVG(
                             CASE
-                                WHEN h.is_correct = 'Y' THEN 100
+                                WHEN h.selected_number::text ~ '^[0-9]+$'
+                                  AND q.answer_number::text ~ '^[0-9]+$'
+                                  AND h.selected_number::integer = q.answer_number::integer THEN 100
                                 ELSE 0
                             END
                         ),
@@ -1805,9 +1806,8 @@ def get_analysis(member_id: str, include_commentary: bool = True) -> dict[str, A
                 GROUP BY
                     e.subject_code,
                     CASE
-                        WHEN COALESCE(NULLIF(q.question_type, ''), '') IN ('실무', '실무형') THEN '실무형'
-                        WHEN COALESCE(NULLIF(q.question_type, ''), '') IN ('이론', '이론형', '객관식') THEN '이론형'
-                        WHEN COALESCE(BTRIM(q.question_content2), '') <> '' THEN '실무형'
+                        WHEN COALESCE(q.question_type, '') LIKE '%%실무%%'
+                          OR COALESCE(BTRIM(q.question_content2), '') <> '' THEN '실무형'
                         ELSE '이론형'
                     END
                 """,
@@ -1823,15 +1823,14 @@ def get_analysis(member_id: str, include_commentary: bool = True) -> dict[str, A
                         exam_round,
                         CAST(exam_score AS DECIMAL(5,2)) AS exam_score,
                         exam_date,
+                        exam_time,
+                        created_at,
                         ROW_NUMBER() OVER (
                             PARTITION BY subject_code
                             ORDER BY
-                                CASE
-                                    WHEN exam_round::text ~ '^[0-9]+(\\.[0-9]+)?$'
-                                    THEN CAST(exam_round AS DECIMAL(10,2))
-                                    ELSE 0
-                                END DESC,
-                                exam_date DESC,
+                                exam_date DESC NULLS LAST,
+                                exam_time DESC NULLS LAST,
+                                created_at DESC NULLS LAST,
                                 exam_id DESC
                         ) AS row_no
                     FROM exam_tb
