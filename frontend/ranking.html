@@ -1,0 +1,204 @@
+﻿<!DOCTYPE html>
+<html lang="ko">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>AI랭킹 | KB Masters</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+
+<body data-page="ranking">
+  <header class="topbar">
+    <a class="brand" href="subjects.html" id="homeLink" aria-label="시험응시 화면으로 이동">
+      <img class="brand-logo" src="assets/brand/kb-masters-logo.png" alt="KB MASTERS" />
+    </a>
+    <nav class="main-nav" aria-label="주요 메뉴">
+      <a class="nav-btn" href="index.html" data-screen="profile">시험응시</a>
+      <a class="nav-btn" href="wrong.html" data-screen="wrong">오답노트</a>
+      <a class="nav-btn" href="ai-recommend.html" data-screen="aiRecommend">AI 맞춤형 추천문제</a>
+      <a class="nav-btn" href="harness.html" data-screen="harness">AI문제생성</a>
+      <a class="nav-btn active" href="ranking.html" data-screen="ranking">AI랭킹</a>
+    </nav>
+    <div class="profile-actions" data-profile-slot aria-label="profile"></div>
+    <div class="top-stats" aria-label="학습 통계">
+      <span>Today <strong id="todayCount">0</strong></span>
+      <span>Wrong <strong id="wrongTopCount">0</strong></span>
+    </div>
+  </header>
+
+  <main class="page-shell ranking-page">
+    <div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+    <section class="ranking-loading result-loading" id="rankingLoading" aria-live="polite">
+      <p class="eyebrow">AI Ranking</p>
+      <p>AI가 랭킹을 분석중입니다.<br /><br />잠시만 기다려 주십시오.</p>
+      <div class="result-loading-track" aria-hidden="true">
+        <span id="rankingLoadingBar"></span>
+      </div>
+    </section>
+
+    <div class="ranking-content" id="rankingContent" hidden>
+      <section class="ranking-hero">
+        <p class="eyebrow">AI Ranking</p>
+        <h1>랭킹</h1>
+        <p>다른 사용자들과 실력을 비교하고 AI가 다음 성장 방향을 추천해드려요.</p>
+      </section>
+
+      <section class="ranking-card ranking-summary-card" aria-label="현재 순위와 예상 순위 변화">
+        <div class="ranking-current-rank">
+          <span>현재 순위</span>
+          <div class="ranking-current-detail">
+            <strong><span id="rankingMyRank">28</span><small>위</small></strong>
+            <div class="ranking-strength-tags" id="rankingStrengthTags" aria-label="강점과 취약 영역">
+              <span><b>강점</b><em class="ranking-keyword">DW와 빅데이터</em></span>
+              <span class="weak"><b>취약</b><em class="ranking-keyword">데이터 프로세싱</em></span>
+            </div>
+          </div>
+        </div>
+        <div class="ranking-summary-visual" aria-hidden="true">
+          <img src="assets/ranking/ranking-current-rabbit.png" alt="" />
+        </div>
+        <div class="ranking-rank-change">
+          <div>
+            <span>예상 순위 변화</span>
+            <strong><span id="rankingChangeMyRank">28</span>위 <b>→</b> <span id="rankingChangeTargetRank">20</span>위</strong>
+            <em>달성 가능성 <span id="rankingSuccessRate">85</span>%</em>
+          </div>
+          <div class="ranking-target-scores" id="rankingSubjectTargets">
+            <span>과목별 목표 점수</span>
+            <p><strong>AI</strong><i><b style="width: 70%"></b></i><em>+2점 ↑</em></p>
+            <p><strong>Cloud</strong><i><b style="width: 58%"></b></i><em>+1점 ↑</em></p>
+          </div>
+        </div>
+      </section>
+
+      <section class="ranking-dashboard" aria-label="AI랭킹 대시보드">
+        <article class="ranking-card ranking-table-card" id="rankingSection">
+          <div class="ranking-card-head">
+            <h2>전체 랭킹</h2>
+            <span id="monthlyRankingTitle">6월 랭킹</span>
+          </div>
+          <ol class="ranking-list" id="monthlyRankingList">
+            <li class="ranking-placeholder"><span class="ranking-rank">1</span><span class="ranking-name">&nbsp;</span><span class="ranking-affiliation is-empty">&nbsp;</span><strong>&nbsp;</strong></li>
+            <li class="ranking-placeholder"><span class="ranking-rank">2</span><span class="ranking-name">&nbsp;</span><span class="ranking-affiliation is-empty">&nbsp;</span><strong>&nbsp;</strong></li>
+            <li class="ranking-placeholder"><span class="ranking-rank">3</span><span class="ranking-name">&nbsp;</span><span class="ranking-affiliation is-empty">&nbsp;</span><strong>&nbsp;</strong></li>
+            <li class="ranking-placeholder"><span class="ranking-rank">4</span><span class="ranking-name">&nbsp;</span><span class="ranking-affiliation is-empty">&nbsp;</span><strong>&nbsp;</strong></li>
+            <li class="ranking-placeholder"><span class="ranking-rank">5</span><span class="ranking-name">&nbsp;</span><span class="ranking-affiliation is-empty">&nbsp;</span><strong>&nbsp;</strong></li>
+            <li class="ranking-placeholder"><span class="ranking-rank">6</span><span class="ranking-name">&nbsp;</span><span class="ranking-affiliation is-empty">&nbsp;</span><strong>&nbsp;</strong></li>
+            <li class="ranking-placeholder"><span class="ranking-rank">7</span><span class="ranking-name">&nbsp;</span><span class="ranking-affiliation is-empty">&nbsp;</span><strong>&nbsp;</strong></li>
+          </ol>
+          <button class="ranking-more-btn" type="button">더보기 <span>→</span></button>
+        </article>
+
+        <article class="ranking-card ranking-goal-card">
+          <div class="ranking-card-head">
+            <h2>AI 추격 목표 추천</h2>
+          </div>
+          <div class="goal-panel">
+            <div class="goal-info">
+              <h3>내 정보</h3>
+              <p><span>내 순위</span><strong><span id="rankingGoalMyRank">28</span>위</strong></p>
+              <p><span>내 점수</span><strong><span id="rankingGoalMyScore">78</span>점</strong></p>
+              <hr />
+              <p><span><span id="rankingGoalTargetRankLabel">20</span>위 점수</span><strong><span id="rankingGoalTargetScore">81</span>점</strong></p>
+              <p><span>점수 차</span><strong><span id="rankingGoalGapScore">3</span>점</strong></p>
+            </div>
+            <div class="goal-ring">
+              <span><span id="rankingGoalTargetRank">20</span>위권 진입까지</span>
+              <strong>+<span id="rankingGoalGapScoreRing">3</span>점 필요</strong>
+            </div>
+          </div>
+          <div class="ranking-goal-coach" id="rankingGoalCoach">
+            현재 20위까지 3점 차이입니다. SW와 Cloud 학습을 강화해 보세요.
+          </div>
+          <ul class="ranking-task-list" id="rankingSubjectRecommendations">
+            <li><span>SW 실무 문제 집중 학습</span><strong>+3점 예상</strong></li>
+            <li><span>Cloud 개념 문제 학습</span><strong>+2점 예상</strong></li>
+          </ul>
+        </article>
+
+        <article class="ranking-card ranking-rival-card">
+          <div class="ranking-card-head">
+            <h2>AI 라이벌 추천</h2>
+          </div>
+          <div class="rival-layout">
+            <div class="rival-profile">
+              <img class="podium-avatar rival-avatar" id="rankingRivalAvatar" src="assets/ranking/ranking-rival-avatar.png" alt="라이벌 프로필 이미지">
+              <p id="rankingRivalAffiliation" hidden>KB데이타시스템</p>
+              <strong id="rankingRivalName">김○수</strong>
+            </div>
+            <div class="rival-score-summary">
+              <div>
+                <p><strong><span id="rankingRivalRank">2</span>위</strong><strong><span id="rankingRivalScore">75.7</span>점</strong></p>
+                <em>평균 점수 유사</em>
+              </div>
+              <div>
+                <span>나와 점수 차이</span>
+                <strong><span id="rankingRivalScoreGap">26.3</span>점</strong>
+              </div>
+            </div>
+          </div>
+          <table class="rival-table" id="rankingRivalTable">
+            <thead id="rankingRivalTableHead">
+              <tr>
+                <th></th>
+                <th>AI</th>
+                <th>CA</th>
+                <th>Cloud</th>
+              </tr>
+            </thead>
+            <tbody id="rankingRivalTableBody">
+              <tr><th>나</th><td>49.4</td><td>51.2</td><td>45.0</td></tr>
+              <tr><th>김○수</th><td>75.7</td><td>76.0</td><td>73.4</td></tr>
+            </tbody>
+          </table>
+          <div class="rival-growth-note">
+            <span aria-hidden="true">↗</span>
+            <strong id="rankingRivalNote">2등과 26.3점 차이입니다. AI와 CA 집중으로 역전 가능합니다.</strong>
+          </div>
+        </article>
+
+        <article class="ranking-card ranking-learning-card">
+          <div class="ranking-card-head">
+            <h2>AI 학습 추천</h2>
+            <small>TOP10 학습자들의 공통 학습 패턴</small>
+          </div>
+          <ul class="learning-list" id="rankingLearningList">
+            <li><span class="learning-icon">•</span><div><strong>주 3회 이상 응시 추천</strong></div></li>
+            <li><span class="learning-icon">•</span><div><strong>Cloud 중심 문제 풀이</strong></div></li>
+            <li><span class="learning-icon">•</span><div><strong>실무형 문제 60% 유지</strong></div></li>
+            <li><span class="learning-icon">•</span><div><strong>오답노트 저장 활용</strong></div></li>
+          </ul>
+          <a class="ranking-primary-btn" href="ai-recommend.html">AI 추천 문제 풀기</a>
+        </article>
+      </section>
+    </div>
+
+    <section class="ranking-modal" id="rankingMoreModal" aria-label="전체 랭킹 TOP10" hidden>
+      <div class="ranking-modal-backdrop" data-ranking-modal-close></div>
+      <div class="ranking-modal-dialog" role="dialog" aria-modal="true" aria-labelledby="rankingMoreTitle">
+        <div class="ranking-modal-head">
+          <h2 id="rankingMoreTitle">전체 랭킹 TOP10</h2>
+          <button type="button" class="ranking-modal-close" aria-label="닫기" data-ranking-modal-close>×</button>
+        </div>
+        <ol class="ranking-list ranking-modal-list" id="rankingMoreList"></ol>
+      </div>
+    </section>
+  </main>
+
+  <footer class="main-footer">
+    <div class="main-footer-inner">
+      <strong class="main-footer-logo">KB Masters</strong>
+      <div class="main-footer-info">
+        <p>대표 : CGNINE</p>
+        <p>주소 : 서울특별시 중구 수표동 47-1 청계IT타워 9층</p>
+        <p class="main-footer-contact">TEL : 02-6936-8547&nbsp;&nbsp;&nbsp; Email : contact@kbmasters.co.kr <span>© CGNINE. All Rights Reserved.</span></p>
+      </div>
+    </div>
+  </footer>
+
+  <script src="app.js"></script>
+  <script src="js/main.js"></script>
+</body>
+</html>
