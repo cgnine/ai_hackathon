@@ -2325,7 +2325,306 @@ body[data-page="main"] .ranking-list.is-rolling {
 
 .member-settings-root {
   display: grid;
+  gap: 28px;
+}
+
+body[data-page="my-info"] .my-info-panel {
+  max-width: none;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+.member-profile-title {
+  margin: 0;
+  color: #06143a;
+  font-size: clamp(1.58rem, 2.4vw, 2rem);
+  font-weight: 900;
+  letter-spacing: 0;
+}
+
+.member-profile-card {
+  border: 1px solid #e5eaf2;
+  border-radius: 8px;
+  background: #ffffff;
+  box-shadow: 0 12px 28px rgba(15, 23, 42, 0.05);
+}
+
+.member-profile-hero {
+  display: flex;
+  min-height: 152px;
+  align-items: center;
+  gap: 22px;
+  padding: 24px 28px;
+}
+
+.member-profile-avatar {
+  display: grid;
+  flex: 0 0 104px;
+  width: 104px;
+  height: 104px;
+  place-items: center;
+  overflow: hidden;
+  border-radius: 50%;
+  background: #ffffff;
+  color: #f5bd00;
+  font-size: 1.9rem;
+  font-weight: 900;
+}
+
+.member-profile-avatar img {
+  display: block;
+  width: 72%;
+  height: 72%;
+  object-fit: contain;
+  object-position: center;
+}
+
+.member-profile-copy h2 {
+  margin: 0;
+  color: #06143a;
+  font-size: 1.55rem;
+  font-weight: 900;
+}
+
+.member-profile-copy p,
+.member-profile-copy small {
+  display: block;
+  margin: 8px 0 0;
+  color: #64748b;
+  font-size: 0.95rem;
+  font-weight: 700;
+}
+
+.member-profile-copy small span {
+  font-weight: 700;
+}
+
+.member-activity-card {
+  display: grid;
   gap: 18px;
+  padding: 24px 16px;
+}
+
+.member-activity-card h2 {
+  margin: 0;
+  padding: 0 0 0 2px;
+  color: #06143a;
+  font-size: 1rem;
+  font-weight: 900;
+}
+
+.member-activity-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.member-activity-item {
+  display: flex;
+  min-height: 88px;
+  align-items: center;
+  gap: 14px;
+  padding: 16px 12px;
+  border: 1px solid #e5eaf2;
+  border-radius: 6px;
+  background: #ffffff;
+}
+
+.member-activity-icon {
+  display: grid;
+  flex: 0 0 48px;
+  width: 48px;
+  height: 48px;
+  place-items: center;
+  border-radius: 50%;
+  font-size: 1.25rem;
+  font-weight: 900;
+}
+
+.member-activity-icon.purple { background: #eee8ff; color: #6d4cff; }
+.member-activity-icon.green { background: #ddf6ea; color: #0ca064; }
+.member-activity-icon.orange { background: #ffeadc; color: #f05d23; }
+.member-activity-icon.blue { background: #e7f0ff; color: #1c6fe8; }
+
+.member-activity-item small {
+  display: block;
+  margin-bottom: 8px;
+  color: #64748b;
+  font-size: 0.78rem;
+  font-weight: 800;
+}
+
+.member-activity-item strong {
+  display: block;
+  min-width: 0;
+  overflow: hidden;
+  color: #06143a;
+  font-size: 0.95rem;
+  font-weight: 900;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.member-activity-date {
+  font-size: 0.74rem;
+  line-height: 1.2;
+  letter-spacing: 0;
+  white-space: nowrap;
+}
+
+.member-reset-open-btn {
+  justify-self: start;
+  min-height: 46px;
+  padding: 0 18px;
+  border: 1px solid #f2d8a8;
+  border-radius: 7px;
+  background: #fffaf0;
+  color: #a64613;
+  font-size: 0.92rem;
+  font-weight: 900;
+}
+
+.member-password-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 4200;
+  display: none;
+  place-items: center;
+  padding: 24px;
+}
+
+.member-password-modal.is-open {
+  display: grid;
+}
+
+.member-password-backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.48);
+}
+
+.member-password-dialog {
+  position: relative;
+  z-index: 1;
+  width: min(100%, 362px);
+  padding: 32px 28px 24px;
+  border-radius: 8px;
+  background: #ffffff;
+  box-shadow: 0 28px 60px rgba(15, 23, 42, 0.25);
+}
+
+.member-password-close {
+  position: absolute;
+  top: 14px;
+  right: 14px;
+  display: grid;
+  width: 32px;
+  height: 32px;
+  place-items: center;
+  border-radius: 50%;
+  background: transparent;
+  color: #475569;
+  font-size: 1.5rem;
+  line-height: 1;
+}
+
+.member-password-dialog h2 {
+  margin: 0;
+  color: #06143a;
+  font-size: 1.32rem;
+  font-weight: 900;
+}
+
+.member-password-dialog > p {
+  margin: 12px 0 20px;
+  color: #64748b;
+  font-size: 0.86rem;
+  font-weight: 700;
+}
+
+.member-password-form {
+  display: grid;
+  gap: 16px;
+}
+
+.member-password-form label {
+  display: grid;
+  gap: 8px;
+}
+
+.member-password-form label > span {
+  color: #06143a;
+  font-size: 0.78rem;
+  font-weight: 900;
+}
+
+.member-password-input-wrap {
+  display: flex;
+  min-height: 40px;
+  align-items: center;
+  border: 1px solid #d7dee8;
+  border-radius: 5px;
+  background: #ffffff;
+}
+
+.member-password-input {
+  min-width: 0;
+  flex: 1;
+  height: 38px;
+  padding: 0 12px;
+  border: 0;
+  background: transparent;
+  color: #06143a;
+  font: inherit;
+}
+
+.member-password-input:focus {
+  outline: 0;
+}
+
+.member-password-input-wrap:focus-within {
+  border-color: #f4c400;
+  box-shadow: 0 0 0 3px rgba(255, 204, 0, 0.22);
+}
+
+.member-password-input-wrap button {
+  flex: 0 0 auto;
+  min-width: 44px;
+  height: 38px;
+  padding: 0 10px;
+  background: transparent;
+  color: #64748b;
+  font-size: 0.75rem;
+  font-weight: 800;
+}
+
+.member-password-actions {
+  display: grid;
+  grid-template-columns: 1fr 1.35fr;
+  gap: 12px;
+  margin-top: 6px;
+}
+
+.member-password-cancel,
+.member-password-submit {
+  min-height: 38px;
+  border-radius: 6px;
+  font-size: 0.9rem;
+  font-weight: 900;
+}
+
+.member-password-cancel {
+  border: 1px solid #dbe3ef;
+  background: #ffffff;
+  color: #06143a;
+}
+
+.member-password-submit {
+  background: #ffcc00;
+  color: #5f4200;
 }
 
 .settings-hero {
@@ -8746,6 +9045,27 @@ body.modal-open {
     text-align: left;
   }
 
+  .member-profile-hero {
+    align-items: flex-start;
+    padding: 20px;
+  }
+
+  .member-profile-avatar {
+    flex-basis: 78px;
+    width: 78px;
+    height: 78px;
+    font-size: 1.5rem;
+  }
+
+  .member-profile-avatar img {
+    width: 70%;
+    height: 70%;
+  }
+
+  .member-activity-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
   .score-line-summary {
     grid-template-columns: 1fr;
   }
@@ -8942,6 +9262,18 @@ body.modal-open {
 }
 
 @media (max-width: 520px) {
+  .member-profile-hero {
+    flex-direction: column;
+  }
+
+  .member-activity-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .member-password-dialog {
+    padding: 28px 22px 22px;
+  }
+
   .topbar {
     padding: 7px 12px;
   }

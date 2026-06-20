@@ -204,6 +204,16 @@ class MemberProfileResponse(BaseModel):
     affiliate: Optional[str] = None
 
 
+class MemberProfileActivityResponse(BaseModel):
+    member_id: str
+    member_name: str
+    recent_subject_name: Optional[str] = None
+    recent_exam_date: Optional[str] = None
+    recent_exam_time: Optional[str] = None
+    diagnosis_report_count: int = 0
+    wrong_note_saved_count: int = 0
+
+
 class MemberProfileUpdateRequest(BaseModel):
     member_id: str = Field(min_length=1, max_length=50)
     member_name: Optional[str] = Field(default=None, max_length=100)

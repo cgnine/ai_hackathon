@@ -15,6 +15,16 @@ class MemberInfo(TypedDict):
     affiliate: Optional[str]
 
 
+class MemberProfileActivity(TypedDict):
+    member_id: str
+    member_name: str
+    recent_subject_name: Optional[str]
+    recent_exam_date: Optional[str]
+    recent_exam_time: Optional[str]
+    diagnosis_report_count: int
+    wrong_note_saved_count: int
+
+
 class LoginResult(TypedDict):
     status: Literal["ok", "not_found", "wrong_password"]
     member_id: Optional[str]
@@ -138,6 +148,91 @@ def get_member_profile(member_id: str) -> Optional[MemberInfo]:
         "member_name": str(row["member_name"]),
         "email": str(row["email"]) if row.get("email") else None,
         "affiliate": str(row["affiliate"]) if row.get("affiliate") else None,
+    }
+
+
+def get_member_profile_activity(member_id: str) -> Optional[MemberProfileActivity]:
+    normalized_member_id = normalize_member_id(member_id)
+    if not normalized_member_id:
+        return None
+
+    with get_conn() as conn:
+        with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
+            cur.execute(
+                """
+                WITH latest_exam AS (
+                    SELECT
+                        e.member_id,
+                        e.exam_id,
+                        e.subject_code,
+                        s.subject_name,
+                        e.exam_date,
+                        e.exam_time,
+                        e.created_at
+                    FROM exam_tb e
+                    JOIN subject_tb s
+                      ON e.subject_code = s.subject_code
+                    WHERE LOWER(e.member_id) = LOWER(%s)
+                    ORDER BY
+                        e.exam_date DESC,
+                        e.exam_time DESC,
+                        e.created_at DESC,
+                        e.exam_id DESC
+                    LIMIT 1
+                ),
+                diagnosis_count AS (
+                    SELECT
+                        member_id,
+                        COUNT(*) AS diagnosis_report_count
+                    FROM exam_tb
+                    WHERE LOWER(member_id) = LOWER(%s)
+                      AND diagnosis_content IS NOT NULL
+                      AND TRIM(diagnosis_content) <> ''
+                    GROUP BY member_id
+                ),
+                wrong_note_count AS (
+                    SELECT
+                        e.member_id,
+                        COUNT(*) AS wrong_note_saved_count
+                    FROM exam_tb e
+                    JOIN exam_history_tb eh
+                      ON e.exam_id = eh.exam_id
+                    WHERE LOWER(e.member_id) = LOWER(%s)
+                      AND eh.wrong_note_saved = 'Y'
+                    GROUP BY e.member_id
+                )
+                SELECT
+                    m.member_id,
+                    COALESCE(m.member_name, m.member_id) AS member_name,
+                    le.subject_name AS recent_subject_name,
+                    le.exam_date AS recent_exam_date,
+                    le.exam_time AS recent_exam_time,
+                    COALESCE(dc.diagnosis_report_count, 0) AS diagnosis_report_count,
+                    COALESCE(wnc.wrong_note_saved_count, 0) AS wrong_note_saved_count
+                FROM member_tb m
+                LEFT JOIN latest_exam le
+                  ON m.member_id = le.member_id
+                LEFT JOIN diagnosis_count dc
+                  ON m.member_id = dc.member_id
+                LEFT JOIN wrong_note_count wnc
+                  ON m.member_id = wnc.member_id
+                WHERE LOWER(m.member_id) = LOWER(%s)
+                LIMIT 1
+                """,
+                (normalized_member_id, normalized_member_id, normalized_member_id, normalized_member_id),
+            )
+            row = cur.fetchone()
+
+    if row is None:
+        return None
+    return {
+        "member_id": str(row["member_id"]),
+        "member_name": str(row["member_name"]),
+        "recent_subject_name": str(row["recent_subject_name"]) if row.get("recent_subject_name") else None,
+        "recent_exam_date": str(row["recent_exam_date"]) if row.get("recent_exam_date") is not None else None,
+        "recent_exam_time": str(row["recent_exam_time"]) if row.get("recent_exam_time") is not None else None,
+        "diagnosis_report_count": int(row["diagnosis_report_count"] or 0),
+        "wrong_note_saved_count": int(row["wrong_note_saved_count"] or 0),
     }
 
 

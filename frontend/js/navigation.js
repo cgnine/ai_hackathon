@@ -34,6 +34,19 @@ function formatProfileDate(value) {
   return normalized || "-";
 }
 
+function formatMemberActivityDate(value) {
+  const formatted = formatProfileDate(value);
+  if (!formatted || formatted === "-") return "-";
+  return memberSettingsEscape(formatted);
+}
+
+function formatMemberActivityDateTime(dateValue, timeValue) {
+  const date = formatProfileDate(dateValue);
+  const time = String(timeValue || "").trim();
+  if (!time) return formatMemberActivityDate(date);
+  return memberSettingsEscape(`${date} ${time.slice(0, 5)}`);
+}
+
 async function loadProfileLatestExam(latestExamTarget = null) {
   const memberId = currentMemberId();
   if (!memberId || !latestExamTarget) return;
@@ -675,48 +688,87 @@ function renderMemberSettings(profile = {}) {
   const memberId = profile.member_id || profile.memberId || currentMemberId();
   const memberName = profile.member_name || profile.memberName || currentMemberName() || memberId;
   const affiliate = profile.affiliate || getMemberAffiliate(memberId);
-  const initial = (memberName || memberId || "P").trim().charAt(0).toUpperCase();
 
   return `
-    <div class="settings-hero">
-      <div class="settings-avatar" aria-hidden="true">${memberSettingsEscape(initial)}</div>
-      <div>
-        <span class="settings-eyebrow">회원 설정</span>
-        <h2>${memberSettingsEscape(memberName)}님의 내정보</h2>
-        <p>기본 회원 정보와 계정 보안 설정을 관리합니다.</p>
-      </div>
-    </div>
+    <h1 class="member-profile-title">내정보</h1>
 
-    <form class="settings-form" id="memberSettingsForm">
-      <div class="settings-grid">
-        <label class="settings-field">
-          <span>내 사번</span>
-          <input class="settings-input readonly" type="text" value="${memberSettingsEscape(memberId)}" readonly />
-        </label>
-        <label class="settings-field">
-          <span>이름</span>
-          <input class="settings-input" name="member_name" type="text" value="${memberSettingsEscape(memberName)}" autocomplete="name" />
-        </label>
-        <label class="settings-field">
-          <span>나의 계열사</span>
-          <input class="settings-input readonly" name="affiliate" type="text" value="${memberSettingsEscape(affiliate)}" readonly />
-        </label>
+    <section class="member-profile-card member-profile-hero">
+      <div class="member-profile-avatar" aria-hidden="true">
+        <img src="assets/profile/profile-avatar-ui65.png" alt="" />
       </div>
+      <div class="member-profile-copy">
+        <h2>${memberSettingsEscape(memberName)}님</h2>
+        <p>${memberSettingsEscape(affiliate)}</p>
+        <small>사번 <span>${memberSettingsEscape(memberId)}</span></small>
+      </div>
+    </section>
 
-      <section class="settings-security-card" aria-label="계정 보안">
-        <div>
-          <strong>비밀번호 관리</strong>
-          <p>비밀번호를 잊었거나 변경이 필요하면 재설정 화면에서 새 비밀번호를 등록할 수 있습니다.</p>
-        </div>
-        <button type="button" class="secondary-btn" id="memberPasswordResetBtn">비밀번호 찾기</button>
+    <section class="member-profile-card member-activity-card" aria-label="최근 활동">
+      <h2>최근 활동</h2>
+      <div class="member-activity-grid">
+        <article class="member-activity-item">
+          <span class="member-activity-icon purple" aria-hidden="true">▣</span>
+          <div>
+            <small>최근 응시 과목</small>
+            <strong data-member-recent-subject>-</strong>
+          </div>
+        </article>
+        <article class="member-activity-item">
+          <span class="member-activity-icon green" aria-hidden="true">▦</span>
+          <div>
+            <small>최근 응시일</small>
+            <strong class="member-activity-date" data-member-recent-date>-</strong>
+          </div>
+        </article>
+        <article class="member-activity-item">
+          <span class="member-activity-icon orange" aria-hidden="true">▤</span>
+          <div>
+            <small>AI 진단리포트</small>
+            <strong><span data-member-report-count>-</span>건 생성</strong>
+          </div>
+        </article>
+        <article class="member-activity-item">
+          <span class="member-activity-icon blue" aria-hidden="true">▧</span>
+          <div>
+            <small>오답노트</small>
+            <strong><span data-member-wrong-count>-</span>건 저장</strong>
+          </div>
+        </article>
+      </div>
+    </section>
+
+    <button type="button" class="member-reset-open-btn" id="memberPasswordResetBtn">비밀번호 재설정</button>
+
+    <div class="member-password-modal" id="memberPasswordModal" aria-hidden="true">
+      <div class="member-password-backdrop" data-member-password-close></div>
+      <section class="member-password-dialog" role="dialog" aria-modal="true" aria-labelledby="memberPasswordTitle">
+        <button type="button" class="member-password-close" data-member-password-close aria-label="닫기">×</button>
+        <h2 id="memberPasswordTitle">비밀번호 재설정</h2>
+        <p>새 비밀번호를 입력하고 확인해 주세요.</p>
+
+        <form class="member-password-form" id="memberPasswordForm">
+          <label>
+            <span>새 비밀번호</span>
+            <div class="member-password-input-wrap">
+              <input class="member-password-input" id="memberNewPasswordInput" name="password" type="password" autocomplete="new-password" required />
+              <button type="button" data-password-toggle="memberNewPasswordInput" aria-label="새 비밀번호 보기">보기</button>
+            </div>
+          </label>
+          <label>
+            <span>새 비밀번호 확인</span>
+            <div class="member-password-input-wrap">
+              <input class="member-password-input" id="memberConfirmPasswordInput" name="password_confirm" type="password" autocomplete="new-password" required />
+              <button type="button" data-password-toggle="memberConfirmPasswordInput" aria-label="새 비밀번호 확인 보기">보기</button>
+            </div>
+          </label>
+          <div class="member-password-actions">
+            <button type="button" class="member-password-cancel" data-member-password-close>취소</button>
+            <button type="submit" class="member-password-submit">비밀번호 재설정</button>
+          </div>
+          <p class="settings-message" id="memberSettingsMessage" role="status" aria-live="polite"></p>
+        </form>
       </section>
-
-      <div class="settings-actions">
-        <button type="submit" class="primary-btn">변경사항 저장</button>
-        <button type="button" class="secondary-btn" onclick="logout()">로그아웃</button>
-      </div>
-      <p class="settings-message" id="memberSettingsMessage" role="status" aria-live="polite"></p>
-    </form>
+    </div>
   `;
 }
 
@@ -737,64 +789,117 @@ async function loadMemberSettings(target) {
     const data = await response.json();
     target.innerHTML = renderMemberSettings(data);
     bindMemberSettingsForm();
+    loadMemberProfileActivity();
   } catch (error) {
     showMemberSettingsMessage("회원 정보를 불러오지 못해 기본 정보로 표시 중입니다.", "warn");
   }
 }
 
 function bindMemberSettingsForm() {
-  const form = document.getElementById("memberSettingsForm");
+  const modal = document.getElementById("memberPasswordModal");
+  const form = document.getElementById("memberPasswordForm");
   const resetBtn = document.getElementById("memberPasswordResetBtn");
+  const closeButtons = document.querySelectorAll("[data-member-password-close]");
+
+  const openModal = () => {
+    if (!modal) return;
+    modal.classList.add("is-open");
+    modal.setAttribute("aria-hidden", "false");
+    document.body.classList.add("modal-open");
+    showMemberSettingsMessage("");
+    document.getElementById("memberNewPasswordInput")?.focus();
+  };
+
+  const closeModal = () => {
+    if (!modal) return;
+    modal.classList.remove("is-open");
+    modal.setAttribute("aria-hidden", "true");
+    document.body.classList.remove("modal-open");
+    form?.reset();
+    showMemberSettingsMessage("");
+  };
+
   if (resetBtn) {
-    resetBtn.addEventListener("click", () => {
-      if (typeof saveResetPasswordPrefill === "function") {
-        saveResetPasswordPrefill({ memberId: currentMemberId() });
-      }
-      window.location.href = typeof resetPasswordUrl === "function"
-        ? resetPasswordUrl()
-        : PAGE_URLS.resetPassword;
-    });
+    resetBtn.addEventListener("click", openModal);
   }
+  closeButtons.forEach((button) => button.addEventListener("click", closeModal));
+  document.querySelectorAll("[data-password-toggle]").forEach((button) => {
+    button.addEventListener("click", () => {
+      const input = document.getElementById(button.dataset.passwordToggle || "");
+      if (!input) return;
+      const isPassword = input.type === "password";
+      input.type = isPassword ? "text" : "password";
+      button.textContent = isPassword ? "숨김" : "보기";
+    });
+  });
 
   if (!form) return;
   form.addEventListener("submit", async (event) => {
     event.preventDefault();
     const memberId = currentMemberId();
     if (!memberId) {
-      showMemberSettingsMessage("로그인 정보가 없어 저장할 수 없습니다.", "error");
+      showMemberSettingsMessage("로그인 정보가 없어 재설정할 수 없습니다.", "error");
       return;
     }
 
     const formData = new FormData(form);
-    const payload = {
-      member_id: memberId,
-      member_name: String(formData.get("member_name") || "").trim(),
-      affiliate: String(formData.get("affiliate") || "").trim()
-    };
-    if (!payload.member_name) {
-      showMemberSettingsMessage("이름을 입력해 주세요.", "error");
+    const password = String(formData.get("password") || "").trim();
+    const passwordConfirm = String(formData.get("password_confirm") || "").trim();
+    if (!password) {
+      showMemberSettingsMessage("새 비밀번호를 입력해 주세요.", "error");
+      return;
+    }
+    if (password !== passwordConfirm) {
+      showMemberSettingsMessage("새 비밀번호와 확인 값이 일치하지 않습니다.", "error");
       return;
     }
 
-    showMemberSettingsMessage("변경사항을 저장하는 중입니다...", "info");
+    const payload = {
+      member_id: memberId,
+      password
+    };
+
+    showMemberSettingsMessage("비밀번호를 재설정하는 중입니다...", "info");
     try {
-      const response = await fetch(`${API_BASE}/auth/member`, {
-        method: "PUT",
+      const response = await fetch(`${API_BASE}/auth/reset-password`, {
+        method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload)
       });
       const data = await response.json().catch(() => ({}));
       if (!response.ok) throw new Error(data.detail || `HTTP ${response.status}`);
 
-      if (typeof saveAuthSession === "function") {
-        saveAuthSession(data.member_id, data.member_name);
-      }
-      renderProfileButton();
-      showMemberSettingsMessage("내정보가 저장되었습니다.", "success");
+      showMemberSettingsMessage("비밀번호가 재설정되었습니다.", "success");
+      window.setTimeout(closeModal, 700);
     } catch (error) {
-      showMemberSettingsMessage(error.message || "내정보 저장에 실패했습니다.", "error");
+      showMemberSettingsMessage(error.message || "비밀번호 재설정에 실패했습니다.", "error");
     }
   });
+}
+
+async function loadMemberProfileActivity() {
+  const memberId = currentMemberId();
+  if (!memberId) return;
+
+  const subjectTarget = document.querySelector("[data-member-recent-subject]");
+  const dateTarget = document.querySelector("[data-member-recent-date]");
+  const reportTarget = document.querySelector("[data-member-report-count]");
+  const wrongTarget = document.querySelector("[data-member-wrong-count]");
+
+  try {
+    const response = await fetch(`${API_BASE}/auth/member/activity?member_id=${encodeURIComponent(memberId)}`);
+    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+    const data = await response.json();
+    if (subjectTarget) subjectTarget.textContent = data.recent_subject_name || "-";
+    if (dateTarget) dateTarget.innerHTML = formatMemberActivityDateTime(data.recent_exam_date, data.recent_exam_time);
+    if (reportTarget) reportTarget.textContent = data.diagnosis_report_count ?? 0;
+    if (wrongTarget) wrongTarget.textContent = data.wrong_note_saved_count ?? 0;
+  } catch {
+    if (subjectTarget) subjectTarget.textContent = "-";
+    if (dateTarget) dateTarget.textContent = "-";
+    if (reportTarget) reportTarget.textContent = "-";
+    if (wrongTarget) wrongTarget.textContent = "-";
+  }
 }
 
 function renderMemberSettingsPage() {
@@ -802,6 +907,7 @@ function renderMemberSettingsPage() {
   if (!target) return;
   target.innerHTML = renderMemberSettings();
   bindMemberSettingsForm();
+  loadMemberProfileActivity();
   loadMemberSettings(target);
 }
 
