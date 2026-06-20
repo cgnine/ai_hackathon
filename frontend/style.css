@@ -8299,7 +8299,148 @@ body.modal-open {
   }
 }
 
-/* ???? AI ?띠룇裕????쒖굣???? ?????????????????????????????????????????????????????????? */
+/* AI 맞춤형 추천문제 - 문제 목록 바깥 화면 */
+body[data-page="ai-recommend"] {
+  background: #f7f8fc;
+}
+
+body[data-page="ai-recommend"] .page-shell {
+  margin-top: 20px;
+}
+
+body[data-page="ai-recommend"] .screen-head {
+  position: relative;
+  min-height: 218px;
+  margin-bottom: 16px;
+  padding: 28px 300px 28px 32px;
+  overflow: hidden;
+  border: 1px solid #edf0f6;
+  border-radius: 9px;
+  background: #fff;
+  box-shadow: 0 2px 8px rgba(42, 58, 91, 0.05);
+}
+
+body[data-page="ai-recommend"] .screen-head .eyebrow {
+  margin: 0;
+  color: #f2b600;
+  font-size: 0.7rem;
+  font-weight: 900;
+  letter-spacing: 0.04em;
+}
+
+body[data-page="ai-recommend"] .screen-head h1 {
+  margin-top: 11px;
+  color: #152238;
+  font-size: clamp(1.75rem, 3vw, 2.25rem);
+  line-height: 1.15;
+  letter-spacing: -0.035em;
+}
+
+body[data-page="ai-recommend"] .screen-head > p:last-of-type {
+  max-width: 610px;
+  margin-top: 10px;
+  color: #718096;
+  font-size: 0.84rem;
+  line-height: 1.65;
+}
+
+body[data-page="ai-recommend"] .screen-head::before {
+  content: "";
+  position: absolute;
+  top: 21px;
+  right: 72px;
+  z-index: 1;
+  width: 126px;
+  height: 176px;
+  border-radius: 12px;
+  background: url("assets/ai-recommend-hero.png") center / cover no-repeat;
+  box-shadow: 0 8px 18px rgba(29, 54, 87, 0.2);
+}
+
+body[data-page="ai-recommend"] .screen-head::after {
+  content: none;
+}
+
+body[data-page="ai-recommend"] .ai-pool-header {
+  width: 300px;
+  max-width: 100%;
+  height: 40px;
+  min-height: 40px;
+  margin: 18px 0 0;
+  padding: 0 14px;
+  box-sizing: border-box;
+  border: 1px solid #f5dda0;
+  border-radius: 8px;
+  background: #fff8e7;
+  box-shadow: none;
+}
+
+body[data-page="ai-recommend"] .ai-pool-status-msg {
+  display: flex;
+  width: 100%;
+  min-width: 0;
+  align-items: center;
+  overflow: hidden;
+  color: #253247;
+  font-size: 0.76rem;
+  font-weight: 600;
+  line-height: 1;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+body[data-page="ai-recommend"] .ai-pool-status-msg::before {
+  content: "✦";
+  display: inline-grid;
+  flex: 0 0 14px;
+  width: 14px;
+  height: 14px;
+  margin-right: 7px;
+  place-items: center;
+  color: #f2b21b;
+  font-size: 0.78rem;
+}
+
+body[data-page="ai-recommend"] .ai-pool-list {
+  min-height: 500px;
+  padding: 20px 28px;
+  box-sizing: border-box;
+  align-content: start;
+  border: 1px solid #e7ebf2;
+  border-radius: 9px;
+  background: #fff;
+  box-shadow: 0 2px 8px rgba(42, 58, 91, 0.05);
+}
+
+@media (max-width: 680px) {
+  body[data-page="ai-recommend"] .page-shell {
+    width: min(100% - 24px, 1180px);
+    margin-top: 12px;
+  }
+
+  body[data-page="ai-recommend"] .screen-head {
+    min-height: auto;
+    padding: 26px 20px;
+  }
+
+  body[data-page="ai-recommend"] .screen-head::before,
+  body[data-page="ai-recommend"] .screen-head::after {
+    display: none;
+  }
+
+  body[data-page="ai-recommend"] .ai-pool-header {
+    width: 300px;
+    height: 40px;
+    padding: 0 14px;
+  }
+
+  body[data-page="ai-recommend"] .ai-pool-list {
+    min-height: 360px;
+    padding: 14px;
+  }
+}
+
+/* AI 맞춤형 추천문제 - 문제 목록 */
 
 .ai-pool-header {
   display: flex;
