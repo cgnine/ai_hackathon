@@ -3660,7 +3660,7 @@ body[data-page="exam-history"] .pagination {
 .subject-page-title {
   display: grid;
   gap: 4px;
-  margin: -10px auto 28px;
+  margin: 8px auto 28px;
   text-align: center;
 }
 
@@ -3696,7 +3696,7 @@ body[data-page="exam-history"] .pagination {
   gap: 8px;
   justify-items: center;
   margin: 0 auto;
-  max-height: 306px;
+  max-height: 370px;
   overflow: hidden;
 }
 
@@ -3705,7 +3705,7 @@ body[data-page="exam-history"] .pagination {
   width: min(300px, calc(100vw - 150px));
   min-width: 180px;
   height: auto;
-  margin: -30px 0 0;
+  margin: 0;
   border-radius: 8px;
 }
 
@@ -3733,7 +3733,7 @@ body[data-page="exam-history"] .pagination {
 
 @media (max-width: 420px) {
   .subject-guide-row {
-    max-height: 240px;
+    max-height: 330px;
   }
 
   .subject-start-btn {
@@ -3880,6 +3880,17 @@ body[data-page="exam-history"] .pagination {
 .subject-illustration img[src*="subject-sa-ui22"] {
   max-width: 128px;
   max-height: 112px;
+}
+
+.subject-theme-sian .subject-illustration {
+  overflow: hidden;
+}
+
+.subject-theme-sian .subject-illustration img[src*="subject-sa-ui71"] {
+  width: 128px;
+  max-width: none;
+  max-height: none;
+  transform: translateY(-110px);
 }
 
 .subject-character-name {
@@ -4482,6 +4493,10 @@ body[data-page="exam-history"] .pagination {
 /* 오답 다시 풀기 - 문제 영역 바깥 화면 */
 body[data-page="wrong-practice"] {
   background: #f8fafc;
+}
+
+body[data-page="wrong-practice"].wrong-review-finished {
+  background: #fff;
 }
 
 body[data-page="wrong-practice"] .page-shell {
@@ -5302,7 +5317,8 @@ body[data-page="mock"] .choice-btn.selected {
 }
 
 .wrong-review-complete .review-complete-panel {
-  margin-top: 28px;
+  margin-top: 0;
+  padding-top: 0;
 }
 
 .review-complete-panel h2 {
@@ -5313,6 +5329,10 @@ body[data-page="mock"] .choice-btn.selected {
   position: relative;
   justify-self: center;
   width: min(100%, 560px);
+  overflow: hidden;
+  border: 1px solid #f2dfb5;
+  border-radius: 22px;
+  box-shadow: 0 10px 26px rgba(89, 66, 23, 0.12);
 }
 
 .review-complete-visual img {
@@ -5321,16 +5341,55 @@ body[data-page="mock"] .choice-btn.selected {
   height: auto;
 }
 
-.review-complete-copy {
+.review-complete-score.review-complete-image-score {
   position: absolute;
-  top: 39%;
-  left: 17%;
+  top: 57.6%;
+  left: 21%;
+  width: 58%;
+  min-height: 13.8%;
+  margin: 0;
+  padding: 1.2% 3%;
+  border-color: #f1d591;
+  border-radius: 18px;
+  background: #fffbf1;
+}
+
+.review-complete-image-link {
+  position: absolute;
+  z-index: 3;
+  top: 89.1%;
+  height: 7.6%;
+  border-radius: 12px;
+}
+
+.review-complete-image-link.back {
+  left: 12.2%;
+  width: 39.2%;
+}
+
+.review-complete-image-link.restart {
+  left: 53.1%;
+  width: 34.2%;
+}
+
+.review-complete-image-link:focus-visible {
+  outline: 3px solid #2563eb;
+  outline-offset: 3px;
+}
+
+.review-complete-copy {
   display: grid;
-  width: 66%;
+  justify-self: center;
+  width: min(100%, 560px);
   gap: 14px;
+  padding: 22px 26px 24px;
+  box-sizing: border-box;
+  border: 1px solid #f1dfb8;
+  border-radius: 20px;
+  background: #fffdf7;
   color: #2b3440;
   text-align: center;
-  transform: rotate(-6deg);
+  box-shadow: 0 8px 20px rgba(89, 66, 23, 0.08);
 }
 
 .review-complete-copy h2 {
@@ -5434,6 +5493,7 @@ body[data-page="mock"] .choice-btn.selected {
 
   .review-complete-copy {
     gap: 7px;
+    padding: 16px 12px 18px;
   }
 
   .review-complete-copy h2 {

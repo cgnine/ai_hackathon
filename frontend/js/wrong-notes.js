@@ -827,6 +827,7 @@ function hideWrongPracticeLoading() {
 
 function renderWrongPractice() {
   if (!els.reviewQuestionText || !els.reviewChoices || !els.reviewFeedback) return;
+  document.body.classList.remove("wrong-review-finished");
 
   if (els.wrongReviewLoading && !wrongPracticeLoadingStarted) {
     wrongPracticeLoadingStarted = true;
@@ -1073,6 +1074,7 @@ function renderWrongReviewComplete(set) {
   const correctCount = Object.values(set.checked || {}).filter((answer) => answer?.correct).length;
   const totalCount = set.notes.length;
   const message = getReviewMessage(correctCount, totalCount);
+  document.body.classList.add("wrong-review-finished");
   $("wrongPracticeScreen")?.classList.add("wrong-review-complete");
   if (els.wrongReviewTop) els.wrongReviewTop.hidden = true;
   if (els.reviewQuestionPanel) els.reviewQuestionPanel.hidden = true;

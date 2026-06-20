@@ -1098,7 +1098,7 @@ function getSubjectVisual(subject) {
       description: "SW개발 지식과 관련 분야의 기술을 기반으로 분석과 설계를 수행합니다.",
       jobs: "응용SW 엔지니어, SW개발 관리자, 조직 관리자",
       stack: "ERD, 흐름도, 설계 및 디자인 패턴, DDD, 소프트웨어 테스트",
-      image: "assets/subjects/subject-sa-ui22-transparent.png",
+      image: "assets/subjects/subject-sa-ui71.png",
       className: "subject-theme-sian"
     },
     CD: {

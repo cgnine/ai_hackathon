@@ -75,22 +75,20 @@
 
       <article class="review-complete-panel" id="reviewCompletePanel" hidden>
         <div class="review-complete-visual">
-          <img src="assets/subjects/wrong-review-result-card.png" alt="" aria-hidden="true" />
-          <div class="review-complete-copy">
-            <h2 id="reviewCompleteTitle">다시 시작해도 괜찮아요!</h2>
-            <p id="reviewCompleteDescription">오답을 확인한 것만으로도 학습은 이미 시작됐어요.</p>
-            <div class="review-complete-score" id="reviewCompleteScore">
-              <strong id="reviewCompleteCorrect">0문항</strong>
-              <span aria-hidden="true">/</span>
-              <p>총 <strong id="reviewCompleteTotal">0문항</strong></p>
-            </div>
+          <img src="assets/wrong-review-complete.png" alt="오답 리뷰 완료" />
+          <div class="review-complete-score review-complete-image-score" id="reviewCompleteScore">
+            <strong id="reviewCompleteCorrect">0문항</strong>
+            <span aria-hidden="true">/</span>
+            <p>총 <strong id="reviewCompleteTotal">0문항</strong></p>
           </div>
+          <a class="review-complete-image-link back" id="reviewBackBtn" href="wrong.html">
+            <span class="sr-only">오답노트로 돌아가기</span>
+          </a>
+          <a class="review-complete-image-link restart" id="reviewRestartBtn" href="wrong-practice.html">
+            <span class="sr-only">다시 풀기</span>
+          </a>
         </div>
         <p id="reviewCompleteSummary" class="sr-only">총 0문항 중 0문항을 다시 맞혔습니다.</p>
-        <div class="complete-actions">
-          <a class="secondary-btn" id="reviewBackBtn" href="wrong.html">오답노트로 돌아가기</a>
-          <a class="primary-btn" id="reviewRestartBtn" href="wrong-practice.html">다시 풀기</a>
-        </div>
       </article>
     </section>
   </main>
