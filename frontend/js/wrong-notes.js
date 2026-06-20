@@ -698,6 +698,7 @@ function syncWrongReviewQuestion() {
 
 function selectWrongReviewAnswer(answer, set) {
   state.reviewAnswer = answer;
+  if (els.reviewAnswerNotice) els.reviewAnswerNotice.hidden = true;
   if (set) {
     set.answers[set.currentIndex] = answer;
     delete set.checked[set.currentIndex];
@@ -840,6 +841,7 @@ function renderWrongPractice() {
   }
 
   hideWrongPracticeLoading();
+  if (els.reviewAnswerNotice) els.reviewAnswerNotice.hidden = true;
 
   const reviewState = syncWrongReviewQuestion();
   const set = reviewState?.set || null;
@@ -1006,6 +1008,13 @@ function focusWrongReviewFeedback() {
 function moveWrongReview(delta) {
   const set = activeWrongReviewSet();
   if (!set) return;
+  const hasAnswer = typeof state.reviewAnswer === "string"
+    ? state.reviewAnswer.trim().length > 0
+    : Boolean(state.reviewAnswer);
+  if (delta > 0 && !hasAnswer) {
+    if (els.reviewAnswerNotice) els.reviewAnswerNotice.hidden = false;
+    return;
+  }
   const nextIndex = set.currentIndex + delta;
   if (nextIndex >= set.notes.length) {
     set.currentIndex = set.notes.length;

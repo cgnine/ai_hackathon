@@ -317,7 +317,7 @@ async function fillPool(currentSize) {
 // ─── 풀 상태 텍스트 ──────────────────────────────────────────
 
 function updatePoolStatus(poolSize) {
-  setPoolStatus(`${poolSize} / ${MAX_POOL}개 · 정답을 맞추면 새 문제로 교체됩니다`);
+  setPoolStatus(`${poolSize} / ${MAX_POOL}개 · 정답을 맞추면 새 문제로 교체됩니다.`);
 }
 
 // ─── 유틸 ────────────────────────────────────────────────────

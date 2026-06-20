@@ -5248,6 +5248,24 @@ body[data-page="mock"] .choice-btn.selected {
   background: #eff6ff;
 }
 
+.wrong-review-answer-notice {
+  width: fit-content;
+  max-width: 100%;
+  margin: 12px 0 0;
+  padding: 10px 12px;
+  border: 1px solid #efcf8b;
+  border-radius: 8px;
+  background: #fff8e7;
+  color: #8a5a00;
+  font-size: 0.85rem;
+  font-weight: 700;
+  line-height: 1.4;
+}
+
+.wrong-review-answer-notice[hidden] {
+  display: none;
+}
+
 .wrong-review-choice-list .choice-btn.correct {
   border-width: 2px;
   border-color: transparent;

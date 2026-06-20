@@ -4038,6 +4038,15 @@ def get_saved_wrong_notes(member_id: str | None = None) -> dict[str, Any]:
             detail_params: tuple[Any, ...] = (normalized_member_id,) if normalized_member_id else ()
             cur.execute(
                 f"""
+                WITH numbered_history AS (
+                    SELECT
+                        h.*,
+                        ROW_NUMBER() OVER (
+                            PARTITION BY h.exam_id
+                            ORDER BY h.exam_question_id
+                        ) AS question_number
+                    FROM exam_history_tb h
+                )
                 SELECT
                     e.exam_id,
                     e.exam_round,
@@ -4053,6 +4062,7 @@ def get_saved_wrong_notes(member_id: str | None = None) -> dict[str, Any]:
                     h.selected_number,
                     h.answer_number AS selected_answer_number,
                     h.is_correct,
+                    h.question_number,
                     q.question_id,
                     q.major_unit,
                     q.minor_unit,
@@ -4066,7 +4076,7 @@ def get_saved_wrong_notes(member_id: str | None = None) -> dict[str, Any]:
                     q.option_5,
                     q.answer_number,
                     q.explanation
-                FROM exam_history_tb h
+                FROM numbered_history h
                 JOIN exam_tb e ON e.exam_id = h.exam_id
                 JOIN member_tb m ON m.member_id = e.member_id
                 JOIN subject_tb s ON s.subject_code = e.subject_code
@@ -4087,7 +4097,7 @@ def get_saved_wrong_notes(member_id: str | None = None) -> dict[str, Any]:
             rows = cur.fetchall()
 
     notes = []
-    for index, row in enumerate(rows):
+    for row in rows:
         exam_summary = exam_summary_map.get(row["exam_id"], {})
         notes.append(
             {
@@ -4104,7 +4114,7 @@ def get_saved_wrong_notes(member_id: str | None = None) -> dict[str, Any]:
                 "correctRate": exam_summary.get("correctRate"),
                 "topPercent": exam_summary.get("topPercent"),
                 "weakKeyword": exam_summary.get("weakKeyword"),
-                "index": index,
+                "index": max(0, int(row["question_number"] or 1) - 1),
                 "selected": _to_int(row["selected_number"]),
                 "question": {
                     "id": row["question_id"],
