@@ -5341,6 +5341,47 @@ body[data-page="mock"] .choice-btn.selected {
   height: auto;
 }
 
+.review-complete-image-message {
+  position: absolute;
+  z-index: 2;
+  top: 39.8%;
+  left: 22%;
+  display: grid;
+  width: 56%;
+  min-height: 15%;
+  padding: 2% 3%;
+  place-content: center;
+  gap: 10px;
+  box-sizing: border-box;
+  background: transparent;
+  color: #17243a;
+  text-align: center;
+}
+
+.review-complete-image-message strong {
+  justify-self: center;
+  padding: 4px 12px;
+  border-radius: 8px;
+  background: #fffdfa;
+  font-size: clamp(1rem, 2.5vw, 1.5rem);
+  font-weight: 900;
+  line-height: 1.25;
+  text-shadow: none;
+}
+
+.review-complete-image-message p {
+  justify-self: center;
+  margin: 0;
+  padding: 4px 12px;
+  border-radius: 8px;
+  background: #fffdfa;
+  color: #273247;
+  font-size: clamp(0.68rem, 1.65vw, 0.95rem);
+  font-weight: 600;
+  line-height: 1.5;
+  text-shadow: none;
+}
+
 .review-complete-score.review-complete-image-score {
   position: absolute;
   top: 57.6%;
