@@ -390,7 +390,8 @@ body[data-page="login"] .main-nav {
 }
 
 .mobile-menu-btn,
-.mobile-menu-overlay {
+.mobile-menu-overlay,
+.mobile-member-name {
   display: none;
 }
 
@@ -413,6 +414,10 @@ body[data-page="login"] .main-nav {
 .nav-btn.active {
   background: transparent;
   color: #1e3a8a; /* darker navy for active */
+}
+
+.nav-btn.mobile-nav-item {
+  display: none;
 }
 
 body[data-page="subjects"] .nav-btn {
@@ -440,9 +445,20 @@ body[data-page="ranking"] .nav-btn:hover {
   display: flex;
   align-items: center;
   gap: 8px;
-  flex: 0 0 42px;
+  flex: 0 1 auto;
   min-width: 42px;
   min-height: 42px;
+}
+
+.profile-greeting {
+  max-width: 180px;
+  overflow: hidden;
+  color: #16213a;
+  font-size: 0.9rem;
+  font-weight: 700;
+  line-height: 1.2;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .profile-button {
@@ -8511,7 +8527,7 @@ body.modal-open {
   body[data-page="ranking"] .brand-logo,
   body[data-page="wrong-practice"] .brand-logo,
   body[data-page="wrong"] .brand-logo {
-    width: 180px;
+    width: min(44vw, 180px);
     max-width: 180px;
   }
 
@@ -8532,8 +8548,11 @@ body.modal-open {
   }
 
   .profile-actions {
-    order: 2;
-    margin-left: auto;
+    display: none;
+  }
+
+  .profile-greeting {
+    display: none;
   }
 
   .profile-button {
@@ -8542,8 +8561,27 @@ body.modal-open {
     font-size: 0.8rem;
   }
 
+  .mobile-member-name {
+    order: 2;
+    display: block;
+    max-width: min(20vw, 80px);
+    margin-left: auto;
+    overflow: hidden;
+    color: #16213a;
+    font-size: 0.86rem;
+    font-weight: 800;
+    line-height: 1.2;
+    text-align: right;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
   .main-nav {
     width: 100%;
+  }
+
+  .account-sidebar {
+    display: none;
   }
 
   .nav-btn[data-screen="profile"]::after,
@@ -8856,11 +8894,23 @@ body.modal-open {
   .nav-btn[data-screen="ranking"]::after {
     content: none;
   }
+
+  .main-nav > .nav-btn:not(.mobile-nav-item) {
+    display: none;
+  }
+
+  .main-nav .mobile-nav-item {
+    display: inline-flex;
+    justify-content: flex-start;
+    text-align: left;
+  }
 }
 
 @media (min-width: 721px) {
   .mobile-menu-btn,
-  .mobile-menu-overlay {
+  .mobile-menu-overlay,
+  .mobile-member-name,
+  .main-nav .mobile-nav-item {
     display: none !important;
   }
 
@@ -9519,5 +9569,59 @@ body[data-page="main"].main-stats-loading [data-main-dynamic-stat] {
 
   .main-start-btn {
     width: 100%;
+  }
+}
+
+@media print {
+  @page {
+    margin: 14mm;
+  }
+
+  body {
+    background: #ffffff !important;
+  }
+
+  .topbar,
+  .main-footer,
+  .toast,
+  .chat-widget,
+  .mobile-menu-btn,
+  .mobile-menu-overlay,
+  .analysis-pdf-btn,
+  .result-loading,
+  .analysis-loading,
+  .wrong-review-actions,
+  .subject-analysis-modal {
+    display: none !important;
+  }
+
+  .page-shell,
+  body[data-page="analysis"] .page-shell {
+    width: 100% !important;
+    max-width: none !important;
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+
+  #resultContent,
+  #resultHero,
+  #analysisReportUi {
+    visibility: visible !important;
+  }
+
+  .analysis-report-ui,
+  .diagnosis-report,
+  .result-hero,
+  .wrong-review-section {
+    box-shadow: none !important;
+  }
+
+  .analysis-report-card,
+  .diagnosis-report,
+  .report-section,
+  .report-card,
+  .result-item {
+    break-inside: avoid;
+    page-break-inside: avoid;
   }
 }

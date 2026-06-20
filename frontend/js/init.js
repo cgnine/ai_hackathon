@@ -20,7 +20,17 @@ function initMobileMenu() {
   if (!topbar || !nav || document.getElementById("mobileMenuBtn")) return;
 
   const button = document.createElement("button");
+  const memberLabel = document.createElement("span");
   const overlay = document.createElement("div");
+  const mobileItems = [
+    { label: "내정보", href: PAGE_URLS.myInfo },
+    { label: "시험응시", href: PAGE_URLS.profile },
+    { label: "오답노트", href: PAGE_URLS.wrong },
+    { label: "AI 맞춤형 추천문제", href: PAGE_URLS.aiRecommend },
+    { label: "AI랭킹", href: PAGE_URLS.ranking },
+    { label: "응시내역", href: PAGE_URLS.examHistory },
+    { label: "종합평가", href: PAGE_URLS.analysis },
+  ];
 
   button.type = "button";
   button.id = "mobileMenuBtn";
@@ -28,6 +38,8 @@ function initMobileMenu() {
   button.setAttribute("aria-label", "메뉴 열기");
   button.setAttribute("aria-expanded", "false");
   button.innerHTML = "<span></span><span></span><span></span>";
+  memberLabel.className = "mobile-member-name";
+  memberLabel.textContent = `${currentMemberName() || state.profileName || "응시자"}님`;
 
   overlay.className = "mobile-menu-overlay";
   overlay.hidden = true;
@@ -52,13 +64,40 @@ function initMobileMenu() {
     }
   });
   overlay.addEventListener("click", closeMenu);
-  nav.querySelectorAll("a").forEach((link) => link.addEventListener("click", closeMenu));
+  mobileItems.forEach((item) => {
+    const link = document.createElement("a");
+    link.className = "nav-btn mobile-nav-item";
+    link.href = item.href;
+    link.textContent = item.label;
+    link.addEventListener("click", closeMenu);
+    nav.appendChild(link);
+  });
+  const logoutMenuButton = document.createElement("button");
+  logoutMenuButton.type = "button";
+  logoutMenuButton.className = "nav-btn mobile-nav-item mobile-logout-btn";
+  logoutMenuButton.textContent = "로그아웃";
+  logoutMenuButton.addEventListener("click", () => {
+    closeMenu();
+    logout();
+  });
+  nav.appendChild(logoutMenuButton);
   document.addEventListener("keydown", (event) => {
     if (event.key === "Escape") closeMenu();
   });
 
+  topbar.insertBefore(memberLabel, nav);
   topbar.insertBefore(button, nav);
   document.body.appendChild(overlay);
+}
+
+function initPrintDownloadButtons() {
+  document.querySelectorAll(".analysis-pdf-btn").forEach((button) => {
+    if (button.dataset.printBound === "true") return;
+    button.dataset.printBound = "true";
+    button.addEventListener("click", () => {
+      window.print();
+    });
+  });
 }
 
 function renderFooter() {
@@ -214,6 +253,7 @@ async function initPage() {
   }
   if (page === "wrong-practice") renderWrongPractice();
 
+  initPrintDownloadButtons();
   renderProfileButton();
   renderTopStats();
   // Ensure top nav reflects the current page when loading static pages

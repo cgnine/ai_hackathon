@@ -56,6 +56,7 @@ function renderProfileButton() {
 
   const actions = document.querySelector("[data-profile-slot]") || document.createElement("div");
   const button = document.createElement("button");
+  const greeting = document.createElement("span");
   const menu = document.createElement("div");
   const header = document.createElement("div");
   const menuList = document.createElement("div");
@@ -65,6 +66,8 @@ function renderProfileButton() {
 
   actions.className = "profile-actions";
   actions.dataset.profileSlot = "true";
+  greeting.className = "profile-greeting";
+  greeting.textContent = `${memberName}님 반갑습니다.`;
   button.type = "button";
   button.className = "profile-button";
   button.id = "profileButton";
@@ -120,7 +123,7 @@ function renderProfileButton() {
   });
 
   menu.append(header, menuList, logoutButton);
-  actions.replaceChildren(button, menu);
+  actions.replaceChildren(greeting, button, menu);
   if (!actions.parentElement) topbar.insertBefore(actions, stats || null);
 }
 
