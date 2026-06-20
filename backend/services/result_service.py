@@ -290,6 +290,10 @@ def format_ranking_number(value: Any) -> str:
     return str(int(numeric)) if numeric.is_integer() else f"{numeric:.1f}"
 
 
+def format_ranking_integer(value: Any) -> str:
+    return str(int(float(value or 0)))
+
+
 def _compact_ranking_subject_name(value: Any) -> str:
     text = " ".join(str(value or "").split())
     normalized = text.lower()
@@ -497,15 +501,17 @@ def _bedrock_ranking_rival_coach(
 
 
 def _fallback_ranking_learning_recommendations(pattern: dict[str, Any]) -> list[str]:
-    exam_count = format_ranking_number(float(pattern["avg_exam_count"] or 0))
-    practical_rate = format_ranking_number(float(pattern["avg_practical_rate"] or 0))
+    exam_count = format_ranking_integer(pattern["avg_exam_count"])
+    practical_rate = format_ranking_integer(pattern["avg_practical_rate"])
+    wrong_note_count = format_ranking_integer(pattern["avg_wrong_note_saved_count"])
     weak_subject = str(pattern["weak_subject"] or "취약 과목").strip()
     weak_subject = _compact_ranking_subject_name(weak_subject)
+    practical_text = "실무형 판단 연습" if float(pattern["avg_practical_rate"] or 0) <= 0 else f"실무형 {practical_rate}%까지 확대"
     return [
         f"{exam_count}회 이상 응시하기"[:20],
         f"{weak_subject} 문제 풀기"[:20],
-        f"실무형 {practical_rate}% 유지"[:20],
-        "오답노트 저장 활용",
+        practical_text[:20],
+        f"오답노트 {wrong_note_count}문항 복습"[:20],
     ]
 
 
@@ -514,7 +520,7 @@ def _validate_ranking_learning_recommendations(
     fallback: list[str],
 ) -> list[str]:
     items = []
-    blocked_words = ("복습했다", "먼저 풀었다", "반복 학습했다")
+    blocked_words = ("복습했다", "먼저 풀었다", "반복 학습했다", "저장", "저장 활용", "0%")
     for item in payload[:4]:
         text = " ".join(str(item or "").split())
         if not text or any(word in text for word in blocked_words):
@@ -532,28 +538,40 @@ def _bedrock_ranking_learning_recommendations(pattern: dict[str, Any]) -> list[s
         "규칙\n\n"
         "- 정확히 4개 작성\n"
         "- 각 항목은 20자 이내\n"
-        "- 행동 중심 문장 사용\n"
-        "- 숫자가 있으면 활용\n"
+        "- 명사형보다 행동 중심 문구 사용\n"
+        "- DB에 있는 수치는 필요할 때만 사용\n"
+        "- 모든 숫자는 소수점 없이 정수로 표현\n"
         "- DB에서 확인할 수 없는 내용 작성 금지\n"
+        "- \"저장\", \"저장 활용\" 표현 금지\n"
+        "- \"0%\", \"100%\"처럼 수치만 강조하는 문구 금지\n"
+        "- 실무형 비율이 낮으면 \"실무형 판단 연습\", \"상황형 문제 보강\"처럼 행동으로 표현\n"
+        "- 오답노트 저장 수는 \"오답노트 N문항 복습\" 또는 \"오답 N문항 재풀이\"로 표현\n"
         "- \"복습했다\", \"먼저 풀었다\", \"반복 학습했다\" 등의 표현 금지\n"
         "- 추천 문구만 출력\n"
         "- JSON 배열만 출력\n\n"
         "출력 예시\n\n"
         "[\n"
-        "  \"주 3회 이상 응시 추천\",\n"
-        "  \"Cloud 중심 문제 풀이\",\n"
-        "  \"실무형 문제 60% 유지\",\n"
-        "  \"오답노트 저장 활용\"\n"
+        "  \"주 3회 이상 응시\",\n"
+        "  \"Cloud 문제 늘리기\",\n"
+        "  \"실무형 판단 연습\",\n"
+        "  \"오답노트 45문항 복습\"\n"
+        "]\n\n"
+        "나쁜 예시\n\n"
+        "[\n"
+        "  \"실무형 0%\",\n"
+        "  \"오답노트 저장 활용\",\n"
+        "  \"450개 저장\",\n"
+        "  \"복습했다\"\n"
         "]\n\n"
         "데이터\n"
         + json.dumps(
             {
-                "avgExamCount": float(pattern["avg_exam_count"] or 0),
-                "avgSubjectCount": float(pattern["avg_subject_count"] or 0),
-                "avgPracticalRate": float(pattern["avg_practical_rate"] or 0),
-                "avgWrongNoteSavedCount": float(pattern["avg_wrong_note_saved_count"] or 0),
+                "avgExamCount": int(float(pattern["avg_exam_count"] or 0)),
+                "avgSubjectCount": int(float(pattern["avg_subject_count"] or 0)),
+                "avgPracticalRate": int(float(pattern["avg_practical_rate"] or 0)),
+                "avgWrongNoteSavedCount": int(float(pattern["avg_wrong_note_saved_count"] or 0)),
                 "weakSubject": _compact_ranking_subject_name(pattern["weak_subject"]),
-                "weakSubjectScore": float(pattern["weak_subject_score"] or 0),
+                "weakSubjectScore": int(float(pattern["weak_subject_score"] or 0)),
             },
             ensure_ascii=False,
         )
