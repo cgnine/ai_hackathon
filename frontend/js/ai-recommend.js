@@ -56,7 +56,10 @@ async function apiAnswer(questionId, selectedOptionNo) {
 
 function setPoolStatus(text) {
   const el = document.getElementById("aiPoolStatusMsg");
-  if (el) el.textContent = text;
+  if (!el) return;
+  const message = String(text || "").trim();
+  el.textContent = message;
+  el.closest(".ai-pool-header")?.classList.toggle("is-pending", !message);
 }
 
 function recommendErrorMessage(detail) {
@@ -340,7 +343,7 @@ async function renderAiRecommendPage() {
   if (!list) return;
 
   list.innerHTML = "";
-  setPoolStatus("AI가 풀이 이력을 분석하고 있습니다...");
+  setPoolStatus("");
 
   try {
     const pool = await apiGetPool();

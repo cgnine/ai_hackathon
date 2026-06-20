@@ -228,6 +228,7 @@ const els = {
   aiRecommendRetryBtn: $("aiRecommendRetryBtn"),
   wrongReviewTop: $("wrongReviewTop"),
   reviewSubject: $("reviewSubject"),
+  reviewQuestionMeta: $("reviewQuestionMeta"),
   reviewQuestionNumber: $("reviewQuestionNumber"),
   reviewDifficulty: $("reviewDifficulty"),
   reviewQuestionType: $("reviewQuestionType"),

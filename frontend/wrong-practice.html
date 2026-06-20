@@ -28,12 +28,24 @@
     <div class="toast" id="toast" role="status" aria-live="polite"></div>
 
     <section class="screen active" id="wrongPracticeScreen" style="visibility: hidden;">
-      <div class="screen-head compact wrong-review-top" id="wrongReviewTop">
-        <div class="wrong-review-meta-row">
-          <h1 id="reviewSubject">오답 문제</h1>
-          <span id="reviewProgressCount">- / -</span>
+      <div class="wrong-practice-hero">
+        <div class="screen-head compact wrong-review-top" id="wrongReviewTop">
+          <div class="wrong-review-meta-row">
+            <div class="wrong-review-copy">
+              <h1 id="reviewSubject">오답 문제</h1>
+              <p id="reviewProgress">오답노트에서 복습할 세트를 선택하세요.</p>
+            </div>
+            <div class="wrong-review-status">
+              <span class="wrong-review-status-badge">●&nbsp; 진행 중</span>
+              <span id="reviewProgressCount">- / -</span>
+            </div>
+          </div>
         </div>
-        <p id="reviewProgress">오답노트에서 복습할 세트를 선택하세요.</p>
+
+        <div class="wrong-practice-guide">
+          <span aria-hidden="true">💡</span>
+          <p>문제를 읽고 가장 적절한 답을 선택한 후 정답 확인을 눌러주세요.</p>
+        </div>
       </div>
 
       <article class="result-loading wrong-review-loading" id="wrongReviewLoading" aria-live="polite">
@@ -44,6 +56,10 @@
       </article>
 
       <article class="question-panel review-question-panel" id="reviewQuestionPanel" hidden>
+        <div class="question-tags wrong-review-question-meta" id="reviewQuestionMeta" hidden>
+          <span class="pill" id="reviewDifficulty"></span>
+          <span class="pill type-pill" id="reviewQuestionType"></span>
+        </div>
         <p class="question-text" id="reviewQuestionText"></p>
         <div class="question-scenario-box" id="reviewScenarioBox" hidden></div>
         <strong class="result-detail-title wrong-review-choice-title">보기</strong>

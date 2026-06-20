@@ -858,6 +858,7 @@ function renderWrongPractice() {
   if (!note) {
     els.reviewSubject.textContent = "오답 문제";
     els.reviewQuestionText.textContent = "선택된 오답 문제가 없습니다. 오답노트에서 다시 풀 문제를 선택하세요.";
+    if (els.reviewQuestionMeta) els.reviewQuestionMeta.hidden = true;
     els.reviewChoices.innerHTML = "";
     if (els.reviewScenarioBox) {
       els.reviewScenarioBox.hidden = true;
@@ -885,8 +886,17 @@ function renderWrongPractice() {
       : "1 / 1";
   }
   if (els.reviewQuestionNumber) els.reviewQuestionNumber.textContent = `${note.index + 1}`;
-  if (els.reviewDifficulty) els.reviewDifficulty.textContent = question.difficulty;
-  if (els.reviewQuestionType) els.reviewQuestionType.textContent = getQuestionType(question, note.index);
+  const majorUnit = String(question.majorUnit || question.difficulty || "").trim();
+  const questionType = String(question.questionType || getQuestionType(question, note.index) || "").trim();
+  if (els.reviewDifficulty) {
+    els.reviewDifficulty.textContent = majorUnit;
+    els.reviewDifficulty.hidden = !majorUnit;
+  }
+  if (els.reviewQuestionType) {
+    els.reviewQuestionType.textContent = questionType;
+    els.reviewQuestionType.hidden = !questionType;
+  }
+  if (els.reviewQuestionMeta) els.reviewQuestionMeta.hidden = !majorUnit && !questionType;
   els.reviewQuestionText.textContent = `${note.index + 1}. ${question.text}`;
   if (els.reviewScenarioBox) {
     const scenario = String(question.scenario || "").trim();
@@ -953,11 +963,8 @@ function submitWrongPractice() {
 
 function renderWrongPracticeFeedback(note, checkedAnswer, shouldFocus = false) {
   const question = note.question;
-  const majorUnit = String(question.majorUnit || question.difficulty || "").trim();
-  const questionType = String(question.questionType || (typeof getQuestionType === "function" ? getQuestionType(question, note.index || 0) : "")).trim();
   const answerSection = document.createElement("div");
   const answerSummary = document.createElement("p");
-  const tags = document.createElement("div");
   const explanationSection = document.createElement("div");
   const explanationText = document.createElement("span");
 
@@ -974,23 +981,7 @@ function renderWrongPracticeFeedback(note, checkedAnswer, shouldFocus = false) {
     createAnswerLabel("정답:"),
     document.createTextNode(` ${formatAnswerNumber(question.answer)}`)
   );
-  tags.className = "question-tags result-detail-tags";
-  if (majorUnit) {
-    const unit = document.createElement("span");
-    unit.className = "pill";
-    unit.textContent = majorUnit;
-    tags.appendChild(unit);
-  }
-  if (questionType) {
-    const type = document.createElement("span");
-    type.className = "pill type-pill";
-    type.textContent = questionType;
-    tags.appendChild(type);
-  }
   answerSection.appendChild(answerSummary);
-  if (majorUnit || questionType) {
-    answerSection.appendChild(tags);
-  }
 
   explanationSection.className = "result-detail-section result-explanation-line";
   explanationText.textContent = cleanExplanationText(question.explanation);
@@ -1036,7 +1027,6 @@ function focusWrongReviewQuestion() {
   if (!els.reviewQuestionPanel.hasAttribute("tabindex")) els.reviewQuestionPanel.setAttribute("tabindex", "-1");
   requestAnimationFrame(() => {
     els.reviewQuestionPanel.focus({ preventScroll: true });
-    els.reviewQuestionPanel.scrollIntoView({ behavior: "smooth", block: "center" });
   });
 }
 

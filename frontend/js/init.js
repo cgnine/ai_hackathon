@@ -264,7 +264,7 @@ async function initPage() {
     const pageName = document.body.dataset.page || "";
     const pageFileMap = {
       main: "index.html",
-      subjects: "subjects.html",
+      subjects: "index.html",
       "my-info": "profile.html",
       "exam-history": "history.html",
       analysis: "analysis.html",

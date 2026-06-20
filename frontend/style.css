@@ -410,10 +410,10 @@ body[data-page="login"] .main-nav {
   color: #60a5fa;
 }
 
-/* Keep active state visible but avoid using the hover background to prevent transient flicker */
+/* 선택된 메뉴는 마우스 오버 상태와 같은 색상을 유지합니다. */
 .nav-btn.active {
-  background: transparent;
-  color: #1e3a8a; /* darker navy for active */
+  background: #fff3bf;
+  color: #60a5fa;
 }
 
 .nav-btn.mobile-nav-item {
@@ -4479,6 +4479,174 @@ body[data-page="exam-history"] .pagination {
   line-height: 1.4;
 }
 
+/* 오답 다시 풀기 - 문제 영역 바깥 화면 */
+body[data-page="wrong-practice"] {
+  background: #f8fafc;
+}
+
+body[data-page="wrong-practice"] .page-shell {
+  width: min(1380px, calc(100% - 48px));
+  margin-top: 18px;
+}
+
+body[data-page="wrong-practice"] .wrong-practice-hero {
+  position: relative;
+  margin-bottom: 16px;
+  padding: 24px 190px 24px 28px;
+  overflow: hidden;
+  border: 1px solid #e7ebf2;
+  border-radius: 12px;
+  background: #fff;
+  box-shadow: 0 2px 8px rgba(42, 58, 91, 0.05);
+}
+
+body[data-page="wrong-practice"] .wrong-practice-hero::after {
+  content: "";
+  position: absolute;
+  top: 18px;
+  right: 28px;
+  width: 112px;
+  height: 164px;
+  border-radius: 12px;
+  background: url("assets/wrong-practice-hero.png") center / cover no-repeat;
+  box-shadow: 0 8px 18px rgba(29, 54, 87, 0.18);
+  pointer-events: none;
+}
+
+body[data-page="wrong-practice"] .wrong-review-top {
+  position: relative;
+  min-height: 116px;
+  margin-bottom: 14px;
+  padding: 0 0 18px;
+  overflow: hidden;
+  border-bottom: 0;
+  background: #fff;
+}
+
+body[data-page="wrong-practice"] .wrong-review-top::after {
+  content: none;
+}
+
+body[data-page="wrong-practice"] .wrong-review-meta-row {
+  min-height: 78px;
+  align-items: center;
+}
+
+body[data-page="wrong-practice"] .wrong-review-copy h1 {
+  color: #111f35;
+  font-size: clamp(1.8rem, 3vw, 2.25rem);
+  font-weight: 900;
+  letter-spacing: -0.035em;
+}
+
+body[data-page="wrong-practice"] .wrong-review-top #reviewProgress {
+  margin-top: 22px;
+  color: #718096;
+  font-size: 0.92rem;
+  font-weight: 600;
+}
+
+body[data-page="wrong-practice"] .wrong-review-status {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  transform: translateY(15px);
+}
+
+body[data-page="wrong-practice"] .wrong-review-question-meta {
+  justify-content: flex-start;
+  margin-bottom: 12px;
+}
+
+body[data-page="wrong-practice"] .wrong-review-question-meta[hidden],
+body[data-page="wrong-practice"] .wrong-review-question-meta .pill[hidden] {
+  display: none;
+}
+
+body[data-page="wrong-practice"] .wrong-review-status .wrong-review-status-badge {
+  border-color: #cfe0ff;
+  background: #f4f8ff;
+  color: #3474df;
+}
+
+body[data-page="wrong-practice"] .wrong-review-status #reviewProgressCount {
+  min-width: 76px;
+  justify-content: center;
+  border-color: #dfe5ed;
+  color: #1c2940;
+}
+
+body[data-page="wrong-practice"] .wrong-practice-guide {
+  display: flex;
+  width: fit-content;
+  max-width: 100%;
+  min-height: 54px;
+  margin-bottom: 0;
+  padding: 0 22px;
+  align-items: center;
+  gap: 12px;
+  box-sizing: border-box;
+  border: 1px solid #f3ddb0;
+  border-radius: 12px;
+  background: #fffbf3;
+  color: #283549;
+  box-shadow: 0 2px 7px rgba(83, 61, 20, 0.03);
+}
+
+body[data-page="wrong-practice"] .wrong-practice-guide > span {
+  font-size: 1.15rem;
+}
+
+body[data-page="wrong-practice"] .wrong-practice-guide p {
+  margin: 0;
+  font-size: 0.9rem;
+  font-weight: 700;
+}
+
+body[data-page="wrong-practice"] .wrong-practice-loading > .wrong-practice-hero,
+body[data-page="wrong-practice"] .wrong-review-complete > .wrong-practice-hero {
+  display: none;
+}
+
+@media (max-width: 680px) {
+  body[data-page="wrong-practice"] .page-shell {
+    width: min(100% - 24px, 1380px);
+    margin-top: 12px;
+  }
+
+  body[data-page="wrong-practice"] .wrong-review-top {
+    min-height: auto;
+    padding: 12px 0 18px;
+  }
+
+  body[data-page="wrong-practice"] .wrong-practice-hero {
+    padding: 18px 16px;
+  }
+
+  body[data-page="wrong-practice"] .wrong-practice-hero::after {
+    display: none;
+  }
+
+  body[data-page="wrong-practice"] .wrong-review-top::after {
+    display: none;
+  }
+
+  body[data-page="wrong-practice"] .wrong-review-meta-row {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  body[data-page="wrong-practice"] .wrong-review-status {
+    gap: 8px;
+    transform: translateY(5px);
+  }
+
+  body[data-page="wrong-practice"] .wrong-practice-guide {
+    padding: 12px 14px;
+    align-items: flex-start;
+  }
+}
+
 .subject-meta,
 .mode-number {
   display: inline-flex;
@@ -8373,6 +8541,10 @@ body[data-page="ai-recommend"] .ai-pool-header {
   border-radius: 8px;
   background: #fff8e7;
   box-shadow: none;
+}
+
+body[data-page="ai-recommend"] .ai-pool-header.is-pending {
+  visibility: hidden;
 }
 
 body[data-page="ai-recommend"] .ai-pool-status-msg {
