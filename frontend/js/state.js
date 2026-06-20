@@ -235,7 +235,6 @@ const els = {
   reviewQuestionText: $("reviewQuestionText"),
   reviewScenarioBox: $("reviewScenarioBox"),
   reviewChoices: $("reviewChoices"),
-  reviewAnswerNotice: $("reviewAnswerNotice"),
   reviewSubmitBtn: $("reviewSubmitBtn"),
   reviewFeedback: $("reviewFeedback"),
   reviewQuestionPanel: $("reviewQuestionPanel"),

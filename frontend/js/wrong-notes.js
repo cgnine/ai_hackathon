@@ -698,7 +698,6 @@ function syncWrongReviewQuestion() {
 
 function selectWrongReviewAnswer(answer, set) {
   state.reviewAnswer = answer;
-  if (els.reviewAnswerNotice) els.reviewAnswerNotice.hidden = true;
   if (set) {
     set.answers[set.currentIndex] = answer;
     delete set.checked[set.currentIndex];
@@ -841,7 +840,6 @@ function renderWrongPractice() {
   }
 
   hideWrongPracticeLoading();
-  if (els.reviewAnswerNotice) els.reviewAnswerNotice.hidden = true;
 
   const reviewState = syncWrongReviewQuestion();
   const set = reviewState?.set || null;
@@ -1012,7 +1010,7 @@ function moveWrongReview(delta) {
     ? state.reviewAnswer.trim().length > 0
     : Boolean(state.reviewAnswer);
   if (delta > 0 && !hasAnswer) {
-    if (els.reviewAnswerNotice) els.reviewAnswerNotice.hidden = false;
+    showToast("먼저 답안을 선택하세요.");
     return;
   }
   const nextIndex = set.currentIndex + delta;
