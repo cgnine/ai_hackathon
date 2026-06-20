@@ -263,6 +263,31 @@ function hasResultAiCommentary(result) {
   );
 }
 
+const resultCommentaryRequests = new Set();
+
+function setResultAiCommentaryLoading(isLoading) {
+  if (!els.diagnosisSummary) return;
+  els.diagnosisSummary.querySelector(".ai-inline-loading")?.remove();
+  if (!isLoading) return;
+
+  const loading = document.createElement("div");
+  loading.className = "ai-inline-loading";
+  loading.setAttribute("role", "status");
+  loading.setAttribute("aria-live", "polite");
+  loading.innerHTML = `
+    <span class="ai-inline-spinner" aria-hidden="true"></span>
+    <span>AI 총평을 생성하는 중입니다.</span>
+  `;
+  els.diagnosisSummary.appendChild(loading);
+  loading.replaceChildren();
+  const spinner = document.createElement("span");
+  const message = document.createElement("span");
+  spinner.className = "ai-inline-spinner";
+  spinner.setAttribute("aria-hidden", "true");
+  message.textContent = "새로운 AI 총평을 업데이트하는 중입니다.";
+  loading.append(spinner, message);
+}
+
 async function loadResultWithAiCommentary(attemptId, examHistoryIds = []) {
   const historyQuery = Array.isArray(examHistoryIds) && examHistoryIds.length
     ? `?history_ids=${encodeURIComponent(examHistoryIds.join(","))}`
@@ -273,18 +298,85 @@ async function loadResultWithAiCommentary(attemptId, examHistoryIds = []) {
   if (!response.ok) throw new Error(`HTTP ${response.status}`);
 
   const result = await response.json();
-  if (hasResultAiCommentary(result)) return result;
+  return result;
+}
 
+function refreshResultAiCommentary(attemptId, examHistoryIds = []) {
+  if (!attemptId) return;
+  if (resultCommentaryRequests.has(attemptId)) return;
+  resultCommentaryRequests.add(attemptId);
+  setResultAiCommentaryLoading(true);
+  generateResultCommentary(attemptId, examHistoryIds)
+    .then(async () => {
+      const historyQuery = Array.isArray(examHistoryIds) && examHistoryIds.length
+        ? `?history_ids=${encodeURIComponent(examHistoryIds.join(","))}`
+        : "";
+      const refreshed = await fetch(`${API_BASE}/results/${encodeURIComponent(attemptId)}${historyQuery}`);
+      if (!refreshed.ok) return;
+      const result = await refreshed.json();
+      if (hasResultAiCommentary(result)) renderApiResultPage(result);
+    })
+    .catch((error) => {
+      console.warn("Failed to generate result commentary", error);
+    })
+    .finally(() => {
+      resultCommentaryRequests.delete(attemptId);
+      setResultAiCommentaryLoading(false);
+    });
+}
+
+async function persistPendingResultSave(navigation = {}) {
+  const payload = navigation.savePayload || state.lastResult?.pendingSavePayload;
+  if (!payload || !state.lastResult?.pendingSave) return;
+
+  setResultAiCommentaryLoading(true);
   try {
-    await generateResultCommentary(attemptId, examHistoryIds);
-  } catch (error) {
-    console.warn("Failed to generate result commentary", error);
-    return result;
-  }
+    const savedResult = await saveExamResultPayload(payload);
+    const examHistoryIds = Array.isArray(savedResult.examHistoryIds)
+      ? savedResult.examHistoryIds.map((historyId) => String(historyId))
+      : [];
+    const questionIds = Array.isArray(savedResult.questionIds) && savedResult.questionIds.length > 0
+      ? savedResult.questionIds.map((questionId) => String(questionId))
+      : state.lastResult.questionIds;
 
-  const refreshed = await fetch(url);
-  if (!refreshed.ok) return result;
-  return refreshed.json();
+    state.lastResult = {
+      ...state.lastResult,
+      examId: savedResult.examId || savedResult.attemptId,
+      attemptId: savedResult.attemptId || savedResult.examId,
+      memberId: savedResult.memberId || state.lastResult.memberId,
+      questionIds,
+      examHistoryIds,
+      roundTitle: savedResult.roundTitle || state.lastResult.roundTitle,
+      score: savedResult.score ?? state.lastResult.score,
+      correctCount: savedResult.correctCount ?? state.lastResult.correctCount,
+      total: savedResult.total ?? state.lastResult.total,
+      createdAt: savedResult.createdAt || state.lastResult.createdAt,
+      pendingSave: false,
+      pendingSavePayload: null
+    };
+    saveState();
+    saveResultNavigation({
+      examId: state.lastResult.attemptId,
+      memberId: state.lastResult.memberId,
+      examHistoryIds
+    });
+
+    const attemptId = state.lastResult.attemptId;
+    if (attemptId) {
+      const result = await loadResultWithAiCommentary(attemptId, examHistoryIds);
+      if (result) renderApiResultPage(result);
+      if (!result || !hasResultAiCommentary(result)) {
+        refreshResultAiCommentary(attemptId, examHistoryIds);
+      }
+    }
+  } catch (error) {
+    console.warn("Failed to persist pending result", error);
+    setResultAiCommentaryLoading(false);
+    if (els.resultCommentary) {
+      els.resultCommentary.style.display = "";
+      els.resultCommentary.textContent = "결과는 화면에 표시했지만 DB 저장이 지연되고 있습니다. 잠시 후 다시 시도해 주세요.";
+    }
+  }
 }
 
 function renderApiResultPage(result) {
@@ -809,6 +901,12 @@ async function loadBackendResultPage() {
     ? navigation.examHistoryIds
     : [];
 
+  if (navigation?.pendingSave || state.lastResult?.pendingSave) {
+    renderResultPage();
+    persistPendingResultSave(navigation);
+    return;
+  }
+
   startResultLoading();
   setResultScoreText("-");
   if (els.resultVerdict) {
@@ -836,6 +934,9 @@ async function loadBackendResultPage() {
       return;
     }
     renderApiResultPage(result);
+    if (!hasResultAiCommentary(result)) {
+      refreshResultAiCommentary(attemptId, examHistoryIds);
+    }
   } catch (error) {
     renderResultEmptyState({
       title: "결과를 불러오지 못했습니다",
@@ -876,6 +977,23 @@ function renderResultHeroAction(show) {
   els.resultHero.querySelector(".result-hero-actions")?.remove();
 }
 
+function getResultSubject(result) {
+  return subjects.find((item) => item.id === result?.subjectId)
+    || {
+      id: result?.subjectId || "result",
+      name: result?.subjectName || "모의고사",
+      subjectCode: result?.subjectCode || "",
+      questions: Array.isArray(state.activeQuestions) ? state.activeQuestions : []
+    };
+}
+
+function getQuestionsForSubject(subject, total = 20) {
+  const subjectQuestions = Array.isArray(subject?.questions) ? subject.questions : [];
+  const activeQuestions = Array.isArray(state.activeQuestions) ? state.activeQuestions : [];
+  const source = subjectQuestions.length ? subjectQuestions : activeQuestions;
+  return source.slice(0, total);
+}
+
 function renderResultPage() {
   if (!els.resultList || !els.resultScore || !els.resultSummary) return;
 
@@ -903,7 +1021,7 @@ function renderResultPage() {
     return;
   }
 
-  const subject = subjects.find((item) => item.id === result.subjectId) || currentSubject();
+  const subject = getResultSubject(result);
   const questions = getQuestionsForSubject(subject, result.total);
   const passed = result.score > 60;
   renderResultHeroAction(false);
@@ -981,7 +1099,7 @@ function buildChatAnswer(question) {
   const result = state.lastResult;
   if (!result) return "아직 채점 결과가 없어서 분석할 내용이 없습니다. 모의고사를 먼저 완료해 주세요.";
 
-  const subject = subjects.find((item) => item.id === result.subjectId) || currentSubject();
+  const subject = getResultSubject(result);
   const questions = getQuestionsForSubject(subject, result.total);
   const wrongRows = result.rows.filter((row) => !row.correct);
   const wrongTopics = wrongRows.slice(0, 3).map((row) => `Q${row.index + 1}`).join(", ") || "없음";

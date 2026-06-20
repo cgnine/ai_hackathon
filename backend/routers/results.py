@@ -4,6 +4,7 @@ import logging
 
 from fastapi import APIRouter
 from pydantic import BaseModel, Field
+from starlette.concurrency import run_in_threadpool
 
 from backend.services import result_service
 
@@ -34,7 +35,8 @@ async def get_saved_wrong_notes(member_id: str | None = None):
 @router.post("")
 async def save_result(request: ExamResultSaveRequest):
     try:
-        return result_service.save_exam_result(
+        return await run_in_threadpool(
+            result_service.save_exam_result,
             member_id=request.member_id,
             subject_code=request.subject_code,
             answers=[answer.model_dump() for answer in request.answers],
@@ -71,7 +73,12 @@ async def get_monthly_ranking(limit: int = 10):
 
 @router.get("/ranking/goal")
 async def get_ranking_goal(member_id: str):
-    return result_service.get_ranking_goal(member_id)
+    return await run_in_threadpool(result_service.get_ranking_goal, member_id)
+
+
+@router.get("/ranking/goal/commentary")
+async def get_ranking_goal_commentary(member_id: str):
+    return await run_in_threadpool(result_service.get_ranking_goal_commentary, member_id)
 
 
 @router.get("/main/stats")
@@ -81,12 +88,25 @@ async def get_main_stats():
 
 @router.get("/analysis")
 async def get_analysis(member_id: str, include_commentary: bool = True):
-    return result_service.get_analysis(member_id, include_commentary=include_commentary)
+    return await run_in_threadpool(
+        result_service.get_analysis,
+        member_id,
+        include_commentary=include_commentary,
+    )
 
 
 @router.get("/analysis/commentary")
 async def get_analysis_commentary(member_id: str):
-    return result_service.get_analysis_commentary(member_id)
+    return await run_in_threadpool(result_service.get_analysis_commentary, member_id)
+
+
+@router.get("/analysis/subject-commentary")
+async def get_analysis_subject_commentary(member_id: str, subject_code: str):
+    return await run_in_threadpool(
+        result_service.get_analysis_subject_commentary,
+        member_id,
+        subject_code,
+    )
 
 
 @router.get("/ai-recommendation")
@@ -111,7 +131,11 @@ async def generate_result_commentary(attempt_id: str, history_ids: str | None = 
         for history_id in (history_ids or "").split(",")
         if history_id.strip()
     ]
-    return result_service.generate_result_commentary(attempt_id, exam_question_ids or None)
+    return await run_in_threadpool(
+        result_service.generate_result_commentary,
+        attempt_id,
+        exam_question_ids or None,
+    )
 
 
 @router.get("/{attempt_id}/wrong")

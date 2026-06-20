@@ -111,6 +111,25 @@ async function saveMockExamResult(subject, questions, answers) {
   return data;
 }
 
+async function saveExamResultPayload(payload) {
+  const response = await fetch(`${API_BASE}/results`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload)
+  });
+
+  if (!response.ok) {
+    const data = await response.json().catch(() => ({}));
+    throw new Error(data.detail || `HTTP ${response.status}`);
+  }
+
+  const data = await response.json();
+  if (typeof clearAnalysisCache === "function") {
+    clearAnalysisCache(payload.member_id);
+  }
+  return data;
+}
+
 async function generateResultCommentary(examId, examHistoryIds = []) {
   const historyQuery = Array.isArray(examHistoryIds) && examHistoryIds.length
     ? `?history_ids=${encodeURIComponent(examHistoryIds.join(","))}`

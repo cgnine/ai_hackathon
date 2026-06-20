@@ -12,6 +12,35 @@ from psycopg2.extras import RealDictCursor
 from backend.services import bedrock_client, question_parser
 from backend.services.db import get_conn
 
+_MONTHLY_RANKING_CACHE: dict[str, Any] = {
+    "expires_at": None,
+    "data": None,
+    "limit": None,
+}
+_MONTHLY_RANKING_CACHE_SECONDS = 30
+_ANALYSIS_CACHE: dict[str, dict[str, Any]] = {}
+_ANALYSIS_CACHE_SECONDS = 60
+_ANALYSIS_COMMENTARY_CACHE_SECONDS = 180
+_ANALYSIS_SUBJECT_COMMENTARY_CACHE_SECONDS = 300
+_RANKING_GOAL_CACHE: dict[str, dict[str, Any]] = {}
+_RANKING_GOAL_CACHE_SECONDS = 60
+_RANKING_GOAL_COMMENTARY_CACHE_SECONDS = 300
+
+
+def _clear_analysis_cache(member_id: str) -> None:
+    prefix = f"{member_id}:"
+    for key in list(_ANALYSIS_CACHE):
+        if key.startswith(prefix):
+            _ANALYSIS_CACHE.pop(key, None)
+    for key in list(_RANKING_GOAL_CACHE):
+        if key.startswith(prefix):
+            _RANKING_GOAL_CACHE.pop(key, None)
+    _MONTHLY_RANKING_CACHE.update({
+        "expires_at": None,
+        "data": None,
+        "limit": None,
+    })
+
 
 def _to_int(value: Any) -> int | None:
     try:
@@ -1085,6 +1114,7 @@ def save_exam_result(member_id: str, subject_code: str, answers: list[dict[str, 
                 [(history_row[0], exam_id, *history_row[1:]) for history_row in history_rows],
             )
 
+    _clear_analysis_cache(normalized_member_id)
     return {
         "examId": exam_id,
         "attemptId": exam_id,
@@ -1592,6 +1622,11 @@ def get_analysis(member_id: str, include_commentary: bool = True) -> dict[str, A
     normalized_member_id = member_id.strip()
     if not normalized_member_id:
         raise HTTPException(status_code=400, detail="member_id is required")
+    now = datetime.now()
+    cache_key = f"{normalized_member_id}:{'commentary' if include_commentary else 'stats'}"
+    cached = _ANALYSIS_CACHE.get(cache_key)
+    if cached and cached.get("expires_at") and now < cached["expires_at"]:
+        return cached["data"]
 
     with get_conn() as conn:
         with conn.cursor(cursor_factory=RealDictCursor) as cur:
@@ -2152,7 +2187,7 @@ def get_analysis(member_id: str, include_commentary: bool = True) -> dict[str, A
         keyword_payload = _bedrock_modal_keywords(
             subject_strong_map.get(subject_code, []),
             subject_weak_map.get(subject_code, []),
-            include_commentary=include_commentary,
+            include_commentary=False,
         )
         for item, keyword in zip(subject_strong_map.get(subject_code, []), keyword_payload["strengths"]):
             item["keyword"] = keyword
@@ -2171,7 +2206,7 @@ def get_analysis(member_id: str, include_commentary: bool = True) -> dict[str, A
             "weaknesses": subject_weak_map.get(subject_code, []),
         }
         subject_modal_ai_map[subject_code] = {
-            "comment": _bedrock_modal_comment(modal_payload, include_commentary=include_commentary),
+            "comment": _bedrock_modal_comment(modal_payload, include_commentary=False),
         }
     subject_stats = []
     for item in subject_map.values():
@@ -2332,7 +2367,7 @@ def get_analysis(member_id: str, include_commentary: bool = True) -> dict[str, A
         else _fallback_analysis_ai_summary(summary, subject_stats)
     )
 
-    return {
+    result = {
         "summary": summary,
         "aiOverview": ai_summary["aiOverview"],
         "aiComment": ai_summary["aiComment"],
@@ -2348,15 +2383,93 @@ def get_analysis(member_id: str, include_commentary: bool = True) -> dict[str, A
         "commentary": ai_summary["aiCommentary"],
         "recommendations": [],
     }
+    _ANALYSIS_CACHE[cache_key] = {
+        "expires_at": now + timedelta(
+            seconds=_ANALYSIS_COMMENTARY_CACHE_SECONDS if include_commentary else _ANALYSIS_CACHE_SECONDS
+        ),
+        "data": result,
+    }
+    return result
 
 
 def get_analysis_commentary(member_id: str) -> dict[str, Any]:
-    analysis = get_analysis(member_id, include_commentary=True)
-    return {
+    normalized_member_id = member_id.strip()
+    if not normalized_member_id:
+        raise HTTPException(status_code=400, detail="member_id is required")
+    now = datetime.now()
+    cache_key = f"{normalized_member_id}:commentary_only"
+    cached = _ANALYSIS_CACHE.get(cache_key)
+    if cached and cached.get("expires_at") and now < cached["expires_at"]:
+        return cached["data"]
+
+    analysis = get_analysis(normalized_member_id, include_commentary=True)
+    result = {
         "aiOverview": analysis.get("aiOverview"),
         "aiComment": analysis.get("aiComment"),
         "commentary": analysis["commentary"],
     }
+    _ANALYSIS_CACHE[cache_key] = {
+        "expires_at": now + timedelta(seconds=_ANALYSIS_COMMENTARY_CACHE_SECONDS),
+        "data": result,
+    }
+    return result
+
+
+def get_analysis_subject_commentary(member_id: str, subject_code: str) -> dict[str, Any]:
+    normalized_member_id = member_id.strip()
+    normalized_subject_code = subject_code.strip()
+    if not normalized_member_id:
+        raise HTTPException(status_code=400, detail="member_id is required")
+    if not normalized_subject_code:
+        raise HTTPException(status_code=400, detail="subject_code is required")
+
+    now = datetime.now()
+    cache_key = f"{normalized_member_id}:subject_commentary:{normalized_subject_code}"
+    cached = _ANALYSIS_CACHE.get(cache_key)
+    if cached and cached.get("expires_at") and now < cached["expires_at"]:
+        return cached["data"]
+
+    analysis = get_analysis(normalized_member_id, include_commentary=False)
+    subject = next(
+        (
+            item for item in analysis.get("subjectStats", [])
+            if str(item.get("subjectCode") or "") == normalized_subject_code
+        ),
+        None,
+    )
+    if not subject:
+        raise HTTPException(status_code=404, detail="Subject analysis not found")
+
+    modal = subject.get("modal") if isinstance(subject.get("modal"), dict) else {}
+    strengths = [dict(item) for item in modal.get("strongUnits", []) if isinstance(item, dict)]
+    weaknesses = [dict(item) for item in modal.get("weakUnits", []) if isinstance(item, dict)]
+    keyword_payload = _bedrock_modal_keywords(strengths, weaknesses, include_commentary=True)
+    for item, keyword in zip(strengths, keyword_payload["strengths"]):
+        item["keyword"] = keyword
+    for item, keyword in zip(weaknesses, keyword_payload["weaknesses"]):
+        item["keyword"] = keyword
+
+    modal_payload = {
+        "subjectCode": normalized_subject_code,
+        "subjectName": subject.get("subjectName") or normalized_subject_code,
+        "summary": subject.get("summary"),
+        "detail": modal.get("detail", []),
+        "trend": modal.get("trend", []),
+        "strengths": strengths,
+        "weaknesses": weaknesses,
+    }
+    result = {
+        "subjectCode": normalized_subject_code,
+        "subjectName": subject.get("subjectName") or normalized_subject_code,
+        "comment": _bedrock_modal_comment(modal_payload, include_commentary=True),
+        "strongUnits": strengths,
+        "weakUnits": weaknesses,
+    }
+    _ANALYSIS_CACHE[cache_key] = {
+        "expires_at": now + timedelta(seconds=_ANALYSIS_SUBJECT_COMMENTARY_CACHE_SECONDS),
+        "data": result,
+    }
+    return result
 
 
 def _build_result_commentary_prompt_data(
@@ -2479,6 +2592,28 @@ def generate_result_commentary(
     exam_question_ids: list[str] | None = None,
 ) -> dict[str, Any]:
     result_data = _build_result_commentary_prompt_data(attempt_id, exam_question_ids)
+    with get_conn() as conn:
+        with conn.cursor(cursor_factory=RealDictCursor) as cur:
+            cur.execute(
+                """
+                SELECT diagnosis_content
+                FROM exam_tb
+                WHERE exam_id = %s
+                  AND member_id = %s
+                """,
+                (attempt_id, result_data["memberId"]),
+            )
+            existing = cur.fetchone()
+    existing_summary, existing_commentary = _parse_diagnosis_content(
+        existing["diagnosis_content"] if existing else None
+    )
+    if existing_commentary:
+        return {
+            "examId": attempt_id,
+            "memberId": result_data["memberId"],
+            "diagnosisContent": existing_commentary,
+        }
+
     user_prompt = RESULT_COMMENTARY_USER_PROMPT_TEMPLATE.replace(
         "{result_data}",
         json.dumps(result_data, ensure_ascii=False, indent=2),
@@ -2856,7 +2991,7 @@ def get_exam_history(
         )
 
     total_pages = max(1, (total_count + safe_page_size - 1) // safe_page_size)
-    return {
+    result = {
         "memberId": normalized_member_id,
         "items": items,
         "page": safe_page,
@@ -2872,11 +3007,26 @@ def get_exam_history(
             "minScore": float(first_row["min_score"]) if first_row.get("min_score") is not None else 0,
         },
     }
+    return result
 
 
 def get_monthly_ranking(limit: int = 10) -> dict[str, Any]:
     safe_limit = max(1, min(limit, 50))
     now = datetime.now()
+    cached_data = _MONTHLY_RANKING_CACHE.get("data")
+    cached_limit = _MONTHLY_RANKING_CACHE.get("limit")
+    cached_expires_at = _MONTHLY_RANKING_CACHE.get("expires_at")
+    if (
+        cached_data
+        and cached_limit is not None
+        and int(cached_limit) >= safe_limit
+        and cached_expires_at
+        and now < cached_expires_at
+    ):
+        return {
+            "monthLabel": cached_data["monthLabel"],
+            "items": cached_data["items"][:safe_limit],
+        }
 
     with get_conn() as conn:
         with conn.cursor(cursor_factory=RealDictCursor) as cur:
@@ -2907,7 +3057,7 @@ def get_monthly_ranking(limit: int = 10) -> dict[str, Any]:
             )
             rows = cur.fetchall()
 
-    return {
+    result = {
         "monthLabel": f"{now.month}월",
         "items": [
             {
@@ -2919,6 +3069,12 @@ def get_monthly_ranking(limit: int = 10) -> dict[str, Any]:
             for index, row in enumerate(rows, start=1)
         ],
     }
+    _MONTHLY_RANKING_CACHE.update({
+        "expires_at": now + timedelta(seconds=_MONTHLY_RANKING_CACHE_SECONDS),
+        "data": result,
+        "limit": safe_limit,
+    })
+    return result
 
 
 def get_main_stats() -> dict[str, int]:
@@ -2956,6 +3112,11 @@ def get_ranking_goal(member_id: str) -> dict[str, Any]:
     normalized_member_id = member_id.strip()
     if not normalized_member_id:
         raise HTTPException(status_code=400, detail="member_id is required")
+    now = datetime.now()
+    cache_key = f"{normalized_member_id}:goal"
+    cached = _RANKING_GOAL_CACHE.get(cache_key)
+    if cached and cached.get("expires_at") and now < cached["expires_at"]:
+        return cached["data"]
 
     with get_conn() as conn:
         with conn.cursor(cursor_factory=RealDictCursor) as cur:
@@ -3336,16 +3497,21 @@ def get_ranking_goal(member_id: str) -> dict[str, Any]:
             {"title": "취약 과목 보완 학습", "expected": "+0점 예상"},
         ]
     else:
-        goal_coach_message = _bedrock_ranking_goal_coach(row, subject_target_items)
-        goal_actions = _bedrock_ranking_goal_actions(row, subject_target_items)
+        goal_coach_message = _fallback_ranking_goal_coach(
+            int(row["my_rank"]),
+            int(row["target_rank"]),
+            gap_score,
+            subject_target_items,
+        )
+        goal_actions = _fallback_ranking_goal_actions(subject_target_items)
 
     rival_coach_message = (
-        _bedrock_ranking_rival_coach(row, rival_row, rival_subject_rows)
+        _fallback_ranking_rival_coach(rival_row, rival_subject_rows)
         if rival_row
         else None
     )
     learning_recommendations = (
-        _bedrock_ranking_learning_recommendations(learning_pattern_row)
+        _fallback_ranking_learning_recommendations(learning_pattern_row)
         if learning_pattern_row
         else []
     )
@@ -3392,6 +3558,99 @@ def get_ranking_goal(member_id: str) -> dict[str, Any]:
             "weakKeyword": strength_keyword_row["weak_keyword"],
         } if strength_keyword_row else None,
     }
+    _RANKING_GOAL_CACHE[cache_key] = {
+        "expires_at": now + timedelta(seconds=_RANKING_GOAL_CACHE_SECONDS),
+        "data": result,
+    }
+    return result
+
+
+def get_ranking_goal_commentary(member_id: str) -> dict[str, Any]:
+    normalized_member_id = member_id.strip()
+    if not normalized_member_id:
+        raise HTTPException(status_code=400, detail="member_id is required")
+
+    now = datetime.now()
+    cache_key = f"{normalized_member_id}:goal_commentary"
+    cached = _RANKING_GOAL_CACHE.get(cache_key)
+    if cached and cached.get("expires_at") and now < cached["expires_at"]:
+        return cached["data"]
+
+    goal = get_ranking_goal(normalized_member_id)
+    ranking_goal = {
+        "my_rank": goal["myRank"],
+        "my_score": goal["myScore"],
+        "target_rank": goal["targetRank"],
+        "target_score": goal["targetScore"],
+        "gap_score": goal["gapScore"],
+        "success_rate": goal["successRate"],
+    }
+    subject_targets = [
+        {
+            "subjectCode": item.get("subjectCode"),
+            "subjectName": item.get("subjectName"),
+            "currentScore": item.get("currentScore"),
+            "expectedUpScore": item.get("expectedUpScore"),
+            "targetSubjectScore": item.get("targetSubjectScore"),
+            "recommendTitle": item.get("recommendTitle"),
+        }
+        for item in goal.get("subjectTargets", [])
+    ]
+    rival = goal.get("rival") or {}
+    rival_row = {
+        "rival_id": rival.get("rivalId"),
+        "rival_name": rival.get("rivalName"),
+        "rival_rank": rival.get("rivalRank"),
+        "rival_score": rival.get("rivalScore"),
+        "score_gap": rival.get("scoreGap"),
+    } if rival else None
+    rival_subject_rows = [
+        {
+            "subject_code": item.get("subjectCode"),
+            "subject_name": item.get("subjectName"),
+            "my_score": item.get("myScore"),
+            "rival_score": item.get("rivalScore"),
+        }
+        for item in rival.get("subjectComparisons", [])
+    ] if rival else []
+    learning_pattern = goal.get("learningPattern") or {}
+    learning_pattern_row = {
+        "avg_exam_count": learning_pattern.get("avgExamCount"),
+        "avg_subject_count": learning_pattern.get("avgSubjectCount"),
+        "avg_practical_rate": learning_pattern.get("avgPracticalRate"),
+        "avg_wrong_note_saved_count": learning_pattern.get("avgWrongNoteSavedCount"),
+        "weak_subject": learning_pattern.get("weakSubject"),
+        "weak_subject_score": learning_pattern.get("weakSubjectScore"),
+    } if learning_pattern else None
+
+    gap_score = float(goal.get("gapScore") or 0)
+    if gap_score == 0:
+        goal_coach_message = goal.get("goalCoachMessage")
+        goal_actions = goal.get("goalActions") or []
+    else:
+        goal_coach_message = _bedrock_ranking_goal_coach(ranking_goal, subject_targets)
+        goal_actions = _bedrock_ranking_goal_actions(ranking_goal, subject_targets)
+
+    result = {
+        "memberId": normalized_member_id,
+        "goalCoachMessage": goal_coach_message,
+        "goalActions": goal_actions,
+        "rivalCoachMessage": (
+            _bedrock_ranking_rival_coach(ranking_goal, rival_row, rival_subject_rows)
+            if rival_row
+            else None
+        ),
+        "learningRecommendations": (
+            _bedrock_ranking_learning_recommendations(learning_pattern_row)
+            if learning_pattern_row
+            else []
+        ),
+    }
+    _RANKING_GOAL_CACHE[cache_key] = {
+        "expires_at": now + timedelta(seconds=_RANKING_GOAL_COMMENTARY_CACHE_SECONDS),
+        "data": result,
+    }
+    return result
 
 
 def get_wrong_items(attempt_id: str) -> dict[str, Any]:

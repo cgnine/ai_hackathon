@@ -11,6 +11,8 @@ from backend.services.db import get_conn
 class MemberInfo(TypedDict):
     member_id: str
     member_name: str
+    email: Optional[str]
+    affiliate: Optional[str]
 
 
 class LoginResult(TypedDict):
@@ -38,6 +40,36 @@ def _has_member_pwd_column(conn) -> bool:
         return cur.fetchone() is not None
 
 
+def _member_columns(conn) -> set[str]:
+    with conn.cursor() as cur:
+        cur.execute(
+            """
+            SELECT column_name
+            FROM information_schema.columns
+            WHERE table_schema = 'public'
+              AND table_name = 'member_tb'
+            """
+        )
+        return {str(row[0]) for row in cur.fetchall()}
+
+
+def _first_existing(columns: set[str], candidates: tuple[str, ...]) -> Optional[str]:
+    for candidate in candidates:
+        if candidate in columns:
+            return candidate
+    return None
+
+
+def _profile_column_map(columns: set[str]) -> dict[str, Optional[str]]:
+    return {
+        "email": _first_existing(columns, ("email", "member_email")),
+        "affiliate": _first_existing(
+            columns,
+            ("affiliate", "member_affiliate", "company", "company_name", "member_company"),
+        ),
+    }
+
+
 def get_member(member_id: str) -> Optional[MemberInfo]:
     normalized_member_id = normalize_member_id(member_id)
     if not normalized_member_id:
@@ -61,7 +93,99 @@ def get_member(member_id: str) -> Optional[MemberInfo]:
     return {
         "member_id": str(row["member_id"]),
         "member_name": str(row["member_name"]),
+        "email": None,
+        "affiliate": None,
     }
+
+
+def get_member_profile(member_id: str) -> Optional[MemberInfo]:
+    normalized_member_id = normalize_member_id(member_id)
+    if not normalized_member_id:
+        return None
+
+    with get_conn() as conn:
+        columns = _member_columns(conn)
+        mapped = _profile_column_map(columns)
+        select_parts = [
+            "member_id",
+            "COALESCE(member_name, member_id) AS member_name",
+        ]
+        if mapped["email"]:
+            select_parts.append(f"{mapped['email']} AS email")
+        else:
+            select_parts.append("NULL AS email")
+        if mapped["affiliate"]:
+            select_parts.append(f"{mapped['affiliate']} AS affiliate")
+        else:
+            select_parts.append("NULL AS affiliate")
+
+        with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
+            cur.execute(
+                f"""
+                SELECT {", ".join(select_parts)}
+                FROM member_tb
+                WHERE LOWER(member_id) = LOWER(%s)
+                LIMIT 1
+                """,
+                (normalized_member_id,),
+            )
+            row = cur.fetchone()
+
+    if row is None:
+        return None
+    return {
+        "member_id": str(row["member_id"]),
+        "member_name": str(row["member_name"]),
+        "email": str(row["email"]) if row.get("email") else None,
+        "affiliate": str(row["affiliate"]) if row.get("affiliate") else None,
+    }
+
+
+def update_member_profile(
+    member_id: str,
+    member_name: Optional[str] = None,
+    email: Optional[str] = None,
+    affiliate: Optional[str] = None,
+) -> Optional[MemberInfo]:
+    normalized_member_id = normalize_member_id(member_id)
+    if not normalized_member_id:
+        return None
+
+    with get_conn() as conn:
+        columns = _member_columns(conn)
+        mapped = _profile_column_map(columns)
+        updates: list[str] = []
+        params: list[Optional[str]] = []
+
+        if member_name is not None and "member_name" in columns:
+            cleaned = member_name.strip()
+            if cleaned:
+                updates.append("member_name = %s")
+                params.append(cleaned)
+
+        if email is not None and mapped["email"]:
+            updates.append(f"{mapped['email']} = %s")
+            params.append(email.strip() or None)
+
+        if affiliate is not None and mapped["affiliate"]:
+            updates.append(f"{mapped['affiliate']} = %s")
+            params.append(affiliate.strip() or None)
+
+        if updates:
+            params.append(normalized_member_id)
+            with conn.cursor() as cur:
+                cur.execute(
+                    f"""
+                    UPDATE member_tb
+                    SET {", ".join(updates)}
+                    WHERE LOWER(member_id) = LOWER(%s)
+                    """,
+                    tuple(params),
+                )
+                if cur.rowcount == 0:
+                    return None
+
+    return get_member_profile(normalized_member_id)
 
 
 def authenticate_member(member_id: str, password: str) -> LoginResult:
@@ -190,6 +314,8 @@ def create_member(member_id: str, member_name: str, password: str) -> Optional[M
     return {
         "member_id": normalized_member_id,
         "member_name": normalized_member_name,
+        "email": None,
+        "affiliate": None,
     }
 
 

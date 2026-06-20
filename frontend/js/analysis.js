@@ -7,6 +7,17 @@ function analysisScoreColor(score) {
 const ANALYSIS_CACHE_TTL_MS = 5 * 60 * 1000;
 let analysisLoadingTimer = null;
 let analysisLoadingProgress = 0;
+let analysisCommentaryRequest = null;
+let analysisAiLoadingMessageTimer = null;
+let analysisAiLoadingMessageIndex = 0;
+
+const ANALYSIS_AI_LOADING_MESSAGES = [
+  "최근 응시 이력을 다시 분석하고 있습니다.",
+  "과목별 점수 흐름을 반영해 새 총평을 준비하고 있습니다.",
+  "취약 영역과 강점 영역을 다시 정리하고 있습니다.",
+  "맞춤 학습 방향을 업데이트하고 있습니다.",
+  "새롭게 업데이트된 AI 총평을 생성하고 있습니다."
+];
 
 function analysisCacheKey(memberId, name) {
   return `analysis:${name}:${memberId}`;
@@ -61,19 +72,67 @@ async function loadAnalysisData(includeCommentary = false) {
 }
 
 async function loadAnalysisCommentary() {
+  if (analysisCommentaryRequest) return analysisCommentaryRequest;
   const memberId = currentMemberId();
   if (!memberId) {
     throw new Error("로그인 정보가 없습니다.");
   }
 
-  const response = await fetch(`${API_BASE}/results/analysis/commentary?member_id=${encodeURIComponent(memberId)}`);
-  if (!response.ok) {
-    const data = await response.json().catch(() => ({}));
-    throw new Error(data.detail || `HTTP ${response.status}`);
+  analysisCommentaryRequest = fetch(`${API_BASE}/results/analysis/commentary?member_id=${encodeURIComponent(memberId)}`)
+    .then(async (response) => {
+      if (!response.ok) {
+        const data = await response.json().catch(() => ({}));
+        throw new Error(data.detail || `HTTP ${response.status}`);
+      }
+      const data = await response.json();
+      writeAnalysisCache(memberId, "commentary", data);
+      return data;
+    })
+    .finally(() => {
+      analysisCommentaryRequest = null;
+    });
+  return analysisCommentaryRequest;
+}
+
+function createAiInlineLoading(message) {
+  const loading = document.createElement("div");
+  const spinner = document.createElement("span");
+  const text = document.createElement("span");
+  loading.className = "ai-inline-loading";
+  loading.setAttribute("role", "status");
+  loading.setAttribute("aria-live", "polite");
+  spinner.className = "ai-inline-spinner";
+  spinner.setAttribute("aria-hidden", "true");
+  text.className = "ai-inline-loading-text";
+  text.textContent = message;
+  loading.append(spinner, text);
+  return loading;
+}
+
+function updateAnalysisAiLoadingMessage() {
+  const message = ANALYSIS_AI_LOADING_MESSAGES[
+    analysisAiLoadingMessageIndex % ANALYSIS_AI_LOADING_MESSAGES.length
+  ];
+  document.querySelectorAll(".ai-inline-loading-text").forEach((target) => {
+    target.textContent = message;
+  });
+  analysisAiLoadingMessageIndex += 1;
+}
+
+function setAnalysisAiLoading(isLoading, message = "AI 총평을 생성하는 중입니다.") {
+  const reportTarget = document.getElementById("analysisAiCommentList");
+  const textTarget = els.analysisText;
+  clearInterval(analysisAiLoadingMessageTimer);
+  analysisAiLoadingMessageTimer = null;
+  [reportTarget, textTarget].forEach((target) => {
+    if (!target) return;
+    target.querySelector(".ai-inline-loading")?.remove();
+    if (isLoading) target.appendChild(createAiInlineLoading(message));
+  });
+  if (isLoading) {
+    analysisAiLoadingMessageIndex = 1;
+    analysisAiLoadingMessageTimer = setInterval(updateAnalysisAiLoadingMessage, 1800);
   }
-  const data = await response.json();
-  writeAnalysisCache(memberId, "commentary", data);
-  return data;
 }
 
 function renderAnalysisData(data, useCachedCommentary = false) {
@@ -98,6 +157,7 @@ function renderAnalysisData(data, useCachedCommentary = false) {
 }
 
 function refreshAnalysisCommentary(subjectStats, keepExistingOnError = false) {
+  setAnalysisAiLoading(true, ANALYSIS_AI_LOADING_MESSAGES[0]);
   loadAnalysisCommentary()
     .then((commentaryData) => {
       renderAnalysisText(commentaryData.commentary || [], subjectStats);
@@ -108,6 +168,9 @@ function refreshAnalysisCommentary(subjectStats, keepExistingOnError = false) {
       p.textContent = `AI총평을 불러오지 못했습니다. (${error.message})`;
       els.analysisText.innerHTML = "";
       els.analysisText.appendChild(p);
+    })
+    .finally(() => {
+      setAnalysisAiLoading(false);
     });
 }
 
@@ -402,6 +465,26 @@ function renderAnalysisReportData(data) {
   renderAnalysisReportWeakness(data.weaknessAnalysis);
 }
 
+function refreshAnalysisReportCommentary(baseData) {
+  setAnalysisAiLoading(true, ANALYSIS_AI_LOADING_MESSAGES[0]);
+  loadAnalysisCommentary()
+    .then((commentaryData) => {
+      const merged = {
+        ...baseData,
+        aiOverview: commentaryData.aiOverview || baseData.aiOverview,
+        aiComment: commentaryData.aiComment || baseData.aiComment,
+        commentary: commentaryData.commentary || baseData.commentary || []
+      };
+      renderAnalysisReportData(merged);
+    })
+    .catch(() => {
+      // Keep the fast fallback report visible when AI commentary is slow/unavailable.
+    })
+    .finally(() => {
+      setAnalysisAiLoading(false);
+    });
+}
+
 async function renderAnalysisReportPage() {
   const memberId = currentMemberId();
   if (!memberId) {
@@ -409,10 +492,17 @@ async function renderAnalysisReportPage() {
     return;
   }
 
-  startAnalysisReportLoading();
+  const cachedData = readAnalysisCache(memberId, "stats");
+  if (cachedData) {
+    renderAnalysisReportData(cachedData);
+    finishAnalysisReportLoading();
+    refreshAnalysisReportCommentary(cachedData);
+  } else {
+    startAnalysisReportLoading();
+  }
 
   try {
-    const data = await loadAnalysisData(true);
+    const data = await loadAnalysisData(false);
     const responseMemberId = String(data?.summary?.memberId || "").trim();
     if (responseMemberId && responseMemberId !== String(memberId).trim()) {
       clearAnalysisCache(memberId);
@@ -420,7 +510,12 @@ async function renderAnalysisReportPage() {
     }
     renderAnalysisReportData(data);
     finishAnalysisReportLoading();
+    refreshAnalysisReportCommentary(data);
   } catch (error) {
+    if (cachedData) {
+      showToast(`종합평가 데이터를 갱신하지 못했습니다. (${error.message})`);
+      return;
+    }
     const loading = document.getElementById("analysisLoading");
     const message = loading?.querySelector("p:not(.eyebrow)");
     if (message) message.textContent = "종합평가 데이터를 불러오지 못했습니다.";

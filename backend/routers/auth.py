@@ -5,6 +5,8 @@ from fastapi import APIRouter, HTTPException
 from backend.models.schemas import (
     LoginRequest,
     LoginResponse,
+    MemberProfileResponse,
+    MemberProfileUpdateRequest,
     PasswordResetRequest,
     PasswordResetResponse,
     SignupRequest,
@@ -13,6 +15,39 @@ from backend.models.schemas import (
 from backend.services import member_repository
 
 router = APIRouter()
+
+
+@router.get("/auth/member", response_model=MemberProfileResponse)
+async def member_profile(member_id: str):
+    member = member_repository.get_member_profile(member_id)
+    if member is None:
+        raise HTTPException(status_code=404, detail="등록된 사번이 없습니다.")
+
+    return MemberProfileResponse(
+        member_id=member["member_id"],
+        member_name=member["member_name"],
+        email=member.get("email"),
+        affiliate=member.get("affiliate"),
+    )
+
+
+@router.put("/auth/member", response_model=MemberProfileResponse)
+async def update_member_profile(request: MemberProfileUpdateRequest):
+    member = member_repository.update_member_profile(
+        request.member_id,
+        member_name=request.member_name,
+        email=request.email,
+        affiliate=request.affiliate,
+    )
+    if member is None:
+        raise HTTPException(status_code=404, detail="등록된 사번이 없습니다.")
+
+    return MemberProfileResponse(
+        member_id=member["member_id"],
+        member_name=member["member_name"],
+        email=member.get("email"),
+        affiliate=member.get("affiliate"),
+    )
 
 
 @router.post("/auth/login", response_model=LoginResponse)

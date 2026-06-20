@@ -223,6 +223,69 @@ async function gradeMock(useBedrockCommentary = false) {
   let memberId = currentMemberId();
   let questionIds = questions.map((question) => String(question.id));
   let examHistoryIds = [];
+  if (!memberId || !subject?.subjectCode) {
+    stopMockGradingLoading(true);
+    showToast("응시 결과를 저장할 로그인/과목 정보가 없습니다.");
+    return;
+  }
+
+  const pendingSavePayload = {
+    member_id: memberId,
+    subject_code: subject.subjectCode,
+    answers: questions.map((question, index) => ({
+      question_id: question.id,
+      selected_number: state.mockAnswers[index] || null
+    }))
+  };
+
+  state.lastResult = {
+    examId: attemptId,
+    attemptId,
+    memberId,
+    questionIds,
+    examHistoryIds,
+    profileName: state.profileName,
+    subjectId: state.subjectId,
+    subjectCode: subject.subjectCode,
+    subjectName: subject.name,
+    roundTitle,
+    correctCount,
+    total: questions.length,
+    score,
+    rows: resultRows,
+    createdAt,
+    pendingSave: true,
+    pendingSavePayload
+  };
+  state.attemptHistory.push({
+    id: attemptId,
+    examId: attemptId,
+    memberId,
+    questionIds,
+    examHistoryIds,
+    profileName: state.profileName,
+    subjectId: state.subjectId,
+    subjectCode: subject.subjectCode,
+    subjectName: subject.name,
+    roundTitle,
+    score,
+    correctCount,
+    total: questions.length,
+    rows: resultRows,
+    createdAt
+  });
+  saveState();
+  saveResultNavigation({
+    examId: null,
+    pendingSave: true,
+    localAttemptId: attemptId,
+    memberId,
+    examHistoryIds: [],
+    savePayload: pendingSavePayload
+  });
+  completeMockGradingLoading();
+  window.location.href = PAGE_URLS.result;
+  return;
   try {
     savedResult = await saveMockExamResult(subject, questions, state.mockAnswers);
     memberId = savedResult.memberId || memberId;

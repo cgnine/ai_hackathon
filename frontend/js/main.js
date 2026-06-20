@@ -13,11 +13,14 @@ let mainRankingAutoRollTimer = null;
 let mainRankingAutoRollPaused = false;
 let mainRankingResumeTimer = null;
 let mainRankingAutoRollInitialized = false;
+let latestRankingGoal = null;
+let rankingGoalCommentaryRequest = null;
 const RANKING_PAGE_SIZE = 17;
 const RANKING_MAX_ITEMS = 50;
 const MAIN_RANKING_PAGE_SIZE = 5;
 const MAIN_RANKING_MAX_ITEMS = 10;
 const MAIN_RANKING_AUTO_ROLL_MS = 4500;
+const MAIN_RANKING_TIMEOUT_MS = 1800;
 
 function setCurrentMonthTitle(monthLabel) {
   const title = document.getElementById("monthlyRankingTitle");
@@ -475,6 +478,7 @@ function renderRankingLearningPattern(pattern) {
 }
 
 function renderRankingGoal(goal) {
+  latestRankingGoal = goal;
   const myRank = Number(goal.myRank) || 0;
   const myScore = formatRankingNumber(goal.myScore);
   const targetRank = Number(goal.targetRank) || 0;
@@ -499,6 +503,68 @@ function renderRankingGoal(goal) {
   renderRankingRival(goal.rival);
   renderRankingStrengthKeywords(goal.strengthKeywords);
   renderRankingLearningPattern(goal.learningPattern);
+}
+
+function createRankingInlineLoading(message) {
+  const loading = document.createElement("div");
+  const spinner = document.createElement("span");
+  const text = document.createElement("span");
+  loading.className = "ai-inline-loading ranking-ai-loading";
+  loading.setAttribute("role", "status");
+  loading.setAttribute("aria-live", "polite");
+  spinner.className = "ai-inline-spinner";
+  spinner.setAttribute("aria-hidden", "true");
+  text.className = "ai-inline-loading-text";
+  text.textContent = message;
+  loading.append(spinner, text);
+  return loading;
+}
+
+function setRankingAiLoading(isLoading) {
+  document.querySelectorAll(".ranking-ai-loading").forEach((item) => item.remove());
+  if (!isLoading) return;
+  const coach = document.getElementById("rankingGoalCoach");
+  const learning = document.querySelector(".ranking-learning-card");
+  if (coach) coach.appendChild(createRankingInlineLoading("AI가 최신 랭킹 코멘트를 업데이트하고 있습니다."));
+  if (learning) learning.appendChild(createRankingInlineLoading("상위권 학습 패턴을 다시 정리하고 있습니다."));
+}
+
+function applyRankingGoalCommentary(commentary) {
+  if (!commentary || !latestRankingGoal) return;
+  if (commentary.goalCoachMessage) {
+    setRankingText("rankingGoalCoach", commentary.goalCoachMessage);
+  }
+  if (Array.isArray(commentary.goalActions)) {
+    renderRankingGoalActions(commentary.goalActions, latestRankingGoal.subjectTargets);
+  }
+  if (latestRankingGoal.rival && commentary.rivalCoachMessage) {
+    latestRankingGoal.rival.rivalCoachMessage = commentary.rivalCoachMessage;
+    renderRankingRival(latestRankingGoal.rival);
+  }
+  if (latestRankingGoal.learningPattern && Array.isArray(commentary.learningRecommendations)) {
+    latestRankingGoal.learningPattern.recommendations = commentary.learningRecommendations;
+    renderRankingLearningPattern(latestRankingGoal.learningPattern);
+  }
+}
+
+function refreshRankingGoalCommentary() {
+  const memberId = readMainCurrentMemberId();
+  if (!memberId || rankingGoalCommentaryRequest) return rankingGoalCommentaryRequest;
+  setRankingAiLoading(true);
+  rankingGoalCommentaryRequest = fetch(`${API_BASE}/results/ranking/goal/commentary?member_id=${encodeURIComponent(memberId)}`)
+    .then(async (response) => {
+      if (!response.ok) throw new Error(`HTTP ${response.status}`);
+      const data = await response.json();
+      applyRankingGoalCommentary(data);
+    })
+    .catch(() => {
+      // Keep the fast fallback ranking goal visible.
+    })
+    .finally(() => {
+      rankingGoalCommentaryRequest = null;
+      setRankingAiLoading(false);
+    });
+  return rankingGoalCommentaryRequest;
 }
 
 function startRankingLoading() {
@@ -544,12 +610,19 @@ async function loadRankingGoal() {
     if (!response.ok) throw new Error(`HTTP ${response.status}`);
     const data = await response.json();
     renderRankingGoal(data);
+    refreshRankingGoalCommentary();
   } catch {
     // Keep the static fallback values when the member has no ranking data yet.
   }
 }
 
 async function initRankingPage() {
+  const pageType = document.body?.dataset.page;
+  if (pageType !== "ranking") {
+    loadMonthlyRanking();
+    return;
+  }
+
   startRankingLoading();
   await Promise.all([
     loadMonthlyRanking(),
@@ -560,10 +633,17 @@ async function initRankingPage() {
 
 async function loadMonthlyRanking() {
   setCurrentMonthTitle();
-  const limit = document.body?.dataset.page === "ranking" ? RANKING_MAX_ITEMS : 10;
+  const isRankingPage = document.body?.dataset.page === "ranking";
+  const limit = isRankingPage ? RANKING_MAX_ITEMS : MAIN_RANKING_MAX_ITEMS;
+  const controller = new AbortController();
+  const timeout = !isRankingPage
+    ? window.setTimeout(() => controller.abort(), MAIN_RANKING_TIMEOUT_MS)
+    : null;
 
   try {
-    const response = await fetch(`${API_BASE}/results/ranking/monthly?limit=${limit}`);
+    const response = await fetch(`${API_BASE}/results/ranking/monthly?limit=${limit}`, {
+      signal: controller.signal
+    });
     if (!response.ok) throw new Error(`HTTP ${response.status}`);
     const data = await response.json();
     setCurrentMonthTitle(data.monthLabel);
@@ -573,6 +653,8 @@ async function loadMonthlyRanking() {
     if (list) {
       renderMonthlyRanking([]);
     }
+  } finally {
+    if (timeout) window.clearTimeout(timeout);
   }
 }
 

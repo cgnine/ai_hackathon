@@ -647,13 +647,163 @@ function renderMyInfoMetricCards() {
   `;
 }
 
-function renderMyInfoPage() {
-  const target = document.getElementById('myInfoMetrics');
+function memberSettingsEscape(value) {
+  return String(value ?? "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#039;");
+}
+
+function getMemberAffiliate(memberId) {
+  const prefix = String(memberId || "").trim().charAt(0).toUpperCase();
+  const affiliates = {
+    A: "KB증권",
+    B: "KB국민은행",
+    C: "KB손해보험",
+    D: "KB데이타시스템",
+    E: "KB라이프생명"
+  };
+  return affiliates[prefix] || "KB금융그룹";
+}
+
+function renderMemberSettings(profile = {}) {
+  const memberId = profile.member_id || profile.memberId || currentMemberId();
+  const memberName = profile.member_name || profile.memberName || currentMemberName() || memberId;
+  const affiliate = profile.affiliate || getMemberAffiliate(memberId);
+  const initial = (memberName || memberId || "P").trim().charAt(0).toUpperCase();
+
+  return `
+    <div class="settings-hero">
+      <div class="settings-avatar" aria-hidden="true">${memberSettingsEscape(initial)}</div>
+      <div>
+        <span class="settings-eyebrow">회원 설정</span>
+        <h2>${memberSettingsEscape(memberName)}님의 내정보</h2>
+        <p>기본 회원 정보와 계정 보안 설정을 관리합니다.</p>
+      </div>
+    </div>
+
+    <form class="settings-form" id="memberSettingsForm">
+      <div class="settings-grid">
+        <label class="settings-field">
+          <span>내 사번</span>
+          <input class="settings-input readonly" type="text" value="${memberSettingsEscape(memberId)}" readonly />
+        </label>
+        <label class="settings-field">
+          <span>이름</span>
+          <input class="settings-input" name="member_name" type="text" value="${memberSettingsEscape(memberName)}" autocomplete="name" />
+        </label>
+        <label class="settings-field">
+          <span>나의 계열사</span>
+          <input class="settings-input readonly" name="affiliate" type="text" value="${memberSettingsEscape(affiliate)}" readonly />
+        </label>
+      </div>
+
+      <section class="settings-security-card" aria-label="계정 보안">
+        <div>
+          <strong>비밀번호 관리</strong>
+          <p>비밀번호를 잊었거나 변경이 필요하면 재설정 화면에서 새 비밀번호를 등록할 수 있습니다.</p>
+        </div>
+        <button type="button" class="secondary-btn" id="memberPasswordResetBtn">비밀번호 찾기</button>
+      </section>
+
+      <div class="settings-actions">
+        <button type="submit" class="primary-btn">변경사항 저장</button>
+        <button type="button" class="secondary-btn" onclick="logout()">로그아웃</button>
+      </div>
+      <p class="settings-message" id="memberSettingsMessage" role="status" aria-live="polite"></p>
+    </form>
+  `;
+}
+
+function showMemberSettingsMessage(message, tone = "info") {
+  const messageEl = document.getElementById("memberSettingsMessage");
+  if (!messageEl) return;
+  messageEl.textContent = message;
+  messageEl.dataset.tone = tone;
+}
+
+async function loadMemberSettings(target) {
+  const memberId = currentMemberId();
+  if (!memberId || !target) return;
+
+  try {
+    const response = await fetch(`${API_BASE}/auth/member?member_id=${encodeURIComponent(memberId)}`);
+    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+    const data = await response.json();
+    target.innerHTML = renderMemberSettings(data);
+    bindMemberSettingsForm();
+  } catch (error) {
+    showMemberSettingsMessage("회원 정보를 불러오지 못해 기본 정보로 표시 중입니다.", "warn");
+  }
+}
+
+function bindMemberSettingsForm() {
+  const form = document.getElementById("memberSettingsForm");
+  const resetBtn = document.getElementById("memberPasswordResetBtn");
+  if (resetBtn) {
+    resetBtn.addEventListener("click", () => {
+      if (typeof saveResetPasswordPrefill === "function") {
+        saveResetPasswordPrefill({ memberId: currentMemberId() });
+      }
+      window.location.href = typeof resetPasswordUrl === "function"
+        ? resetPasswordUrl()
+        : PAGE_URLS.resetPassword;
+    });
+  }
+
+  if (!form) return;
+  form.addEventListener("submit", async (event) => {
+    event.preventDefault();
+    const memberId = currentMemberId();
+    if (!memberId) {
+      showMemberSettingsMessage("로그인 정보가 없어 저장할 수 없습니다.", "error");
+      return;
+    }
+
+    const formData = new FormData(form);
+    const payload = {
+      member_id: memberId,
+      member_name: String(formData.get("member_name") || "").trim(),
+      affiliate: String(formData.get("affiliate") || "").trim()
+    };
+    if (!payload.member_name) {
+      showMemberSettingsMessage("이름을 입력해 주세요.", "error");
+      return;
+    }
+
+    showMemberSettingsMessage("변경사항을 저장하는 중입니다...", "info");
+    try {
+      const response = await fetch(`${API_BASE}/auth/member`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload)
+      });
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(data.detail || `HTTP ${response.status}`);
+
+      if (typeof saveAuthSession === "function") {
+        saveAuthSession(data.member_id, data.member_name);
+      }
+      renderProfileButton();
+      showMemberSettingsMessage("내정보가 저장되었습니다.", "success");
+    } catch (error) {
+      showMemberSettingsMessage(error.message || "내정보 저장에 실패했습니다.", "error");
+    }
+  });
+}
+
+function renderMemberSettingsPage() {
+  const target = document.getElementById("myInfoMetrics");
   if (!target) return;
-  // populate with existing cached values immediately
-  target.innerHTML = renderMyInfoMetricCards();
-  // then load live metrics (if logged in)
-  loadMyInfoMetrics(target);
+  target.innerHTML = renderMemberSettings();
+  bindMemberSettingsForm();
+  loadMemberSettings(target);
+}
+
+function renderMyInfoPage() {
+  renderMemberSettingsPage();
 }
 
 function renderExamHistoryPage() {

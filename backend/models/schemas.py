@@ -195,3 +195,17 @@ class PasswordResetRequest(BaseModel):
 
 class PasswordResetResponse(BaseModel):
     member_id: str
+
+
+class MemberProfileResponse(BaseModel):
+    member_id: str
+    member_name: str
+    email: Optional[str] = None
+    affiliate: Optional[str] = None
+
+
+class MemberProfileUpdateRequest(BaseModel):
+    member_id: str = Field(min_length=1, max_length=50)
+    member_name: Optional[str] = Field(default=None, max_length=100)
+    email: Optional[str] = Field(default=None, max_length=255)
+    affiliate: Optional[str] = Field(default=None, max_length=100)

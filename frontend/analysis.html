@@ -15,7 +15,6 @@
       <a class="nav-btn" href="index.html" data-screen="profile">시험응시</a>
       <a class="nav-btn" href="wrong.html" data-screen="wrong">오답노트</a>
       <a class="nav-btn" href="ai-recommend.html" data-screen="aiRecommend">AI 맞춤형 추천문제</a>
-      <a class="nav-btn" href="harness.html" data-screen="harness">AI문제생성</a>
       <a class="nav-btn" href="ranking.html" data-screen="ranking">AI랭킹</a>
     </nav>
     <div class="profile-actions" data-profile-slot aria-label="profile"></div>
@@ -288,6 +287,8 @@
       const weakList = modal?.querySelector(".subject-list-card.weak");
       const commentCard = modal?.querySelector(".subject-comment-card");
       const closeButtons = modal?.querySelectorAll("[data-subject-close]") ?? [];
+      const subjectCommentaryRequests = new Map();
+      let activeSubjectCode = "";
 
       function roundedPercent(value) {
         const number = Number(value);
@@ -418,6 +419,7 @@
       function renderAiComment(comment, subject) {
         if (!commentCard) return;
         commentCard.querySelectorAll("p").forEach((row) => row.remove());
+        commentCard.querySelector(".ai-inline-loading")?.remove();
         const image = commentCard.querySelector(".subject-comment-image");
         const text = String(comment || `${subject} 과목의 강점은 유지하고 취약 영역은 쉬운 문제부터 다시 점검해 보세요. 꾸준히 이어가면 다음 점수에서 변화를 만들 수 있어요.`).trim();
         const paragraph = document.createElement("p");
@@ -429,9 +431,65 @@
         }
       }
 
+      function setSubjectAiCommentLoading(isLoading) {
+        if (!commentCard) return;
+        commentCard.querySelector(".ai-inline-loading")?.remove();
+        if (!isLoading) return;
+        const loading = document.createElement("div");
+        const spinner = document.createElement("span");
+        const text = document.createElement("span");
+        loading.className = "ai-inline-loading";
+        loading.setAttribute("role", "status");
+        loading.setAttribute("aria-live", "polite");
+        spinner.className = "ai-inline-spinner";
+        spinner.setAttribute("aria-hidden", "true");
+        text.className = "ai-inline-loading-text";
+        text.textContent = "해당 과목의 최신 AI 코멘트를 업데이트하고 있습니다.";
+        loading.append(spinner, text);
+        const image = commentCard.querySelector(".subject-comment-image");
+        if (image) {
+          commentCard.insertBefore(loading, image);
+        } else {
+          commentCard.appendChild(loading);
+        }
+      }
+
+      async function refreshSubjectAiComment(subjectCode, subject) {
+        const memberId = typeof currentMemberId === "function" ? currentMemberId() : "";
+        if (!memberId || !subjectCode || !commentCard) return;
+        if (subjectCommentaryRequests.has(subjectCode)) {
+          setSubjectAiCommentLoading(true);
+          return subjectCommentaryRequests.get(subjectCode);
+        }
+        setSubjectAiCommentLoading(true);
+        const request = fetch(`${API_BASE}/results/analysis/subject-commentary?member_id=${encodeURIComponent(memberId)}&subject_code=${encodeURIComponent(subjectCode)}`)
+          .then(async (response) => {
+            if (!response.ok) throw new Error(`HTTP ${response.status}`);
+            const data = await response.json();
+            const modalData = window.analysisSubjectModalData?.[subjectCode] || {};
+            modalData.comment = data.comment || modalData.comment;
+            modalData.strongUnits = data.strongUnits || modalData.strongUnits || [];
+            modalData.weakUnits = data.weakUnits || modalData.weakUnits || [];
+            window.analysisSubjectModalData[subjectCode] = modalData;
+            if (activeSubjectCode !== subjectCode) return;
+            renderUnitList(strongList, modalData.strongUnits || []);
+            renderUnitList(weakList, modalData.weakUnits || []);
+            renderAiComment(modalData.comment, subject);
+          })
+          .catch(() => {
+            setSubjectAiCommentLoading(false);
+          })
+          .finally(() => {
+            subjectCommentaryRequests.delete(subjectCode);
+          });
+        subjectCommentaryRequests.set(subjectCode, request);
+        return request;
+      }
+
       function openSubjectModal(link) {
         if (!modal) return;
         const subjectCode = link.dataset.subjectCode || "";
+        activeSubjectCode = subjectCode;
         const subject = link.dataset.subject || "AI";
         const score = link.dataset.score || "92";
         const rate = link.dataset.rate || score;
@@ -457,6 +515,7 @@
         modal.classList.add("is-open");
         modal.setAttribute("aria-hidden", "false");
         document.body.classList.add("modal-open");
+        refreshSubjectAiComment(subjectCode, subject);
       }
 
       function closeSubjectModal() {
