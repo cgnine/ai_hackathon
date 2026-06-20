@@ -5,7 +5,7 @@ function getQuestionType(question, index) {
 function showScreen(name) {
   state.screen = name;
   if (name === "wrong") {
-    state.wrongSubjectId = null;
+    state.wrongSubjectId = "AI";
     state.wrongOpenDateKey = null;
     state.wrongRoundPage = 1;
   }

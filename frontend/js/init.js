@@ -248,7 +248,7 @@ async function initPage() {
   if (page === "exam-history") renderExamHistoryPage();
   if (page === "ai-recommend") renderAiRecommendPage();
   if (page === "wrong") {
-    state.wrongSubjectId = null;
+    state.wrongSubjectId = "AI";
     state.wrongOpenDateKey = null;
     state.wrongRoundPage = 1;
     saveState();

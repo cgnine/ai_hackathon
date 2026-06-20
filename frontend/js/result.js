@@ -513,7 +513,7 @@ function getResultSaveRows(result = latestApiResult || state.lastResult) {
         saved: state.wrongNotes.has(apiWrongNoteKey(result, item, index)) || item.wrongNoteSaved,
         save: (notify = false, syncServer = true) => saveApiResultItemToWrongNote(result, item, index, notify, syncServer)
       }))
-      .filter((row) => row.questionId);
+      .filter((row) => row.correct === false && row.questionId);
   }
 
   if (Array.isArray(result.rows)) {
@@ -529,7 +529,8 @@ function getResultSaveRows(result = latestApiResult || state.lastResult) {
           roundTitle: result.roundTitle || "모의고사 결과",
           createdAt: result.createdAt || new Date().toISOString()
         })
-      }));
+      }))
+      .filter((row) => row.correct === false);
   }
 
   return [];

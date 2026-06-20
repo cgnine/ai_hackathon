@@ -1,5 +1,6 @@
 let wrongPageLoadingTimer = null;
 let wrongPageLoadingProgress = 0;
+const WRONG_SUBJECT_ORDER = ["AI", "CA", "CD", "DE", "SW"];
 
 function ensureSampleWrongNotes() {
   const subject = subjects[0];
@@ -120,7 +121,7 @@ function renderWrongNotes() {
   const groups = groupWrongNotes(notes);
   const groupBySubject = new Map(groups.map((group) => [group.subjectId, group]));
   const useBackendNotes = Array.isArray(backendWrongNotes);
-  const subjectOptions = useBackendNotes
+  const subjectOptions = (useBackendNotes
     ? (backendWrongSubjects || groups.map((group) => ({
       subjectId: group.subjectId,
       subjectName: group.subjectName,
@@ -134,7 +135,14 @@ function renderWrongNotes() {
       total: subject.wrongCount ?? subject.total ?? 0,
       roundCount: subject.roundCount ?? subject.rounds?.length ?? 0
     }))
-    : subjects;
+    : subjects).slice().sort((a, b) => {
+      const aCode = String(a.code || a.subjectCode || a.id || "").toUpperCase();
+      const bCode = String(b.code || b.subjectCode || b.id || "").toUpperCase();
+      const aOrder = WRONG_SUBJECT_ORDER.indexOf(aCode);
+      const bOrder = WRONG_SUBJECT_ORDER.indexOf(bCode);
+      return (aOrder < 0 ? WRONG_SUBJECT_ORDER.length : aOrder)
+        - (bOrder < 0 ? WRONG_SUBJECT_ORDER.length : bOrder);
+    });
   if (!state.wrongSubjectId || !subjectOptions.some((subject) => subject.id === state.wrongSubjectId)) {
     const defaultSubject = subjectOptions.find((subject) => {
       const code = String(subject.code || subject.subjectCode || subject.id || "").toUpperCase();
