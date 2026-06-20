@@ -4503,10 +4503,10 @@ body[data-page="wrong-practice"] .wrong-practice-hero {
 body[data-page="wrong-practice"] .wrong-practice-hero::after {
   content: "";
   position: absolute;
-  top: 18px;
+  top: 12px;
   right: 28px;
-  width: 112px;
-  height: 164px;
+  bottom: 12px;
+  width: 140px;
   border-radius: 12px;
   background: url("assets/wrong-practice-hero.png") center / cover no-repeat;
   box-shadow: 0 8px 18px rgba(29, 54, 87, 0.18);
@@ -4533,10 +4533,20 @@ body[data-page="wrong-practice"] .wrong-review-meta-row {
 }
 
 body[data-page="wrong-practice"] .wrong-review-copy h1 {
+  margin-top: 8px;
   color: #111f35;
   font-size: clamp(1.8rem, 3vw, 2.25rem);
   font-weight: 900;
   letter-spacing: -0.035em;
+}
+
+body[data-page="wrong-practice"] .wrong-review-eyebrow {
+  margin: 0;
+  color: #f2b600;
+  font-size: 0.72rem;
+  font-weight: 900;
+  letter-spacing: 0.06em;
+  line-height: 1;
 }
 
 body[data-page="wrong-practice"] .wrong-review-top #reviewProgress {
@@ -5278,8 +5288,8 @@ body[data-page="mock"] .choice-btn.selected {
 .review-complete-panel {
   display: grid;
   gap: 14px;
-  margin-top: 42px;
-  padding: 30px;
+  margin-top: 28px;
+  padding: 24px 30px 34px;
   border: 0;
   border-radius: var(--radius);
   background: var(--surface);
@@ -5292,7 +5302,7 @@ body[data-page="mock"] .choice-btn.selected {
 }
 
 .wrong-review-complete .review-complete-panel {
-  margin-top: 96px;
+  margin-top: 28px;
 }
 
 .review-complete-panel h2 {
@@ -5302,7 +5312,7 @@ body[data-page="mock"] .choice-btn.selected {
 .review-complete-visual {
   position: relative;
   justify-self: center;
-  width: min(100%, 420px);
+  width: min(100%, 560px);
 }
 
 .review-complete-visual img {
@@ -5313,23 +5323,70 @@ body[data-page="mock"] .choice-btn.selected {
 
 .review-complete-copy {
   position: absolute;
-  top: 42%;
-  left: 18%;
+  top: 39%;
+  left: 17%;
   display: grid;
-  width: 62%;
-  gap: 0;
+  width: 66%;
+  gap: 14px;
   color: #2b3440;
   text-align: center;
   transform: rotate(-6deg);
 }
 
-.review-complete-copy strong {
+.review-complete-copy h2 {
+  margin: 0;
   color: #17202a;
-  font-size: clamp(1.45rem, 3.5vw, 2.25rem);
+  font-size: clamp(1.2rem, 3vw, 1.85rem);
+  font-weight: 900;
+  line-height: 1.25;
+}
+
+.review-complete-copy > p {
+  margin: 0;
+  color: #566274;
+  font-size: clamp(0.78rem, 1.8vw, 1rem);
+  font-weight: 700;
+  line-height: 1.55;
+}
+
+.review-complete-score {
+  display: flex;
+  min-height: 84px;
+  margin-top: 8px;
+  padding: 14px 18px;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  box-sizing: border-box;
+  border: 1px solid #f1d591;
+  border-radius: 18px;
+  background: rgba(255, 252, 241, 0.88);
+}
+
+.review-complete-score > strong,
+.review-complete-score p strong {
+  color: #17202a;
+  font-size: clamp(1.35rem, 3.5vw, 2.15rem);
   font-weight: 900;
   line-height: 1;
   letter-spacing: 0;
   white-space: nowrap;
+}
+
+.review-complete-score > span {
+  color: #c7c9ce;
+  font-size: 1.8rem;
+  font-weight: 500;
+}
+
+.review-complete-score p {
+  display: flex;
+  margin: 0;
+  align-items: baseline;
+  gap: 7px;
+  color: #596477;
+  font-size: 0.9rem;
+  font-weight: 800;
 }
 
 .review-complete-panel p:not(.eyebrow) {
@@ -5368,6 +5425,52 @@ body[data-page="mock"] .choice-btn.selected {
 .complete-actions #reviewRestartBtn:focus-visible {
   background: #eab900;
   box-shadow: 0 8px 16px rgba(23, 32, 42, 0.14);
+}
+
+@media (max-width: 520px) {
+  .review-complete-panel {
+    padding: 18px 8px 28px;
+  }
+
+  .review-complete-copy {
+    gap: 7px;
+  }
+
+  .review-complete-copy h2 {
+    font-size: 1rem;
+  }
+
+  .review-complete-copy > p {
+    font-size: 0.7rem;
+    line-height: 1.4;
+  }
+
+  .review-complete-score {
+    min-height: 58px;
+    margin-top: 2px;
+    padding: 8px;
+    gap: 7px;
+    border-radius: 12px;
+  }
+
+  .review-complete-score > strong,
+  .review-complete-score p strong {
+    font-size: 1.05rem;
+  }
+
+  .review-complete-score > span {
+    font-size: 1.2rem;
+  }
+
+  .review-complete-score p {
+    gap: 4px;
+    font-size: 0.72rem;
+  }
+
+  .complete-actions {
+    gap: 10px;
+    margin-top: 20px;
+  }
 }
 
 .result-hero {

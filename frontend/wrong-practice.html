@@ -32,6 +32,7 @@
         <div class="screen-head compact wrong-review-top" id="wrongReviewTop">
           <div class="wrong-review-meta-row">
             <div class="wrong-review-copy">
+              <p class="wrong-review-eyebrow">REVIEW PRACTICE</p>
               <h1 id="reviewSubject">오답 문제</h1>
               <p id="reviewProgress">오답노트에서 복습할 세트를 선택하세요.</p>
             </div>
@@ -76,13 +77,19 @@
         <div class="review-complete-visual">
           <img src="assets/subjects/wrong-review-result-card.png" alt="" aria-hidden="true" />
           <div class="review-complete-copy">
-            <strong id="reviewCompleteScore">0문항 / 총 0문항</strong>
+            <h2 id="reviewCompleteTitle">다시 시작해도 괜찮아요!</h2>
+            <p id="reviewCompleteDescription">오답을 확인한 것만으로도 학습은 이미 시작됐어요.</p>
+            <div class="review-complete-score" id="reviewCompleteScore">
+              <strong id="reviewCompleteCorrect">0문항</strong>
+              <span aria-hidden="true">/</span>
+              <p>총 <strong id="reviewCompleteTotal">0문항</strong></p>
+            </div>
           </div>
         </div>
         <p id="reviewCompleteSummary" class="sr-only">총 0문항 중 0문항을 다시 맞혔습니다.</p>
         <div class="complete-actions">
-          <button class="secondary-btn" id="reviewBackBtn" type="button">오답노트로 돌아가기</button>
-          <button class="primary-btn" id="reviewRestartBtn" type="button">다시 풀기</button>
+          <a class="secondary-btn" id="reviewBackBtn" href="wrong.html">오답노트로 돌아가기</a>
+          <a class="primary-btn" id="reviewRestartBtn" href="wrong-practice.html">다시 풀기</a>
         </div>
       </article>
     </section>

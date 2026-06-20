@@ -1030,8 +1030,49 @@ function focusWrongReviewQuestion() {
   });
 }
 
+function getReviewMessage(correctCount, totalCount) {
+  const rate = totalCount === 0 ? 0 : (correctCount / totalCount) * 100;
+
+  if (rate === 100) {
+    return {
+      title: "완벽하게 리뷰했어요!",
+      desc: "모든 오답을 정확히 해결했어요. 복습이 실력으로 연결되고 있어요."
+    };
+  }
+  if (rate >= 80) {
+    return {
+      title: "정말 잘했어요!",
+      desc: "대부분의 오답을 꼼꼼히 리뷰했어요. 실력이 확실히 올라가고 있어요."
+    };
+  }
+  if (rate >= 60) {
+    return {
+      title: "복습 효과가 보이기 시작했어요!",
+      desc: "오답 리뷰를 통해 약점이 점점 줄어들고 있어요."
+    };
+  }
+  if (rate >= 40) {
+    return {
+      title: "기본 개념을 확인했어요!",
+      desc: "헷갈린 문제를 다시 풀어보면 더 안정적으로 잡힐 거예요."
+    };
+  }
+  if (rate > 0) {
+    return {
+      title: "조금씩 감이 오고 있어요!",
+      desc: "틀린 문제를 다시 보는 과정이 실력 향상의 시작이에요."
+    };
+  }
+  return {
+    title: "다시 시작해도 괜찮아요!",
+    desc: "오답을 확인한 것만으로도 학습은 이미 시작됐어요."
+  };
+}
+
 function renderWrongReviewComplete(set) {
   const correctCount = Object.values(set.checked || {}).filter((answer) => answer?.correct).length;
+  const totalCount = set.notes.length;
+  const message = getReviewMessage(correctCount, totalCount);
   $("wrongPracticeScreen")?.classList.add("wrong-review-complete");
   if (els.wrongReviewTop) els.wrongReviewTop.hidden = true;
   if (els.reviewQuestionPanel) els.reviewQuestionPanel.hidden = true;
@@ -1040,11 +1081,12 @@ function renderWrongReviewComplete(set) {
     els.reviewFeedback.style.display = "none";
   }
   if (els.reviewCompleteSummary) {
-    els.reviewCompleteSummary.textContent = `총 ${set.notes.length}문항 중 ${correctCount}문항을 다시 맞혔습니다.`;
+    els.reviewCompleteSummary.textContent = `총 ${totalCount}문항 중 ${correctCount}문항을 다시 맞혔습니다.`;
   }
-  if (els.reviewCompleteScore) {
-    els.reviewCompleteScore.textContent = `${correctCount}문항 / 총 ${set.notes.length}문항`;
-  }
+  if (els.reviewCompleteTitle) els.reviewCompleteTitle.textContent = message.title;
+  if (els.reviewCompleteDescription) els.reviewCompleteDescription.textContent = message.desc;
+  if (els.reviewCompleteCorrect) els.reviewCompleteCorrect.textContent = `${correctCount}문항`;
+  if (els.reviewCompleteTotal) els.reviewCompleteTotal.textContent = `${totalCount}문항`;
   if (els.reviewCompletePanel) els.reviewCompletePanel.hidden = false;
   showWrongPracticeScreen();
 }

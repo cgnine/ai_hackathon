@@ -267,14 +267,14 @@ async function initPage() {
       subjects: "index.html",
       "my-info": "profile.html",
       "exam-history": "history.html",
-      analysis: "analysis.html",
+      analysis: "index.html",
       wrong: "wrong.html",
-      "wrong-practice": "wrong-practice.html",
-      result: "result.html",
+      "wrong-practice": "wrong.html",
+      result: "index.html",
       ranking: "ranking.html",
       "ai-recommend": "ai-recommend.html",
-      harness: "harness.html",
-      mock: "mock.html",
+      harness: "index.html",
+      mock: "index.html",
     };
     const targetFile = pageFileMap[pageName];
     if (!targetFile) return;
