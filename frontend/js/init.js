@@ -18,6 +18,9 @@ function initMobileMenu() {
   const topbar = document.querySelector(".topbar");
   const nav = document.querySelector(".main-nav");
   if (!topbar || !nav || document.getElementById("mobileMenuBtn")) return;
+  nav.querySelectorAll(".nav-btn").forEach((link) => {
+    link.classList.add("desktop-nav-item");
+  });
 
   const button = document.createElement("button");
   const memberLabel = document.createElement("span");

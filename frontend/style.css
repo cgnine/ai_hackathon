@@ -9229,7 +9229,7 @@ body.modal-open {
     content: none;
   }
 
-  .main-nav > .nav-btn:not(.mobile-nav-item) {
+  .main-nav .desktop-nav-item {
     display: none;
   }
 
@@ -9246,6 +9246,10 @@ body.modal-open {
   .mobile-member-name,
   .main-nav .mobile-nav-item {
     display: none !important;
+  }
+
+  .main-nav .desktop-nav-item {
+    display: inline-flex;
   }
 
   .main-nav {
