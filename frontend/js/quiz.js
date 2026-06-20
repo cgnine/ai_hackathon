@@ -219,7 +219,6 @@ async function gradeMock(useBedrockCommentary = false) {
   });
 
   const score = Math.round((correctCount / questions.length) * 100);
-  let savedResult;
   let memberId = currentMemberId();
   let questionIds = questions.map((question) => String(question.id));
   let examHistoryIds = [];
@@ -282,81 +281,6 @@ async function gradeMock(useBedrockCommentary = false) {
     memberId,
     examHistoryIds: [],
     savePayload: pendingSavePayload
-  });
-  completeMockGradingLoading();
-  window.location.href = PAGE_URLS.result;
-  return;
-  try {
-    savedResult = await saveMockExamResult(subject, questions, state.mockAnswers);
-    memberId = savedResult.memberId || memberId;
-    questionIds = Array.isArray(savedResult.questionIds) && savedResult.questionIds.length > 0
-      ? savedResult.questionIds.map((questionId) => String(questionId))
-      : questionIds;
-    examHistoryIds = Array.isArray(savedResult.examHistoryIds)
-      ? savedResult.examHistoryIds.map((historyId) => String(historyId))
-      : [];
-    attemptId = savedResult.attemptId || attemptId;
-    roundTitle = savedResult.roundTitle || roundTitle;
-  } catch (error) {
-    stopMockGradingLoading(true);
-    showToast(`응시 결과 저장에 실패했습니다. (${error.message})`);
-    return;
-  }
-
-  if (useBedrockCommentary) {
-    try {
-      await generateResultCommentary(attemptId, examHistoryIds);
-    } catch (error) {
-      console.warn("AI commentary generation failed", error);
-    }
-  }
-
-  state.lastResult = {
-    examId: attemptId,
-    attemptId,
-    memberId,
-    questionIds,
-    examHistoryIds,
-    profileName: state.profileName,
-    subjectId: state.subjectId,
-    subjectName: subject.name,
-    roundTitle,
-    correctCount,
-    total: questions.length,
-    score,
-    rows: resultRows,
-    createdAt
-  };
-  state.attemptHistory.push({
-    id: attemptId,
-    examId: attemptId,
-    memberId,
-    questionIds,
-    examHistoryIds,
-    profileName: state.profileName,
-    subjectId: state.subjectId,
-    subjectName: subject.name,
-    roundTitle,
-    score,
-    correctCount,
-    total: questions.length,
-    rows: resultRows,
-    createdAt
-  });
-  saveState();
-  renderResultPage();
-  renderTopStats();
-  console.log("result page payload", {
-    attemptId,
-    examId: attemptId,
-    memberId,
-    questionIds,
-    examHistoryIds
-  });
-  saveResultNavigation({
-    examId: attemptId,
-    memberId,
-    examHistoryIds
   });
   completeMockGradingLoading();
   window.location.href = PAGE_URLS.result;

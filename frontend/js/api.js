@@ -15,6 +15,7 @@ function normalizeApiQuestion(item) {
   return {
     id: item.question_id,
     subjectCode: item.subject_code,
+    majorUnit: item.major_unit || "문제",
     difficulty: item.major_unit || "문제",
     text: item.question_text,
     scenario,

@@ -9,6 +9,8 @@ function appendResultItem(question, index, selected, correct, meta = {}) {
   const explanation = createResultDetail({
     choices: question.choices,
     scenario: question.scenario,
+    majorUnit: question.majorUnit || question.difficulty,
+    questionType: question.questionType || (typeof getQuestionType === "function" ? getQuestionType(question, index) : ""),
     selected,
     answer: question.answer,
     explanation: question.explanation,
@@ -115,6 +117,8 @@ function cleanExplanationText(text) {
 function createResultDetail({
   choices = [],
   scenario = "",
+  majorUnit = "",
+  questionType = "",
   selected,
   answer,
   explanation,
@@ -143,7 +147,26 @@ function createResultDetail({
     createAnswerLabel("정답:"),
     document.createTextNode(` ${formatAnswerNumber(answer)}`)
   );
+  const hasMajorUnit = String(majorUnit || "").trim();
+  const hasQuestionType = String(questionType || "").trim();
+  const tags = document.createElement("div");
+  tags.className = "question-tags result-detail-tags";
+  if (hasMajorUnit) {
+    const unit = document.createElement("span");
+    unit.className = "pill";
+    unit.textContent = hasMajorUnit;
+    tags.appendChild(unit);
+  }
+  if (hasQuestionType) {
+    const type = document.createElement("span");
+    type.className = "pill type-pill";
+    type.textContent = hasQuestionType;
+    tags.appendChild(type);
+  }
   answerSection.appendChild(answerSummary);
+  if (hasMajorUnit || hasQuestionType) {
+    answerSection.appendChild(tags);
+  }
 
   if (hasChoices) {
     const choiceSection = document.createElement("div");
@@ -225,6 +248,8 @@ function appendApiResultItem(item, index, resultMeta) {
   const explanation = createResultDetail({
     choices: item.choices,
     scenario: item.questionScenario,
+    majorUnit: item.majorUnit || item.diagnosisArea || item.difficulty,
+    questionType: item.questionType,
     selected: item.selected,
     answer: item.answer,
     explanation: item.explanation
@@ -372,10 +397,11 @@ async function persistPendingResultSave(navigation = {}) {
   } catch (error) {
     console.warn("Failed to persist pending result", error);
     setResultAiCommentaryLoading(false);
-    if (els.resultCommentary) {
-      els.resultCommentary.style.display = "";
-      els.resultCommentary.textContent = "결과는 화면에 표시했지만 DB 저장이 지연되고 있습니다. 잠시 후 다시 시도해 주세요.";
-    }
+    renderResultEmptyState({
+      title: "결과 저장에 실패했습니다",
+      summary: "응시 결과를 저장하지 못해 진단 리포트를 불러올 수 없습니다.",
+      detail: "잠시 후 다시 시도하거나 시험응시 화면에서 새 응시를 시작하세요."
+    });
   }
 }
 
@@ -425,6 +451,7 @@ function toWrongNoteQuestion(item) {
     answer: item.answer,
     explanation: item.explanation,
     difficulty: item.difficulty,
+    majorUnit: item.majorUnit,
     questionType: item.questionType
   };
 }
@@ -902,7 +929,19 @@ async function loadBackendResultPage() {
     : [];
 
   if (navigation?.pendingSave || state.lastResult?.pendingSave) {
-    renderResultPage();
+    startResultLoading();
+    setResultScoreText("-");
+    if (els.resultVerdict) {
+      els.resultVerdict.textContent = "결과 저장 중";
+      els.resultVerdict.className = "verdict-badge neutral";
+    }
+    els.resultSummary.textContent = "응시 결과를 저장하고 진단 리포트를 불러오는 중입니다.";
+    if (els.resultCommentary) els.resultCommentary.style.display = "none";
+    if (els.resultDiagnosis) els.resultDiagnosis.style.display = "none";
+    if (els.wrongReviewSection) els.wrongReviewSection.style.display = "none";
+    if (els.toggleAllExplanationsBtn) els.toggleAllExplanationsBtn.style.display = "none";
+    if (els.saveWrongAllBtn) els.saveWrongAllBtn.style.display = "none";
+    els.resultList.innerHTML = "";
     persistPendingResultSave(navigation);
     return;
   }

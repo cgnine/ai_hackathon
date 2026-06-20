@@ -953,17 +953,50 @@ function submitWrongPractice() {
 
 function renderWrongPracticeFeedback(note, checkedAnswer, shouldFocus = false) {
   const question = note.question;
+  const majorUnit = String(question.majorUnit || question.difficulty || "").trim();
+  const questionType = String(question.questionType || (typeof getQuestionType === "function" ? getQuestionType(question, note.index || 0) : "")).trim();
+  const answerSection = document.createElement("div");
+  const answerSummary = document.createElement("p");
+  const tags = document.createElement("div");
+  const explanationSection = document.createElement("div");
+  const explanationText = document.createElement("span");
+
   els.reviewFeedback.style.display = "block";
   els.reviewFeedback.hidden = false;
   els.reviewFeedback.className = "feedback-panel review-feedback wrong-review-detail";
-  els.reviewFeedback.innerHTML = `
-    <div class="result-detail-section result-answer-section">
-      <p class="result-answer-summary"><span class="answer-label">선택한 답:</span> ${formatAnswerNumber(checkedAnswer.selected)}  <span class="answer-label">정답:</span> ${formatAnswerNumber(question.answer)}</p>
-    </div>
-    <div class="result-detail-section result-explanation-line">
-      <span>${cleanExplanationText(question.explanation)}</span>
-    </div>
-  `;
+  els.reviewFeedback.replaceChildren();
+
+  answerSection.className = "result-detail-section result-answer-section";
+  answerSummary.className = "result-answer-summary";
+  answerSummary.append(
+    createAnswerLabel("선택한 답:"),
+    document.createTextNode(` ${formatAnswerNumber(checkedAnswer.selected)}  `),
+    createAnswerLabel("정답:"),
+    document.createTextNode(` ${formatAnswerNumber(question.answer)}`)
+  );
+  tags.className = "question-tags result-detail-tags";
+  if (majorUnit) {
+    const unit = document.createElement("span");
+    unit.className = "pill";
+    unit.textContent = majorUnit;
+    tags.appendChild(unit);
+  }
+  if (questionType) {
+    const type = document.createElement("span");
+    type.className = "pill type-pill";
+    type.textContent = questionType;
+    tags.appendChild(type);
+  }
+  answerSection.appendChild(answerSummary);
+  if (majorUnit || questionType) {
+    answerSection.appendChild(tags);
+  }
+
+  explanationSection.className = "result-detail-section result-explanation-line";
+  explanationText.textContent = cleanExplanationText(question.explanation);
+  explanationSection.appendChild(explanationText);
+  els.reviewFeedback.append(answerSection, explanationSection);
+
   requestAnimationFrame(() => {
     els.reviewFeedback.classList.add("open");
     if (shouldFocus) focusWrongReviewFeedback();

@@ -25,6 +25,7 @@ _ANALYSIS_SUBJECT_COMMENTARY_CACHE_SECONDS = 300
 _RANKING_GOAL_CACHE: dict[str, dict[str, Any]] = {}
 _RANKING_GOAL_CACHE_SECONDS = 60
 _RANKING_GOAL_COMMENTARY_CACHE_SECONDS = 300
+_RESULT_RADAR_LABEL_CACHE: dict[str, str] = {}
 
 
 def _clear_analysis_cache(member_id: str) -> None:
@@ -749,6 +750,107 @@ def _validate_modal_keywords(payload: dict[str, Any], fallback: dict[str, list[s
                 break
         result[key] = keywords or fallback[key]
     return result
+
+
+def _fallback_result_radar_label(value: dict[str, Any]) -> str:
+    current = str(value.get("current_label") or "").strip()
+    major = str(value.get("major_unit") or "").strip()
+    label = _fallback_modal_keyword({
+        "major_unit": current or major,
+        "minor_unit": "",
+    })
+    label = re.sub(r"\([^)]*$", "", label).strip()
+    return label or "미분류"
+
+
+def _validate_result_radar_labels(payload: Any, inputs: list[dict[str, Any]]) -> dict[str, str]:
+    if not isinstance(payload, list):
+        return {}
+
+    result: dict[str, str] = {}
+    seen: set[str] = set()
+    by_index = {int(item["index"]): item for item in inputs}
+    for item in payload:
+        if not isinstance(item, dict):
+            continue
+        try:
+            index = int(item.get("index"))
+        except (TypeError, ValueError):
+            continue
+        source = by_index.get(index)
+        if not source:
+            continue
+        label = str(item.get("label") or "").strip()
+        if len(label) < 2 or len(label) > 15 or label in seen:
+            continue
+        seen.add(label)
+        result[source["key"]] = label
+    return result
+
+
+def _bedrock_result_radar_labels(inputs: list[dict[str, Any]]) -> dict[str, str]:
+    uncached = [item for item in inputs if item["key"] not in _RESULT_RADAR_LABEL_CACHE]
+    if not uncached:
+        return {item["key"]: _RESULT_RADAR_LABEL_CACHE[item["key"]] for item in inputs}
+
+    fallback = {item["key"]: _fallback_result_radar_label(item) for item in uncached}
+    system_prompt = "당신은 KB Masters의 AI 역량 분석기입니다."
+    prompt_items = [
+        {
+            "index": index,
+            "major_unit": item.get("major_unit") or "",
+            "minor_unit": item.get("minor_unit") or "",
+            "current_label": item.get("current_label") or "",
+        }
+        for index, item in enumerate(uncached)
+    ]
+    indexed_inputs = [
+        {
+            **item,
+            "index": index,
+        }
+        for index, item in enumerate(uncached)
+    ]
+    user_prompt = (
+        "입력된 진단리포트 레이더 축 후보를\n"
+        "사용자 화면에 표시할 짧은 학습 영역 라벨로 변환하세요.\n\n"
+        "규칙\n\n"
+        "1. SECTION, Chapter, 번호, 점(.) 문구는 제거한다.\n"
+        "2. 핵심 의미를 유지한다.\n"
+        "3. 구현, 이론, 실무, 운영, 설계, 보안, 평가, 튜닝 등\n"
+        "   학습 영역을 구분하는 단어는 유지한다.\n"
+        "4. 서로 다른 학습 영역을 하나로 합치지 않는다.\n"
+        "5. 레이더 축은 major_unit 또는 current_label 기준으로 만든다.\n"
+        "6. minor_unit은 의미 파악용 참고 정보로만 사용하고,\n"
+        "   같은 Chapter를 여러 축으로 나누지 않는다.\n"
+        "7. 출력 라벨은 2~15자 이내.\n"
+        "8. 설명문 작성 금지.\n"
+        "9. 중복 라벨 생성 금지.\n\n"
+        "예시\n\n"
+        "입력\n"
+        "major_unit: 클라우드 보안\n"
+        "minor_unit: 도입 효과\n\n"
+        "출력\n"
+        "클라우드 보안\n\n"
+        "입력\n"
+        "major_unit: 클라우드\n"
+        "minor_unit: 클라우드 실무\n\n"
+        "출력\n"
+        "클라우드 실무\n\n"
+        f"입력 데이터\n{json.dumps(prompt_items, ensure_ascii=False, indent=2)}\n\n"
+        "JSON 배열로 반환\n"
+        '[{"index":0,"label":"라벨"}]'
+    )
+
+    try:
+        raw = bedrock_client.invoke(system_prompt, user_prompt, max_tokens=400)
+        normalized = _validate_result_radar_labels(_extract_json_array(raw), indexed_inputs)
+    except Exception:
+        normalized = {}
+
+    for item in uncached:
+        _RESULT_RADAR_LABEL_CACHE[item["key"]] = normalized.get(item["key"]) or fallback[item["key"]]
+    return {item["key"]: _RESULT_RADAR_LABEL_CACHE[item["key"]] for item in inputs}
 
 
 def _bedrock_modal_keywords(
@@ -2746,10 +2848,34 @@ def get_result(attempt_id: str, exam_question_ids: list[str] | None = None) -> d
         raise HTTPException(status_code=404, detail="Result not found")
 
     first = rows[0]
+    radar_label_inputs = []
+    seen_radar_keys: set[str] = set()
+    for row in rows:
+        radar_key = "\u001f".join([
+            str(row.get("major_unit") or ""),
+            str(row.get("radar_label") or ""),
+        ])
+        if radar_key in seen_radar_keys:
+            continue
+        seen_radar_keys.add(radar_key)
+        radar_label_inputs.append(
+            {
+                "key": radar_key,
+                "major_unit": row.get("major_unit") or "",
+                "minor_unit": row.get("minor_unit") or "",
+                "current_label": row.get("radar_label") or "",
+            }
+        )
+    radar_label_map = _bedrock_result_radar_labels(radar_label_inputs) if radar_label_inputs else {}
+
     items = []
     for row in rows:
         selected = _to_int(row["selected_number"])
         answer = _to_int(row["answer_number"])
+        radar_key = "\u001f".join([
+            str(row.get("major_unit") or ""),
+            str(row.get("radar_label") or ""),
+        ])
         items.append(
             {
                 "questionId": row["question_id"],
@@ -2765,7 +2891,8 @@ def get_result(attempt_id: str, exam_question_ids: list[str] | None = None) -> d
                 ],
                 "difficulty": row["minor_unit"] or "-",
                 "questionType": _question_type(row),
-                "diagnosisArea": row["radar_label"] or row["major_unit"] or "-",
+                "majorUnit": row["major_unit"] or "-",
+                "diagnosisArea": radar_label_map.get(radar_key) or row["radar_label"] or row["major_unit"] or "-",
                 "minorUnit": row["minor_unit"] or "-",
                 "selected": selected,
                 "answer": answer,
