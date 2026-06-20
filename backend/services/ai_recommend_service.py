@@ -92,6 +92,26 @@ def _fetch_exam_history(member_id: str) -> list[dict[str, Any]]:
             return [dict(r) for r in cur.fetchall()]
 
 
+def _has_exam_history(member_id: str) -> bool:
+    with get_conn() as conn:
+        with conn.cursor() as cur:
+            cur.execute(
+                """
+                SELECT EXISTS (
+                    SELECT 1
+                    FROM exam_tb e
+                    JOIN exam_history_tb h ON h.exam_id = e.exam_id
+                    JOIN question_tb q
+                        ON q.question_id = h.question_id
+                       AND q.subject_code = e.subject_code
+                    WHERE e.member_id = %s
+                )
+                """,
+                (member_id,),
+            )
+            return bool(cur.fetchone()[0])
+
+
 def _pick_weak_area(
     exam_rows: list[dict[str, Any]],
     exclude_weak_areas: set[str],
@@ -206,10 +226,13 @@ def get_pool(member_id: str) -> dict[str, Any]:
     _get_member_name(normalized)  # 존재 확인
 
     questions = repo.get_active_pool(normalized)
+    has_exam_history = _has_exam_history(normalized)
     return {
         "poolSize": len(questions),
         "maxSize": MAX_POOL,
         "questions": [_format_question(q) for q in questions],
+        "canGenerate": has_exam_history and len(questions) < MAX_POOL,
+        "generationReason": None if has_exam_history else "NO_HISTORY",
     }
 
 

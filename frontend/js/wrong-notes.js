@@ -1,6 +1,13 @@
 let wrongPageLoadingTimer = null;
 let wrongPageLoadingProgress = 0;
 const WRONG_SUBJECT_ORDER = ["AI", "CA", "CD", "DE", "SW"];
+const WRONG_SUBJECT_NAMES = {
+  AI: "AI Engineering",
+  CA: "Cloud for Architect(Pro)",
+  CD: "Cloud for Developer(Pro)",
+  DE: "Data Engineering",
+  SW: "Software Engineering"
+};
 
 function ensureSampleWrongNotes() {
   const subject = subjects[0];
@@ -119,30 +126,25 @@ function renderWrongNotes() {
 
   const notes = currentProfileWrongNotes();
   const groups = groupWrongNotes(notes);
-  const groupBySubject = new Map(groups.map((group) => [group.subjectId, group]));
-  const useBackendNotes = Array.isArray(backendWrongNotes);
-  const subjectOptions = (useBackendNotes
-    ? (backendWrongSubjects || groups.map((group) => ({
-      subjectId: group.subjectId,
-      subjectName: group.subjectName,
-      total: group.total,
-      rounds: group.rounds
-    }))).map((subject) => ({
-      id: subject.subjectId,
-      code: subject.subjectCode || subject.subjectId,
-      name: getWrongSubjectName(subject),
-      desc: subject.subjectDescription || subject.subjectName || subject.subjectId,
-      total: subject.wrongCount ?? subject.total ?? 0,
-      roundCount: subject.roundCount ?? subject.rounds?.length ?? 0
-    }))
-    : subjects).slice().sort((a, b) => {
-      const aCode = String(a.code || a.subjectCode || a.id || "").toUpperCase();
-      const bCode = String(b.code || b.subjectCode || b.id || "").toUpperCase();
-      const aOrder = WRONG_SUBJECT_ORDER.indexOf(aCode);
-      const bOrder = WRONG_SUBJECT_ORDER.indexOf(bCode);
-      return (aOrder < 0 ? WRONG_SUBJECT_ORDER.length : aOrder)
-        - (bOrder < 0 ? WRONG_SUBJECT_ORDER.length : bOrder);
-    });
+  const groupBySubject = new Map(groups.map((group) => [String(group.subjectId || "").toUpperCase(), group]));
+  const subjectOptions = WRONG_SUBJECT_ORDER.map((code) => {
+    const backendSubject = (backendWrongSubjects || []).find((subject) =>
+      String(subject.subjectCode || subject.subjectId || "").toUpperCase() === code
+    );
+    const catalogSubject = subjects.find((subject) =>
+      String(subject.subjectCode || subject.id || "").toUpperCase() === code
+    );
+    const group = groups.find((item) => String(item.subjectId || "").toUpperCase() === code);
+    const subject = backendSubject || catalogSubject || {};
+    return {
+      id: code,
+      code,
+      name: getWrongSubjectName(subject) || WRONG_SUBJECT_NAMES[code],
+      desc: subject.subjectDescription || subject.desc || subject.subjectName || WRONG_SUBJECT_NAMES[code],
+      total: subject.wrongCount ?? subject.total ?? group?.total ?? 0,
+      roundCount: subject.roundCount ?? subject.rounds?.length ?? group?.rounds?.length ?? 0
+    };
+  });
   if (!state.wrongSubjectId || !subjectOptions.some((subject) => subject.id === state.wrongSubjectId)) {
     const defaultSubject = subjectOptions.find((subject) => {
       const code = String(subject.code || subject.subjectCode || subject.id || "").toUpperCase();
@@ -197,7 +199,7 @@ function renderWrongNotes() {
     card.type = "button";
     card.className = `subject-card wrong-subject-card ${visual.className}`;
     card.style.setProperty("--wrong-card-accent", visual.color);
-    if (selectedGroup && group.subjectId === selectedGroup.subjectId) card.classList.add("active");
+    if (selectedGroup && String(group.subjectId || "").toUpperCase() === selectedSubject.id) card.classList.add("active");
     card.innerHTML = `
       <span class="wrong-subject-visual" aria-hidden="true">
         <img class="wrong-subject-character" src="${characterImages.defaultSrc}" alt="" data-default-src="${characterImages.defaultSrc}" ${characterImages.hoverSrc ? `data-hover-src="${characterImages.hoverSrc}"` : ""} />
@@ -222,7 +224,7 @@ function renderWrongNotes() {
       if (character?.dataset.defaultSrc) character.src = character.dataset.defaultSrc;
     });
     card.addEventListener("click", () => {
-      state.wrongSubjectId = group.subjectId;
+      state.wrongSubjectId = subject.id;
       state.wrongOpenDateKey = null;
       state.wrongRoundPage = 1;
       saveState();
@@ -239,7 +241,9 @@ function renderWrongNotes() {
   }
 
   if (els.selectedWrongSubjectTitle) {
-    const selectedSummary = subjectOptions.find((subject) => subject.id === selectedGroup.subjectId);
+    const selectedSummary = subjectOptions.find((subject) =>
+      subject.id === String(selectedGroup.subjectId || "").toUpperCase()
+    );
     setSelectedWrongSubjectTitle(selectedSummary?.name || selectedGroup.subjectName);
   }
 

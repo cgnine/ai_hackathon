@@ -8837,6 +8837,10 @@ body[data-page="ai-recommend"] .ai-pool-list {
   gap: 14px;
 }
 
+.ai-pool-list[hidden] {
+  display: none;
+}
+
 .ai-pool-card {
   background: var(--surface, #fff);
   border: 1px solid var(--border, #e5e7eb);
