@@ -174,6 +174,17 @@ def _truncate_commentary_sentence(value: str, limit: int) -> str:
     return _truncate_commentary_text(text, limit)
 
 
+def _complete_commentary_sentences(value: str, limit: int) -> str:
+    text = _truncate_commentary_sentence(value, limit)
+    if not text:
+        return ""
+    sentence_marks = ".!?。！？"
+    if text[-1] in sentence_marks:
+        return text
+    cut_at = max(text.rfind(mark) for mark in sentence_marks)
+    return text[: cut_at + 1].rstrip() if cut_at >= 0 else ""
+
+
 def _fallback_ranking_goal_coach(
     my_rank: int,
     target_rank: int,
@@ -949,9 +960,9 @@ def _fallback_modal_comment(payload: dict[str, Any]) -> str:
         if str(item.get("keyword") or "").strip()
     ]
     weak_text = ", ".join(weak_labels) if weak_labels else "취약 영역"
-    return _truncate_commentary_sentence(
+    return _complete_commentary_sentences(
         f"{subject_name}에서는 {strength}에서 강점이 보입니다. 보완할 영역은 {weak_text}입니다. 지금 흐름을 유지하며 쉬운 문제부터 다시 풀면 점수를 안정적으로 올릴 수 있어요.",
-        150,
+        120,
     )
 
 
@@ -965,12 +976,15 @@ def _bedrock_modal_comment(payload: dict[str, Any], include_commentary: bool = T
         "사용자의 과목 분석 결과를 바탕으로\n"
         "개인 맞춤형 코멘트를 작성하세요.\n\n"
         "규칙\n\n"
-        "- 3~4문장\n"
-        "- 150자 이내\n"
+        "- 2~3개의 완결된 문장\n"
+        "- 전체 120자 이내\n"
         "- 긍정적인 어조\n"
-        "- 강점 1개 이상 언급\n"
-        "- 취약 영역 1~2개 언급\n"
-        "- 학습 동기 부여 포함\n"
+        "- 강점 1개, 취약 영역 1개, 학습 행동 1개만 언급\n"
+        "- 점수와 정답률 수치는 최대 1개만 사용\n"
+        "- 괄호를 사용한 수치 나열 금지\n"
+        "- 모든 문장은 반드시 마침표로 끝냄\n"
+        "- 길이가 초과되면 마지막 문장 전체를 제거\n"
+        "- 문장이나 단어를 중간에서 자르지 않음\n"
         "- 과장 금지\n"
         "- 한국어\n\n"
         "출력은 순수 텍스트만 반환\n\n"
@@ -979,7 +993,7 @@ def _bedrock_modal_comment(payload: dict[str, Any], include_commentary: bool = T
     try:
         raw = bedrock_client.invoke(system_prompt, user_prompt, max_tokens=220)
         text = str(raw or "").strip().strip('"')
-        return _truncate_commentary_sentence(text, 150) or fallback
+        return _complete_commentary_sentences(text, 120) or fallback
     except Exception:
         return fallback
 
