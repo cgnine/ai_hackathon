@@ -5,10 +5,10 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>KB 역량진단 모의고사</title>
-  <link rel="stylesheet" href="style.css" />
+  <link rel="stylesheet" href="style.css?v=20260621-demo-login-links-align" />
 </head>
 
-<body data-page="main" class="main-stats-loading">
+<body data-page="main" class="main-stats-loading demo-reference-layout">
   <header class="topbar">
     <a class="brand" href="index.html" aria-label="KB 역량진단 모의고사">
       <img class="brand-logo" src="assets/brand/kb-masters-logo.png" alt="KB MASTERS" />
@@ -22,36 +22,9 @@
   <main class="main-landing">
     <section class="main-intro" aria-label="KB Masters 소개">
       <p class="main-eyebrow"><span>AI</span> 기반 맞춤 학습 플랫폼</p>
-      <h1><span>AI</span>가 당신의 <mark>성장</mark>을 함께합니다.</h1>
-
-      <div class="main-feature-list">
-        <article>
-          <span class="main-feature-icon quiz">▣</span>
-          <div>
-            <strong>AI 문제출제</strong>
-            <p>실무형 문제를 AI가 자동으로 생성합니다.</p>
-          </div>
-        </article>
-        <article>
-          <span class="main-feature-icon analysis">⌘</span>
-          <div>
-            <strong>AI 약점 분석</strong>
-            <p>데이터 기반으로 강점과 약점을 정확히 분석합니다.</p>
-          </div>
-        </article>
-        <article>
-          <span class="main-feature-icon coach">♙</span>
-          <div>
-            <strong>AI 학습 추천</strong>
-            <p>개인에게 최적화된 학습 콘텐츠를 추천합니다.</p>
-          </div>
-        </article>
-      </div>
-
-      <a class="main-start-btn" href="login.html">
-        AI 문제 풀기 시작하기
-        <b>›</b>
-      </a>
+      <h1 class="demo-typing-title" aria-label="AI가 당신의 성장을 함께합니다.">
+        <span data-demo-type="AI"></span><b data-demo-type="가 당신의 "></b><mark data-demo-type="성장"></mark><b data-demo-type="을 함께합니다."></b><i class="demo-type-cursor" aria-hidden="true"></i>
+      </h1>
     </section>
 
     <section class="main-hero" aria-label="KB 역량진단 메인">
@@ -62,9 +35,10 @@
       <div class="main-right-top">
         <aside class="main-ranking" id="rankingSection" aria-label="응시 랭킹">
           <div class="main-ranking-head">
-            <span class="main-ranking-crown">♛</span>
-            <strong id="monthlyRankingTitle">랭킹</strong>
+            <img class="main-ranking-crown" src="assets/brand/ranking-crown.png?v=20260621-transparent" alt="" aria-hidden="true" />
+            <strong id="monthlyRankingTitle">6월 랭킹</strong>
           </div>
+          <div class="demo-ranking-viewport">
           <ol class="ranking-list" id="monthlyRankingList">
             <li class="ranking-placeholder">
               <span class="ranking-rank">1</span>
@@ -96,26 +70,84 @@
               <span class="ranking-affiliation is-empty">&nbsp;</span>
               <strong>&nbsp;</strong>
             </li>
+            <li class="ranking-placeholder">
+              <span class="ranking-rank">6</span>
+              <span class="ranking-name">&nbsp;</span>
+              <span class="ranking-affiliation is-empty">&nbsp;</span>
+              <strong>&nbsp;</strong>
+            </li>
+            <li class="ranking-placeholder">
+              <span class="ranking-rank">7</span>
+              <span class="ranking-name">&nbsp;</span>
+              <span class="ranking-affiliation is-empty">&nbsp;</span>
+              <strong>&nbsp;</strong>
+            </li>
+            <li class="ranking-placeholder">
+              <span class="ranking-rank">8</span>
+              <span class="ranking-name">&nbsp;</span>
+              <span class="ranking-affiliation is-empty">&nbsp;</span>
+              <strong>&nbsp;</strong>
+            </li>
+            <li class="ranking-placeholder">
+              <span class="ranking-rank">9</span>
+              <span class="ranking-name">&nbsp;</span>
+              <span class="ranking-affiliation is-empty">&nbsp;</span>
+              <strong>&nbsp;</strong>
+            </li>
+            <li class="ranking-placeholder">
+              <span class="ranking-rank">10</span>
+              <span class="ranking-name">&nbsp;</span>
+              <span class="ranking-affiliation is-empty">&nbsp;</span>
+              <strong>&nbsp;</strong>
+            </li>
           </ol>
+          </div>
         </aside>
 
-        <form class="main-mini-login" id="mainMiniLoginForm" aria-label="간편 로그인">
-          <h2>로그인</h2>
-          <div class="main-mini-login-fields">
-            <label>
-              <input id="mainMiniMemberId" type="text" autocomplete="username" placeholder="사번" required />
-            </label>
-            <label>
-              <input id="mainMiniPassword" type="password" autocomplete="current-password" placeholder="비밀번호" required />
-            </label>
-          </div>
-          <button type="submit">로그인</button>
-          <div class="main-mini-login-links" aria-label="계정 메뉴">
-            <a href="signup.html">회원가입</a>
-            <a href="reset-password.html">비밀번호 재설정</a>
-          </div>
-          <p id="mainMiniLoginMessage" aria-live="polite"></p>
-        </form>
+        <div class="main-side-stack">
+          <form class="main-mini-login" id="mainMiniLoginForm" aria-label="간편 로그인">
+            <div class="main-mini-login-fields">
+              <label>
+                <span>아이디</span>
+                <input id="mainMiniMemberId" type="text" autocomplete="username" required />
+              </label>
+              <label>
+                <span>비밀번호</span>
+                <input id="mainMiniPassword" type="password" autocomplete="current-password" required />
+              </label>
+            </div>
+            <button type="submit">로그인</button>
+            <div class="main-mini-login-links" aria-label="계정 메뉴">
+              <a href="signup.html">회원가입</a>
+              <a href="reset-password.html">비밀번호 재설정</a>
+            </div>
+            <p id="mainMiniLoginMessage" aria-live="polite"></p>
+          </form>
+
+          <section class="main-feature-list" aria-label="AI 학습 기능">
+            <article>
+              <span class="main-feature-icon quiz">▣</span>
+              <div>
+                <strong>AI 문제출제</strong>
+                <p>실무형 문제를 AI가 자동으로 생성합니다.</p>
+              </div>
+            </article>
+            <article>
+              <span class="main-feature-icon analysis">⌘</span>
+              <div>
+                <strong>AI 약점 분석</strong>
+                <p>데이터 기반으로 강점과 약점을 정확히 분석합니다.</p>
+              </div>
+            </article>
+            <article>
+              <span class="main-feature-icon coach">♙</span>
+              <div>
+                <strong>AI 학습 추천</strong>
+                <p>개인에게 최적화된 학습 콘텐츠를 추천합니다.</p>
+              </div>
+            </article>
+          </section>
+        </div>
       </div>
 
       <div class="main-stat-grid" aria-label="서비스 현황">
@@ -141,6 +173,7 @@
         </article>
       </div>
     </section>
+
   </main>
 
   <footer class="main-footer">
@@ -155,7 +188,7 @@
   </footer>
 
   <script src="js/config.js"></script>
-  <script src="js/main.js?v=20260615-main-stats"></script>
+  <script src="js/main.js?v=20260621-demo-ranking-eight"></script>
 </body>
 
 </html>

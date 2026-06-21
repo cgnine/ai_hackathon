@@ -13,13 +13,20 @@ let mainRankingAutoRollTimer = null;
 let mainRankingAutoRollPaused = false;
 let mainRankingResumeTimer = null;
 let mainRankingAutoRollInitialized = false;
+let demoRankingStepTimer = null;
+let demoRankingTransitionTimer = null;
 let latestRankingGoal = null;
 let rankingGoalCommentaryRequest = null;
 const RANKING_MAX_ITEMS = 15;
 const MAIN_RANKING_PAGE_SIZE = 5;
 const MAIN_RANKING_MAX_ITEMS = 10;
+const DEMO_RANKING_MAX_ITEMS = 10;
 const MAIN_RANKING_AUTO_ROLL_MS = 4500;
 const MAIN_RANKING_TIMEOUT_MS = 1800;
+
+function getMainRankingPageSize() {
+  return document.body?.classList.contains("demo-reference-layout") ? 8 : MAIN_RANKING_PAGE_SIZE;
+}
 
 function setCurrentMonthTitle(monthLabel) {
   const title = document.getElementById("monthlyRankingTitle");
@@ -47,6 +54,46 @@ function renderRankingAffiliation(target, memberId, hasScore) {
   target.classList.toggle("is-empty", !showAffiliation);
 }
 
+function startDemoRankingStepRotation(list) {
+  window.clearTimeout(demoRankingStepTimer);
+  window.clearTimeout(demoRankingTransitionTimer);
+  list.style.transition = "none";
+  list.style.transform = "translateY(0)";
+
+  const scheduleNextStep = () => {
+    demoRankingStepTimer = window.setTimeout(moveNextRow, 1000);
+  };
+
+  const moveNextRow = () => {
+    const firstRow = list.firstElementChild;
+    if (!firstRow || list.children.length < 2 || !list.isConnected) return;
+
+    const nextBottomRow = firstRow.cloneNode(true);
+    nextBottomRow.setAttribute("aria-hidden", "true");
+    list.appendChild(nextBottomRow);
+    list.style.transition = "none";
+    list.style.transform = "translateY(0)";
+    void list.offsetWidth;
+    list.style.transition = "transform 650ms ease-in-out";
+    list.style.transform = "translateY(-46px)";
+
+    demoRankingTransitionTimer = window.setTimeout(() => {
+      if (firstRow.parentElement === list) firstRow.remove();
+      nextBottomRow.removeAttribute("aria-hidden");
+      while (list.children.length > DEMO_RANKING_MAX_ITEMS) {
+        list.firstElementChild?.remove();
+      }
+      list.style.transition = "none";
+      list.style.transform = "translateY(0)";
+      void list.offsetWidth;
+      scheduleNextStep();
+    }, 650);
+
+  };
+
+  scheduleNextStep();
+}
+
 function renderMonthlyRanking(items) {
   const list = document.getElementById("monthlyRankingList");
   if (!list) return;
@@ -54,20 +101,30 @@ function renderMonthlyRanking(items) {
   const pageType = document.body?.dataset.page;
   const isRankingPage = pageType === "ranking";
   const isMainPage = pageType === "main";
-  const maxItems = isRankingPage ? RANKING_MAX_ITEMS : MAIN_RANKING_MAX_ITEMS;
-  const pageSize = isRankingPage ? RANKING_MAX_ITEMS : MAIN_RANKING_PAGE_SIZE;
-  const isPagedRanking = isMainPage;
+  const isDemoRanking = document.body?.classList.contains("demo-reference-layout");
+  const mainPageSize = getMainRankingPageSize();
+  const maxItems = isRankingPage
+    ? RANKING_MAX_ITEMS
+    : isDemoRanking
+      ? DEMO_RANKING_MAX_ITEMS
+      : MAIN_RANKING_MAX_ITEMS;
+  const pageSize = isRankingPage ? RANKING_MAX_ITEMS : mainPageSize;
+  const isPagedRanking = isMainPage && !isDemoRanking;
   monthlyRankingItems = Array.isArray(items) ? items.slice(0, maxItems) : [];
   const pageCount = isPagedRanking ? Math.max(1, Math.ceil(maxItems / pageSize)) : 1;
   const safePage = Math.max(1, Math.min(monthlyRankingPage, pageCount));
   monthlyRankingPage = safePage;
   const startIndex = isPagedRanking ? (safePage - 1) * pageSize : 0;
-  const endIndex = isPagedRanking ? Math.min(startIndex + pageSize, maxItems) : pageSize;
+  const endIndex = isDemoRanking
+    ? maxItems
+    : isPagedRanking
+      ? Math.min(startIndex + pageSize, maxItems)
+      : pageSize;
   const rows = Array.from({ length: endIndex - startIndex }, (_, index) => {
     const itemIndex = startIndex + index;
     return monthlyRankingItems[itemIndex] || { rank: itemIndex + 1 };
   });
-  if (isMainPage) {
+  if (isMainPage && !isDemoRanking) {
     list.classList.remove("is-rolling");
     void list.offsetWidth;
     list.classList.add("is-rolling");
@@ -86,7 +143,11 @@ function renderMonthlyRanking(items) {
     name.className = "ranking-name";
     affiliation.className = "ranking-affiliation";
     row.classList.toggle("ranking-placeholder", !hasScore);
-    rank.textContent = item.rank || startIndex + index + 1;
+    const rankingPosition = Number.parseInt(item.rank || startIndex + index + 1, 10);
+    if (rankingPosition >= 1 && rankingPosition <= 3) {
+      row.classList.add(`ranking-position-${rankingPosition}`);
+    }
+    rank.textContent = rankingPosition;
     name.textContent = hasScore ? (item.memberName || item.memberId) : "\u00a0";
     renderRankingAffiliation(affiliation, item.memberId, hasScore);
     score.textContent = hasScore ? formatMonthlyScore(item.averageScore) : "\u00a0";
@@ -95,11 +156,15 @@ function renderMonthlyRanking(items) {
     list.appendChild(row);
   });
 
+  if (isDemoRanking) {
+    startDemoRankingStepRotation(list);
+  }
+
   renderTopRankingPodium(items);
 }
 
 function pageCountForMainRanking() {
-  return Math.max(1, Math.ceil(Math.min(monthlyRankingItems.length, MAIN_RANKING_MAX_ITEMS) / MAIN_RANKING_PAGE_SIZE));
+  return Math.max(1, Math.ceil(Math.min(monthlyRankingItems.length, MAIN_RANKING_MAX_ITEMS) / getMainRankingPageSize()));
 }
 
 function pauseMainRankingAutoRoll(duration = 0) {
@@ -112,7 +177,11 @@ function pauseMainRankingAutoRoll(duration = 0) {
 }
 
 function initMainRankingAutoRoll() {
-  if (document.body?.dataset.page !== "main" || mainRankingAutoRollInitialized) return;
+  if (
+    document.body?.dataset.page !== "main"
+    || document.body?.classList.contains("demo-reference-layout")
+    || mainRankingAutoRollInitialized
+  ) return;
   const card = document.querySelector(".main-ranking");
   if (!card) return;
   mainRankingAutoRollInitialized = true;
@@ -124,7 +193,7 @@ function initMainRankingAutoRoll() {
 
   window.clearInterval(mainRankingAutoRollTimer);
   mainRankingAutoRollTimer = window.setInterval(() => {
-    if (mainRankingAutoRollPaused || monthlyRankingItems.length <= MAIN_RANKING_PAGE_SIZE) return;
+    if (mainRankingAutoRollPaused || monthlyRankingItems.length <= getMainRankingPageSize()) return;
     const pageCount = pageCountForMainRanking();
     monthlyRankingPage = monthlyRankingPage >= pageCount ? 1 : monthlyRankingPage + 1;
     renderMonthlyRanking(monthlyRankingItems);
@@ -633,7 +702,12 @@ async function initRankingPage() {
 async function loadMonthlyRanking() {
   setCurrentMonthTitle();
   const isRankingPage = document.body?.dataset.page === "ranking";
-  const limit = isRankingPage ? RANKING_MAX_ITEMS : MAIN_RANKING_MAX_ITEMS;
+  const isDemoRanking = document.body?.classList.contains("demo-reference-layout");
+  const limit = isRankingPage
+    ? RANKING_MAX_ITEMS
+    : isDemoRanking
+      ? DEMO_RANKING_MAX_ITEMS
+      : MAIN_RANKING_MAX_ITEMS;
   const controller = new AbortController();
   const timeout = !isRankingPage
     ? window.setTimeout(() => controller.abort(), MAIN_RANKING_TIMEOUT_MS)
@@ -724,7 +798,56 @@ function initMainMiniLogin() {
   if (form) form.addEventListener("submit", submitMainMiniLogin);
 }
 
+function initDemoTypingTitle() {
+  if (!document.body?.classList.contains("demo-reference-layout")) return;
+  const title = document.querySelector(".demo-typing-title");
+  const pieces = Array.from(title?.querySelectorAll("[data-demo-type]") || []);
+  const cursor = title?.querySelector(".demo-type-cursor");
+  if (!title || pieces.length === 0) return;
+
+  const values = pieces.map((piece) => Array.from(piece.dataset.demoType || ""));
+  const renderCompleteTitle = () => {
+    pieces.forEach((piece, index) => {
+      piece.textContent = values[index].join("");
+    });
+  };
+  if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+    renderCompleteTitle();
+    cursor?.remove();
+    return;
+  }
+
+  let pieceIndex = 0;
+  let characterIndex = 0;
+  const restartTyping = () => {
+    pieces.forEach((piece) => {
+      piece.textContent = "";
+    });
+    pieceIndex = 0;
+    characterIndex = 0;
+    typeNextCharacter();
+  };
+  const typeNextCharacter = () => {
+    if (pieceIndex >= pieces.length) {
+      window.setTimeout(restartTyping, 5000);
+      return;
+    }
+    const characters = values[pieceIndex];
+    if (characterIndex < characters.length) {
+      pieces[pieceIndex].textContent += characters[characterIndex];
+      characterIndex += 1;
+      window.setTimeout(typeNextCharacter, 95);
+      return;
+    }
+    pieceIndex += 1;
+    characterIndex = 0;
+    window.setTimeout(typeNextCharacter, 95);
+  };
+  window.setTimeout(typeNextCharacter, 350);
+}
+
 initMainMiniLogin();
+initDemoTypingTitle();
 initRankingMoreModal();
 initMainRankingAutoRoll();
 initRankingPage();
