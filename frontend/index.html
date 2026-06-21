@@ -129,13 +129,7 @@
     }
 
     .hero::after {
-      content: "";
-      position: absolute;
-      inset: 0;
-      z-index: -1;
-      background: url("assets/brand/main-hero.png") right clamp(14px, 5vw, 72px) center / min(780px, 56vw) auto no-repeat;
-      opacity: 0.15;
-      pointer-events: none;
+      display: none;
     }
 
     .hero-inner {
@@ -253,23 +247,44 @@
     .stats-section {
       padding-top: clamp(28px, 4vw, 48px);
       padding-bottom: clamp(42px, 6vw, 72px);
-      background: #fff;
+      background: rgba(255, 255, 255, 0.96);
     }
 
     .hero-ranking {
       display: grid;
-      gap: 20px;
-      width: min(470px, 100%);
+      gap: 22px;
+      width: min(520px, 100%);
       justify-self: center;
       align-self: center;
       position: relative;
       z-index: 1;
-      padding: 30px;
-      border: 1px solid rgba(255, 255, 255, 0.76);
+      isolation: isolate;
+      padding: 34px;
+      border: 1px solid #e5e7eb;
       border-radius: 8px;
-      background: rgba(255, 255, 255, 0.9);
+      background: rgba(255, 255, 255, 0.96);
+      background-clip: padding-box;
       box-shadow: var(--shadow);
-      backdrop-filter: blur(14px);
+    }
+
+    .hero-ranking::before {
+      content: "";
+      position: absolute;
+      inset: -190px -170px -160px;
+      z-index: -1;
+      background: url("assets/brand/main-hero.png") center / contain no-repeat;
+      opacity: 0.15;
+      pointer-events: none;
+    }
+
+    .hero-ranking::after {
+      content: "";
+      position: absolute;
+      inset: 0;
+      z-index: -1;
+      border-radius: inherit;
+      background: #fff;
+      pointer-events: none;
     }
 
     .hero-ranking-head {
@@ -331,7 +346,7 @@
       grid-template-columns: 40px minmax(0, 1fr) 76px;
       gap: 12px;
       align-items: center;
-      min-height: 48px;
+      min-height: 52px;
     }
 
     .hero-ranking b {
