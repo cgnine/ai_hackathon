@@ -141,8 +141,8 @@ function renderWrongNotes() {
       code,
       name: getWrongSubjectName(subject) || WRONG_SUBJECT_NAMES[code],
       desc: subject.subjectDescription || subject.desc || subject.subjectName || WRONG_SUBJECT_NAMES[code],
-      total: subject.wrongCount ?? subject.total ?? group?.total ?? 0,
-      roundCount: subject.roundCount ?? subject.rounds?.length ?? group?.rounds?.length ?? 0
+      total: Array.isArray(backendWrongNotes) ? group?.total ?? 0 : subject.wrongCount ?? subject.total ?? group?.total ?? 0,
+      roundCount: Array.isArray(backendWrongNotes) ? group?.rounds?.length ?? 0 : subject.roundCount ?? subject.rounds?.length ?? group?.rounds?.length ?? 0
     };
   });
   if (!state.wrongSubjectId || !subjectOptions.some((subject) => subject.id === state.wrongSubjectId)) {
@@ -523,22 +523,42 @@ function getRoundOrder(roundTitle = "") {
   return match ? Number(match[1]) : Number.MAX_SAFE_INTEGER;
 }
 
-function deleteWrongReviewSet(subjectGroup, roundGroup) {
+async function deleteWrongReviewSet(subjectGroup, roundGroup) {
   const message = `${subjectGroup.subjectName} ${roundGroup.roundTitle} 오답노트를 삭제할까요?`;
   if (!window.confirm(message)) return;
+
+  const dbNotes = (roundGroup.notes || []).filter((note) => note.source === "db");
+  if (dbNotes.length > 0) {
+    const questionIds = dbNotes
+      .map((note) => note.question?.id)
+      .filter(Boolean);
+    try {
+      const response = await fetch(`${API_BASE}/results/${encodeURIComponent(roundGroup.roundKey)}/wrong-note`, {
+        method: "DELETE",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({ question_ids: questionIds })
+      });
+      if (!response.ok) throw new Error(`HTTP ${response.status}`);
+    } catch (error) {
+      showToast(`DB 오답노트 삭제 저장에 실패했습니다. (${error.message})`);
+      return;
+    }
+  }
 
   const keysToDelete = [];
   state.wrongNotes.forEach((note, key) => {
     const sameProfile = !note.profileName || note.profileName === state.profileName;
-    const sameSubject = (note.subjectId || note.subjectName) === subjectGroup.subjectId;
-    const sameRound = (note.attemptId || note.roundTitle || "manual") === roundGroup.roundKey;
+    const sameSubject = String(note.subjectId || note.subjectName || "").toUpperCase() === String(subjectGroup.subjectId || "").toUpperCase();
+    const sameRound = String(note.attemptId || note.roundTitle || "manual") === String(roundGroup.roundKey);
     if (sameProfile && sameSubject && sameRound) keysToDelete.push(key);
   });
   keysToDelete.forEach((key) => state.wrongNotes.delete(key));
   if (Array.isArray(backendWrongNotes)) {
     backendWrongNotes = backendWrongNotes.filter((note) => {
-      const sameSubject = (note.subjectId || note.subjectName) === subjectGroup.subjectId;
-      const sameRound = (note.attemptId || note.roundTitle || "manual") === roundGroup.roundKey;
+      const sameSubject = String(note.subjectId || note.subjectName || "").toUpperCase() === String(subjectGroup.subjectId || "").toUpperCase();
+      const sameRound = String(note.attemptId || note.roundTitle || "manual") === String(roundGroup.roundKey);
       return !(sameSubject && sameRound);
     });
   }
@@ -597,7 +617,7 @@ function groupWrongNotes(notes) {
     subjectGroup.total += 1;
     roundGroup.notes.push(note);
     roundGroup.totalCount = Math.max(roundGroup.totalCount || 0, Number(note.total || note.totalCount || 0));
-    roundGroup.wrongCount = Math.max(roundGroup.wrongCount || 0, Number(note.wrongCount || 0));
+    roundGroup.wrongCount = roundGroup.notes.length;
     if (roundGroup.correctRate === null && note.correctRate !== undefined) {
       roundGroup.correctRate = note.correctRate;
     }

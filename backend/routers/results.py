@@ -146,3 +146,8 @@ async def get_wrong_items(attempt_id: str):
 @router.put("/{attempt_id}/wrong-note")
 async def save_wrong_note(attempt_id: str, request: WrongNoteSaveRequest):
     return result_service.save_wrong_note(attempt_id, request.question_ids)
+
+
+@router.delete("/{attempt_id}/wrong-note")
+async def delete_wrong_note(attempt_id: str, request: WrongNoteSaveRequest):
+    return result_service.delete_wrong_note(attempt_id, request.question_ids)

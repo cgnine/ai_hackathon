@@ -3862,6 +3862,37 @@ def save_wrong_note(attempt_id: str, question_ids: list[str] | None = None) -> d
     }
 
 
+def delete_wrong_note(attempt_id: str, question_ids: list[str] | None = None) -> dict[str, Any]:
+    with get_conn() as conn:
+        with conn.cursor() as cur:
+            if question_ids:
+                cur.execute(
+                    """
+                    UPDATE exam_history_tb
+                    SET wrong_note_saved = 'N'
+                    WHERE exam_id = %s
+                      AND question_id = ANY(%s)
+                    """,
+                    (attempt_id, question_ids),
+                )
+            else:
+                cur.execute(
+                    """
+                    UPDATE exam_history_tb
+                    SET wrong_note_saved = 'N'
+                    WHERE exam_id = %s
+                    """,
+                    (attempt_id,),
+                )
+            updated_count = cur.rowcount
+
+    return {
+        "attemptId": attempt_id,
+        "updatedCount": updated_count,
+        "questionIds": question_ids or [],
+    }
+
+
 def get_saved_wrong_notes(member_id: str | None = None) -> dict[str, Any]:
     normalized_member_id = (member_id or "").strip()
     with get_conn() as conn:
@@ -3943,7 +3974,9 @@ def get_saved_wrong_notes(member_id: str | None = None) -> dict[str, Any]:
                     subject_summary AS (
                         SELECT
                             e.subject_code,
-                            COUNT(DISTINCT e.exam_id) AS wrong_set_count,
+                            COUNT(DISTINCT e.exam_id) FILTER (
+                                WHERE h.wrong_note_saved = 'Y'
+                            ) AS wrong_set_count,
                             SUM(CASE WHEN h.wrong_note_saved = 'Y' THEN 1 ELSE 0 END) AS saved_question_count
                         FROM exam_tb e
                         JOIN exam_history_tb h
@@ -4050,7 +4083,11 @@ def get_saved_wrong_notes(member_id: str | None = None) -> dict[str, Any]:
                 for row in summary_rows
             }
 
-            detail_where = "LOWER(e.member_id) = LOWER(%s) AND h.is_correct = 'N'" if normalized_member_id else "h.wrong_note_saved = 'Y'"
+            detail_where = (
+                "LOWER(e.member_id) = LOWER(%s) AND h.is_correct = 'N' AND h.wrong_note_saved = 'Y'"
+                if normalized_member_id
+                else "h.wrong_note_saved = 'Y'"
+            )
             detail_params: tuple[Any, ...] = (normalized_member_id,) if normalized_member_id else ()
             cur.execute(
                 f"""

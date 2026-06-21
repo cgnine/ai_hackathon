@@ -1,0 +1,1006 @@
+<!DOCTYPE html>
+<html lang="ko">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>KB Masters Demo</title>
+  <style>
+    :root {
+      --ink: #111827;
+      --muted: #5f6b7a;
+      --line: #e5e7eb;
+      --yellow: #ffcc00;
+      --yellow-deep: #c79500;
+      --green: #0f766e;
+      --blue: #2563eb;
+      --surface: #ffffff;
+      --soft: #f7f8fb;
+      --shadow: 0 22px 56px rgba(17, 24, 39, 0.09);
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    html {
+      scroll-behavior: smooth;
+    }
+
+    body {
+      min-height: 100vh;
+      background: #fff;
+      color: var(--ink);
+      font-family: "Pretendard", "Noto Sans KR", "Apple SD Gothic Neo", Arial, sans-serif;
+      letter-spacing: 0;
+    }
+
+    a {
+      color: inherit;
+      text-decoration: none;
+    }
+
+    img {
+      display: block;
+      max-width: 100%;
+    }
+
+    .demo-header {
+      position: sticky;
+      top: 0;
+      z-index: 10;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      min-height: 76px;
+      padding: 0 clamp(20px, 5vw, 72px);
+      border-bottom: 1px solid rgba(229, 231, 235, 0.82);
+      background: rgba(255, 255, 255, 0.92);
+      backdrop-filter: blur(18px);
+    }
+
+    .demo-brand {
+      display: inline-flex;
+      align-items: center;
+      gap: 14px;
+      min-width: 0;
+      font-weight: 800;
+    }
+
+    .demo-brand img {
+      width: min(214px, 46vw);
+      height: auto;
+    }
+
+    .demo-nav {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .demo-nav a {
+      min-height: 40px;
+      padding: 10px 14px;
+      border-radius: 8px;
+      color: #374151;
+      font-size: 0.94rem;
+      font-weight: 700;
+    }
+
+    .demo-nav a:hover,
+    .demo-nav a:focus-visible {
+      outline: none;
+      background: #f3f4f6;
+      color: #111827;
+    }
+
+    .demo-nav .primary {
+      border: 1px solid var(--yellow);
+      background: var(--yellow);
+      color: #111827;
+    }
+
+    .demo-main {
+      display: grid;
+      background: #fff;
+    }
+
+    .demo-section {
+      padding: clamp(56px, 8vw, 104px) clamp(20px, 5vw, 72px);
+    }
+
+    .demo-inner {
+      width: min(1120px, 100%);
+      margin: 0 auto;
+    }
+
+    .hero {
+      min-height: calc(100vh - 76px);
+      display: grid;
+      align-items: center;
+      padding-top: clamp(34px, 5vw, 58px);
+      padding-bottom: clamp(34px, 5vw, 58px);
+      position: relative;
+      isolation: isolate;
+      background: #fff;
+      overflow: hidden;
+    }
+
+    .hero::after {
+      content: "";
+      position: absolute;
+      inset: 0;
+      z-index: -1;
+      background: url("assets/brand/main-hero.png") right 7vw bottom 42px / min(700px, 50vw) auto no-repeat;
+      opacity: 0.14;
+      pointer-events: none;
+    }
+
+    .hero-inner {
+      display: grid;
+      align-items: end;
+      gap: clamp(28px, 5vw, 56px);
+    }
+
+    .hero-main {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) minmax(300px, 390px);
+      gap: clamp(26px, 5vw, 56px);
+      align-items: center;
+    }
+
+    .hero-kicker {
+      color: var(--yellow-deep);
+      font-size: clamp(0.9rem, 1vw, 1rem);
+      font-weight: 900;
+      line-height: 1.35;
+    }
+
+    .hero-title {
+      display: grid;
+      gap: 0;
+      margin-top: 14px;
+      font-size: clamp(3.1rem, 8.6vw, 7.4rem);
+      font-weight: 900;
+      line-height: 0.88;
+    }
+
+    .hero-title span {
+      display: block;
+    }
+
+    .hero-title mark {
+      display: inline-block;
+      width: fit-content;
+      padding: 0 0.08em 0.08em;
+      background: var(--yellow);
+      color: #111827;
+    }
+
+    .typing-word {
+      display: inline-flex;
+      align-items: center;
+      width: 3.36em;
+      min-height: 0.9em;
+      white-space: nowrap;
+    }
+
+    .typing-word::after {
+      content: "";
+      display: inline-block;
+      width: 0.06em;
+      height: 0.7em;
+      margin-left: 0.06em;
+      background: #111827;
+      animation: caretBlink 0.82s steps(1) infinite;
+    }
+
+    @keyframes caretBlink {
+      50% {
+        opacity: 0;
+      }
+    }
+
+    .hero-copy {
+      width: min(540px, 100%);
+      margin-top: 22px;
+      color: #374151;
+      font-size: clamp(1rem, 1.25vw, 1.16rem);
+      font-weight: 700;
+      line-height: 1.75;
+    }
+
+    .hero-actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-top: 26px;
+    }
+
+    .demo-button {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 58px;
+      padding: 0 30px;
+      border: 1px solid #111827;
+      border-radius: 8px;
+      background: #111827;
+      color: #fff;
+      font-size: 1.04rem;
+      font-weight: 900;
+    }
+
+    .demo-button.secondary {
+      border-color: var(--line);
+      background: #fff;
+      color: #111827;
+    }
+
+    .hero-strip {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 10px;
+      overflow: hidden;
+      border-radius: 0;
+      background: transparent;
+    }
+
+    .hero-ranking {
+      display: grid;
+      gap: 18px;
+      padding: 24px;
+      border: 1px solid rgba(255, 255, 255, 0.76);
+      border-radius: 8px;
+      background: rgba(255, 255, 255, 0.9);
+      box-shadow: var(--shadow);
+      backdrop-filter: blur(14px);
+    }
+
+    .hero-ranking-head {
+      display: flex;
+      align-items: end;
+      justify-content: space-between;
+      gap: 16px;
+      border-bottom: 1px solid var(--line);
+      padding-bottom: 16px;
+    }
+
+    .ranking-next-btn {
+      min-height: 34px;
+      padding: 0 12px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: #fff;
+      color: #111827;
+      font: inherit;
+      font-size: 0.86rem;
+      font-weight: 900;
+      cursor: pointer;
+      white-space: nowrap;
+    }
+
+    .ranking-next-btn:hover,
+    .ranking-next-btn:focus-visible {
+      outline: 3px solid rgba(17, 24, 39, 0.08);
+      border-color: #111827;
+    }
+
+    .hero-ranking-head small {
+      color: var(--yellow-deep);
+      font-weight: 900;
+    }
+
+    .hero-ranking-head strong {
+      display: block;
+      margin-top: 5px;
+      font-size: 1.22rem;
+      line-height: 1.28;
+    }
+
+    .hero-ranking-head span {
+      color: var(--muted);
+      font-size: 0.88rem;
+      font-weight: 800;
+      white-space: nowrap;
+    }
+
+    .hero-ranking ol {
+      display: grid;
+      gap: 11px;
+      list-style: none;
+    }
+
+    .hero-ranking li {
+      display: grid;
+      grid-template-columns: 34px minmax(0, 1fr) 64px;
+      gap: 9px;
+      align-items: center;
+      min-height: 42px;
+    }
+
+    .hero-ranking b {
+      display: inline-grid;
+      place-items: center;
+      width: 30px;
+      height: 30px;
+      border-radius: 8px;
+      background: #111827;
+      color: #fff;
+      font-size: 0.86rem;
+    }
+
+    .hero-ranking li:first-child b {
+      background: var(--yellow);
+      color: #111827;
+    }
+
+    .hero-ranking em {
+      color: #111827;
+      font-style: normal;
+      font-weight: 900;
+    }
+
+    .hero-ranking p {
+      min-width: 0;
+      color: #374151;
+      font-size: 0.96rem;
+      font-weight: 800;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .hero-ranking .ranking-rank {
+      display: inline-grid;
+      place-items: center;
+      width: 30px;
+      height: 30px;
+      border-radius: 8px;
+      background: #111827;
+      color: #fff;
+      font-size: 0.86rem;
+      font-weight: 900;
+    }
+
+    .hero-ranking .ranking-rank.top-rank {
+      background: linear-gradient(135deg, #ffe58a 0%, #f5b800 100%);
+      color: #111827;
+      box-shadow: 0 8px 18px rgba(245, 184, 0, 0.24);
+    }
+
+    .hero-ranking .ranking-rank.silver-rank {
+      background: linear-gradient(135deg, #f8fafc 0%, #cbd5e1 100%);
+      color: #111827;
+      box-shadow: 0 8px 18px rgba(100, 116, 139, 0.18);
+    }
+
+    .hero-ranking .ranking-rank.bronze-rank {
+      background: linear-gradient(135deg, #f8d4ac 0%, #b7793c 100%);
+      color: #111827;
+      box-shadow: 0 8px 18px rgba(180, 103, 39, 0.18);
+    }
+
+    .hero-ranking .ranking-name {
+      min-width: 0;
+      color: #374151;
+      font-size: 0.96rem;
+      font-weight: 900;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .hero-ranking .ranking-name small {
+      margin-left: 5px;
+      color: #8b95a1;
+      font-size: 0.68rem;
+      font-weight: 800;
+      vertical-align: middle;
+    }
+
+    .hero-ranking .ranking-affiliation {
+      display: none;
+      min-width: 0;
+      color: #8b95a1;
+      font-size: 0.68rem;
+      font-weight: 800;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .hero-ranking .ranking-affiliation.is-empty {
+      display: none;
+    }
+
+    .hero-ranking strong {
+      justify-self: end;
+      color: #111827;
+      font-size: 0.96rem;
+      text-align: right;
+      white-space: nowrap;
+    }
+
+    .hero-strip article {
+      min-height: 88px;
+      padding: 16px 18px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: #fff;
+    }
+
+    .hero-strip strong {
+      display: block;
+      font-size: 1rem;
+      line-height: 1.35;
+    }
+
+    .hero-strip p {
+      margin-top: 8px;
+      color: var(--muted);
+      font-size: 0.9rem;
+      font-weight: 700;
+      line-height: 1.65;
+    }
+
+    .section-head {
+      display: grid;
+      gap: 16px;
+      margin-bottom: clamp(34px, 6vw, 58px);
+    }
+
+    .eyebrow {
+      color: var(--yellow-deep);
+      font-size: 0.86rem;
+      font-weight: 900;
+      letter-spacing: 0;
+      text-transform: uppercase;
+    }
+
+    .section-head h2 {
+      width: min(780px, 100%);
+      font-size: clamp(2rem, 4vw, 3.8rem);
+      font-weight: 900;
+      line-height: 1.04;
+    }
+
+    .section-head p {
+      width: min(640px, 100%);
+      color: var(--muted);
+      font-size: 1.08rem;
+      font-weight: 600;
+      line-height: 1.72;
+    }
+
+    .flow {
+      background:
+        linear-gradient(180deg, #f4f7fb 0%, #eef4ff 100%);
+    }
+
+    .flow-list {
+      display: grid;
+      gap: 0;
+      border-top: 1px solid #dfe3ea;
+    }
+
+    .flow-item {
+      display: grid;
+      grid-template-columns: 120px minmax(0, 1fr) minmax(240px, 390px);
+      gap: 28px;
+      padding: 34px 0;
+      border-bottom: 1px solid #dfe3ea;
+      align-items: start;
+    }
+
+    .flow-item b {
+      color: var(--yellow-deep);
+      font-size: 1.4rem;
+      font-weight: 900;
+    }
+
+    .flow-item strong {
+      font-size: clamp(1.5rem, 2.5vw, 2.35rem);
+      line-height: 1.18;
+    }
+
+    .flow-item p {
+      color: var(--muted);
+      font-weight: 650;
+      line-height: 1.74;
+    }
+
+    .features-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 22px;
+    }
+
+    .feature-card {
+      min-height: 260px;
+      display: grid;
+      align-content: space-between;
+      gap: 24px;
+      padding: clamp(24px, 4vw, 38px);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: #fff;
+    }
+
+    .feature-card small {
+      color: var(--muted);
+      font-weight: 900;
+    }
+
+    .feature-card strong {
+      font-size: clamp(1.36rem, 2vw, 2rem);
+      line-height: 1.24;
+    }
+
+    .feature-card p {
+      color: var(--muted);
+      font-weight: 650;
+      line-height: 1.72;
+    }
+
+    .cta {
+      background: linear-gradient(180deg, #fff 0%, #f3f4f6 100%);
+      text-align: center;
+    }
+
+    .cta .demo-inner {
+      display: grid;
+      justify-items: center;
+      gap: 24px;
+    }
+
+    .cta h2 {
+      width: min(820px, 100%);
+      font-size: clamp(2rem, 4.6vw, 4.2rem);
+      font-weight: 900;
+      line-height: 1.02;
+    }
+
+    .cta p {
+      width: min(610px, 100%);
+      color: #4b5563;
+      font-size: 1.12rem;
+      font-weight: 700;
+      line-height: 1.75;
+    }
+
+    .demo-footer {
+      padding: 34px clamp(20px, 5vw, 72px);
+      border-top: 1px solid var(--line);
+      color: #6b7280;
+      font-size: 0.92rem;
+    }
+
+    .demo-footer-inner {
+      width: min(1120px, 100%);
+      display: flex;
+      justify-content: space-between;
+      gap: 18px;
+      margin: 0 auto;
+      line-height: 1.7;
+    }
+
+    @media (max-width: 820px) {
+      .demo-header {
+        align-items: center;
+        flex-direction: row;
+        gap: 14px;
+        padding-top: 14px;
+        padding-bottom: 14px;
+      }
+
+      .demo-nav {
+        width: auto;
+        overflow: visible;
+        padding-bottom: 0;
+      }
+
+      .demo-nav a {
+        display: none;
+        white-space: nowrap;
+      }
+
+      .demo-nav a[href="signup.html"] {
+        display: inline-flex;
+      }
+
+      .hero {
+        min-height: auto;
+        background: #fff;
+        padding-bottom: 300px;
+      }
+
+      .hero::after {
+        background-position: center bottom 28px;
+        background-size: min(520px, 92vw) auto;
+        opacity: 0.12;
+      }
+
+      .hero-main,
+      .hero-strip,
+      .features-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .flow-item {
+        grid-template-columns: 1fr;
+        gap: 12px;
+      }
+
+      .flow-item b {
+        font-size: 1rem;
+      }
+
+      .demo-footer-inner {
+        flex-direction: column;
+      }
+    }
+
+    @media (max-width: 520px) {
+      .demo-section {
+        padding-left: 18px;
+        padding-right: 18px;
+      }
+
+      .hero-title {
+        font-size: 2.84rem;
+      }
+
+
+      .hero-actions {
+        flex-direction: column;
+      }
+
+      .demo-button {
+        width: 100%;
+      }
+    }
+  </style>
+</head>
+
+<body data-page="main" class="main-stats-loading">
+  <header class="demo-header">
+    <a class="demo-brand" href="demo.html" aria-label="KB Masters">
+      <img src="assets/brand/kb-masters-logo.png" alt="KB Masters" />
+    </a>
+    <nav class="demo-nav" aria-label="주요 메뉴">
+      <a href="#flow">진단 흐름</a>
+      <a href="#features">핵심 기능</a>
+      <a href="signup.html">회원가입</a>
+      <a class="primary" href="login.html">시작하기</a>
+    </nav>
+  </header>
+
+  <main class="demo-main">
+    <section class="demo-section hero" aria-labelledby="demoHeroTitle">
+      <div class="demo-inner hero-inner">
+        <div class="hero-main">
+          <div>
+            <p class="hero-kicker">AI 기반 개발자 역량진단</p>
+            <h1 class="hero-title" id="demoHeroTitle">
+              <span>WE</span>
+              <span><span class="typing-word" id="heroTypingWord">MAKE</span></span>
+              <mark>GROWTH</mark>
+            </h1>
+            <p class="hero-copy">
+              개발자 역량평가 대비를 위한 실전 CBT, 오답 복습, AI 취약점 분석, 맞춤 학습 리포트.
+            </p>
+            <div class="hero-actions">
+              <a class="demo-button" href="login.html">시작하기</a>
+            </div>
+          </div>
+
+          <aside class="hero-ranking main-ranking" aria-label="이번 달 랭킹">
+            <div class="hero-ranking-head">
+              <div>
+                <small>Monthly Ranking</small>
+                <strong id="monthlyRankingTitle">랭킹</strong>
+              </div>
+              <button class="ranking-next-btn" id="demoRankingNextBtn" type="button">다음 순위</button>
+            </div>
+            <ol id="monthlyRankingList">
+              <li class="ranking-placeholder">
+                <span class="ranking-rank">1</span>
+                <span class="ranking-name">&nbsp;</span>
+                <span class="ranking-affiliation is-empty">&nbsp;</span>
+                <strong>&nbsp;</strong>
+              </li>
+              <li class="ranking-placeholder">
+                <span class="ranking-rank">2</span>
+                <span class="ranking-name">&nbsp;</span>
+                <span class="ranking-affiliation is-empty">&nbsp;</span>
+                <strong>&nbsp;</strong>
+              </li>
+              <li class="ranking-placeholder">
+                <span class="ranking-rank">3</span>
+                <span class="ranking-name">&nbsp;</span>
+                <span class="ranking-affiliation is-empty">&nbsp;</span>
+                <strong>&nbsp;</strong>
+              </li>
+              <li class="ranking-placeholder">
+                <span class="ranking-rank">4</span>
+                <span class="ranking-name">&nbsp;</span>
+                <span class="ranking-affiliation is-empty">&nbsp;</span>
+                <strong>&nbsp;</strong>
+              </li>
+              <li class="ranking-placeholder">
+                <span class="ranking-rank">5</span>
+                <span class="ranking-name">&nbsp;</span>
+                <span class="ranking-affiliation is-empty">&nbsp;</span>
+                <strong>&nbsp;</strong>
+              </li>
+            </ol>
+          </aside>
+        </div>
+
+        <div class="hero-strip" aria-label="서비스 요약">
+          <article>
+            <strong><span id="mainQuestionCount" data-main-dynamic-stat>-</span>개</strong>
+            <p>생성된 문제</p>
+          </article>
+          <article>
+            <strong><span id="mainPdfCount">5</span>개</strong>
+            <p>등록된 PDF</p>
+          </article>
+          <article>
+            <strong><span id="mainExamCount" data-main-dynamic-stat>-</span>회</strong>
+            <p>누적 응시</p>
+          </article>
+          <article>
+            <strong><span id="mainReportCount" data-main-dynamic-stat>-</span>건</strong>
+            <p>AI 분석 리포트</p>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <section class="demo-section flow" id="flow" aria-labelledby="flowTitle">
+      <div class="demo-inner">
+        <div class="section-head">
+          <p class="eyebrow">Learning Flow</p>
+          <h2 id="flowTitle">AI 역량진단을 위한 단계별 학습 구조</h2>
+          <p>응시, 결과, 오답노트, AI 추천 문제까지 이어지는 개발자 역량평가 준비 흐름.</p>
+        </div>
+
+        <div class="flow-list">
+          <article class="flow-item">
+            <b>01</b>
+            <strong>과목 선택</strong>
+            <p>AI Engineering, Cloud, Data, Software 영역별 진단 과목.</p>
+          </article>
+          <article class="flow-item">
+            <b>02</b>
+            <strong>실전 CBT</strong>
+            <p>문항, 보기, 진행 상태 중심의 시험형 풀이 환경.</p>
+          </article>
+          <article class="flow-item">
+            <b>03</b>
+            <strong>결과 분석</strong>
+            <p>점수, 정답률, 취약 단원, 오답 문항 기반 진단 결과.</p>
+          </article>
+          <article class="flow-item">
+            <b>04</b>
+            <strong>AI 보완 학습</strong>
+            <p>오답 이력 기반 맞춤 추천 문제와 취약 영역 보강.</p>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <section class="demo-section" id="features" aria-labelledby="featuresTitle">
+      <div class="demo-inner">
+        <div class="section-head">
+          <p class="eyebrow">Core Features</p>
+          <h2 id="featuresTitle">역량진단에 필요한 핵심 기능</h2>
+        </div>
+
+        <div class="features-grid">
+          <article class="feature-card">
+            <small>CBT</small>
+            <strong>과목별 실전 문제</strong>
+            <p>개발 직무 역량 영역별 CBT 문항과 시험 진행 상태.</p>
+          </article>
+          <article class="feature-card">
+            <small>RESULT</small>
+            <strong>점수와 취약 영역</strong>
+            <p>응시 결과, 과목별 성취도, 취약 단원 중심 분석.</p>
+          </article>
+          <article class="feature-card">
+            <small>REVIEW</small>
+            <strong>회차별 오답노트</strong>
+            <p>과목, 회차, 문항 기준의 오답 복습 데이터.</p>
+          </article>
+          <article class="feature-card">
+            <small>AI COACH</small>
+            <strong>맞춤 추천 문제</strong>
+            <p>최근 오답 이력 기반 AI 보완 문제와 해설.</p>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <section class="demo-section cta" aria-labelledby="ctaTitle">
+      <div class="demo-inner">
+        <p class="eyebrow">Ready</p>
+        <h2 id="ctaTitle">오늘의 AI 역량진단</h2>
+        <p>실전 CBT, 오답노트, AI 분석 리포트 기반 개발자 역량평가 준비.</p>
+        <a class="demo-button" href="login.html">시작하기</a>
+      </div>
+    </section>
+  </main>
+
+  <footer class="demo-footer">
+    <div class="demo-footer-inner">
+      <strong>KB Masters</strong>
+      <p>CGNINE · AI 기반 개발자 역량평가 CBT</p>
+    </div>
+  </footer>
+
+  <script src="js/config.js"></script>
+  <script>
+    (() => {
+      const typingTarget = document.getElementById("heroTypingWord");
+      const typingWords = ["MAKE", "LEAD", "DRIVE"];
+      let typingWordIndex = 0;
+      let typingCharIndex = typingWords[0].length;
+      let typingDeleting = true;
+
+      const runHeroTyping = () => {
+        if (!typingTarget) return;
+        const word = typingWords[typingWordIndex];
+        typingTarget.textContent = word.slice(0, typingCharIndex);
+
+        if (typingDeleting) {
+          if (typingCharIndex > 0) {
+            typingCharIndex -= 1;
+            window.setTimeout(runHeroTyping, 74);
+            return;
+          }
+          typingDeleting = false;
+          typingWordIndex = (typingWordIndex + 1) % typingWords.length;
+          window.setTimeout(runHeroTyping, 180);
+          return;
+        }
+
+        if (typingCharIndex < typingWords[typingWordIndex].length) {
+          typingCharIndex += 1;
+          window.setTimeout(runHeroTyping, 105);
+          return;
+        }
+
+        typingDeleting = true;
+        window.setTimeout(runHeroTyping, 1250);
+      };
+
+      window.setTimeout(runHeroTyping, 1100);
+
+      const syncRankingHighlight = () => {
+        document.querySelectorAll("#monthlyRankingList li").forEach((row) => {
+          const rank = row.querySelector(".ranking-rank");
+          if (!rank) return;
+          const rankNo = rank.textContent.trim();
+          rank.classList.toggle("top-rank", rankNo === "1");
+          rank.classList.toggle("silver-rank", rankNo === "2");
+          rank.classList.toggle("bronze-rank", rankNo === "3");
+        });
+      };
+
+      const list = document.getElementById("monthlyRankingList");
+      if (list) {
+        new MutationObserver(syncRankingHighlight).observe(list, { childList: true, subtree: true });
+        syncRankingHighlight();
+      }
+
+      const demoPageSize = 5;
+      let demoRankingItems = [];
+      let demoRankingPage = 1;
+
+      const formatDemoScore = (score) => {
+        const numeric = Number(score) || 0;
+        return Number.isInteger(numeric) ? `${numeric}점` : `${numeric.toFixed(1)}점`;
+      };
+
+      const formatDemoCount = (value) => (Number(value) || 0).toLocaleString("ko-KR");
+
+      const getDemoCompanyName = (memberId) => {
+        const prefix = String(memberId || "").trim().toUpperCase().slice(0, 1);
+        return {
+          A: "KB증권",
+          B: "KB국민은행",
+          C: "KB손해보험",
+          D: "KB데이타시스템",
+          E: "KB라이프생명"
+        }[prefix] || "";
+      };
+
+      const renderDemoRanking = () => {
+        const target = document.getElementById("monthlyRankingList");
+        if (!target) return;
+
+        const start = (demoRankingPage - 1) * demoPageSize;
+        const rows = Array.from({ length: demoPageSize }, (_, index) => demoRankingItems[start + index] || { rank: start + index + 1 });
+        target.replaceChildren();
+
+        rows.forEach((item) => {
+          const row = document.createElement("li");
+          const rank = document.createElement("span");
+          const name = document.createElement("span");
+          const affiliation = document.createElement("span");
+          const score = document.createElement("strong");
+          const hasScore = item.memberName || item.memberId;
+
+          rank.className = "ranking-rank";
+          name.className = "ranking-name";
+          affiliation.className = "ranking-affiliation";
+          rank.textContent = item.rank || "";
+          const companyName = hasScore ? getDemoCompanyName(item.memberId) : "";
+          name.textContent = hasScore ? (item.memberName || item.memberId) : "\u00a0";
+          if (companyName) {
+            const company = document.createElement("small");
+            company.textContent = companyName;
+            name.appendChild(company);
+          }
+          affiliation.textContent = companyName;
+          affiliation.classList.toggle("is-empty", !affiliation.textContent);
+          score.textContent = hasScore ? formatDemoScore(item.averageScore) : "\u00a0";
+
+          row.classList.toggle("ranking-placeholder", !hasScore);
+          row.append(rank, name, affiliation, score);
+          target.appendChild(row);
+        });
+        syncRankingHighlight();
+      };
+
+      document.getElementById("demoRankingNextBtn")?.addEventListener("click", () => {
+        const pageCount = Math.max(1, Math.ceil(demoRankingItems.length / demoPageSize));
+        demoRankingPage = demoRankingPage >= pageCount ? 1 : demoRankingPage + 1;
+        renderDemoRanking();
+      });
+
+      const loadDemoRanking = async () => {
+        try {
+          const response = await fetch(`${API_BASE}/results/ranking/monthly?limit=10`);
+          if (!response.ok) throw new Error(`HTTP ${response.status}`);
+          const data = await response.json();
+          const title = document.getElementById("monthlyRankingTitle");
+          if (title) title.textContent = `${data.monthLabel || new Date().getMonth() + 1 + "월"} 랭킹`;
+          demoRankingItems = Array.isArray(data.items) ? data.items : [];
+          demoRankingPage = 1;
+          renderDemoRanking();
+        } catch {
+          // Leave placeholders if the backend is unavailable.
+        }
+      };
+
+      const loadDemoStats = async () => {
+        try {
+          const response = await fetch(`${API_BASE}/results/main/stats`);
+          if (!response.ok) throw new Error(`HTTP ${response.status}`);
+          const data = await response.json();
+          const question = document.getElementById("mainQuestionCount");
+          const pdf = document.getElementById("mainPdfCount");
+          const exam = document.getElementById("mainExamCount");
+          const report = document.getElementById("mainReportCount");
+          if (question) question.textContent = formatDemoCount(data.questionCount);
+          if (pdf) pdf.textContent = formatDemoCount(data.pdfCount);
+          if (exam) exam.textContent = formatDemoCount(data.examCount);
+          if (report) report.textContent = formatDemoCount(data.reportCount);
+        } catch {
+          // Keep static fallback values.
+        }
+      };
+
+      loadDemoRanking();
+      loadDemoStats();
+    })();
+  </script>
+</body>
+
+</html>
