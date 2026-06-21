@@ -1,11 +1,18 @@
 from __future__ import annotations
 
+import base64
+import hashlib
+import hmac
+import secrets
 from datetime import datetime
 from typing import Literal, Optional, TypedDict
 
 import psycopg2.extras
 
 from backend.services.db import get_conn
+
+_PASSWORD_HASH_ALGORITHM = "pbkdf2_sha256"
+_PASSWORD_HASH_ITERATIONS = 210_000
 
 
 class MemberInfo(TypedDict):
@@ -33,6 +40,57 @@ class LoginResult(TypedDict):
 
 def normalize_member_id(member_id: str) -> str:
     return member_id.strip()
+
+
+def _hash_password(password: str) -> str:
+    salt = secrets.token_bytes(16)
+    digest = hashlib.pbkdf2_hmac(
+        "sha256",
+        password.encode("utf-8"),
+        salt,
+        _PASSWORD_HASH_ITERATIONS,
+    )
+    return "$".join(
+        (
+            _PASSWORD_HASH_ALGORITHM,
+            str(_PASSWORD_HASH_ITERATIONS),
+            base64.b64encode(salt).decode("ascii"),
+            base64.b64encode(digest).decode("ascii"),
+        )
+    )
+
+
+def _verify_password(password: str, password_hash: Optional[str]) -> bool:
+    if not password_hash:
+        return False
+
+    try:
+        algorithm, iterations_text, salt_text, digest_text = password_hash.split("$", 3)
+        if algorithm != _PASSWORD_HASH_ALGORITHM:
+            return False
+        iterations = int(iterations_text)
+        salt = base64.b64decode(salt_text.encode("ascii"))
+        expected = base64.b64decode(digest_text.encode("ascii"))
+    except (ValueError, TypeError):
+        return False
+
+    actual = hashlib.pbkdf2_hmac("sha256", password.encode("utf-8"), salt, iterations)
+    return hmac.compare_digest(actual, expected)
+
+
+def _has_member_password_hash_column(conn) -> bool:
+    with conn.cursor() as cur:
+        cur.execute(
+            """
+            SELECT 1
+            FROM information_schema.columns
+            WHERE table_schema = 'public'
+              AND table_name = 'member_tb'
+              AND column_name = 'password_hash'
+            LIMIT 1
+            """
+        )
+        return cur.fetchone() is not None
 
 
 def _has_member_pwd_column(conn) -> bool:
@@ -294,9 +352,37 @@ def authenticate_member(member_id: str, password: str) -> LoginResult:
         }
 
     with get_conn() as conn:
+        has_password_hash_column = _has_member_password_hash_column(conn)
         has_password_column = _has_member_pwd_column(conn)
         with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
-            if has_password_column:
+            if has_password_hash_column and has_password_column:
+                cur.execute(
+                    """
+                    SELECT
+                        member_id,
+                        COALESCE(member_name, member_id) AS member_name,
+                        password_hash,
+                        member_pwd
+                    FROM member_tb
+                    WHERE LOWER(member_id) = LOWER(%s)
+                    LIMIT 1
+                    """,
+                    (normalized_member_id,),
+                )
+            elif has_password_hash_column:
+                cur.execute(
+                    """
+                    SELECT
+                        member_id,
+                        COALESCE(member_name, member_id) AS member_name,
+                        password_hash
+                    FROM member_tb
+                    WHERE LOWER(member_id) = LOWER(%s)
+                    LIMIT 1
+                    """,
+                    (normalized_member_id,),
+                )
+            elif has_password_column:
                 cur.execute(
                     """
                     SELECT
@@ -330,7 +416,39 @@ def authenticate_member(member_id: str, password: str) -> LoginResult:
             "member_name": None,
         }
 
-    if has_password_column and str(row["member_pwd"] or "") != normalized_password:
+    if has_password_hash_column:
+        if _verify_password(normalized_password, row.get("password_hash")):
+            return {
+                "status": "ok",
+                "member_id": str(row["member_id"]),
+                "member_name": str(row["member_name"]),
+            }
+
+        legacy_password = str(row.get("member_pwd") or "") if has_password_column else ""
+        if legacy_password and hmac.compare_digest(legacy_password, normalized_password):
+            with get_conn() as conn:
+                with conn.cursor() as cur:
+                    cur.execute(
+                        """
+                        UPDATE member_tb
+                        SET password_hash = %s
+                        WHERE LOWER(member_id) = LOWER(%s)
+                        """,
+                        (_hash_password(normalized_password), normalized_member_id),
+                    )
+            return {
+                "status": "ok",
+                "member_id": str(row["member_id"]),
+                "member_name": str(row["member_name"]),
+            }
+
+        return {
+            "status": "wrong_password",
+            "member_id": None,
+            "member_name": None,
+        }
+
+    if has_password_column and not hmac.compare_digest(str(row["member_pwd"] or ""), normalized_password):
         return {
             "status": "wrong_password",
             "member_id": None,
@@ -350,8 +468,10 @@ def create_member(member_id: str, member_name: str, password: str) -> Optional[M
     normalized_password = password.strip()
     if not normalized_member_id or not normalized_member_name or not normalized_password:
         return None
+    password_hash = _hash_password(normalized_password)
 
     with get_conn() as conn:
+        has_password_hash_column = _has_member_password_hash_column(conn)
         has_password_column = _has_member_pwd_column(conn)
         with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
             cur.execute(
@@ -367,7 +487,49 @@ def create_member(member_id: str, member_name: str, password: str) -> Optional[M
             if existing is not None:
                 return None
 
-            if has_password_column:
+            if has_password_hash_column and has_password_column:
+                cur.execute(
+                    """
+                    INSERT INTO member_tb (
+                        member_id,
+                        member_name,
+                        password_hash,
+                        member_pwd,
+                        evaluation_content,
+                        created_at
+                    )
+                    VALUES (%s, %s, %s, %s, %s, %s)
+                    """,
+                    (
+                        normalized_member_id,
+                        normalized_member_name,
+                        password_hash,
+                        password_hash,
+                        "self-registered member",
+                        datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+                    ),
+                )
+            elif has_password_hash_column:
+                cur.execute(
+                    """
+                    INSERT INTO member_tb (
+                        member_id,
+                        member_name,
+                        password_hash,
+                        evaluation_content,
+                        created_at
+                    )
+                    VALUES (%s, %s, %s, %s, %s)
+                    """,
+                    (
+                        normalized_member_id,
+                        normalized_member_name,
+                        password_hash,
+                        "self-registered member",
+                        datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+                    ),
+                )
+            elif has_password_column:
                 cur.execute(
                     """
                     INSERT INTO member_tb (
@@ -419,11 +581,34 @@ def reset_member_password(member_id: str, password: str) -> bool:
     normalized_password = password.strip()
     if not normalized_member_id or not normalized_password:
         return False
+    password_hash = _hash_password(normalized_password)
 
     with get_conn() as conn:
+        has_password_hash_column = _has_member_password_hash_column(conn)
         has_password_column = _has_member_pwd_column(conn)
         with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
-            if has_password_column:
+            if has_password_hash_column and has_password_column:
+                cur.execute(
+                    """
+                    UPDATE member_tb
+                    SET password_hash = %s,
+                        member_pwd = %s
+                    WHERE LOWER(member_id) = LOWER(%s)
+                    RETURNING member_id
+                    """,
+                    (password_hash, password_hash, normalized_member_id),
+                )
+            elif has_password_hash_column:
+                cur.execute(
+                    """
+                    UPDATE member_tb
+                    SET password_hash = %s
+                    WHERE LOWER(member_id) = LOWER(%s)
+                    RETURNING member_id
+                    """,
+                    (password_hash, normalized_member_id),
+                )
+            elif has_password_column:
                 cur.execute(
                     """
                     UPDATE member_tb
