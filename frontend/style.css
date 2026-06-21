@@ -1036,6 +1036,11 @@ body[data-page="ranking"] .nav-btn:hover {
   gap: 20px;
 }
 
+.ranking-content.ranking-empty-content {
+  grid-template-rows: auto auto;
+  align-content: start;
+}
+
 .mock-grading-loading[hidden] {
   display: none;
 }
@@ -1068,6 +1073,10 @@ body[data-page="ranking"] .nav-btn:hover {
   align-items: stretch;
 }
 
+.ranking-dashboard[hidden] {
+  display: none;
+}
+
 .ranking-card {
   display: grid;
   gap: 18px;
@@ -1086,7 +1095,7 @@ body[data-page="ranking"] .nav-btn:hover {
 .ranking-table-card {
   grid-row: span 2;
   grid-template-rows: auto auto 1fr;
-  min-height: 1006px;
+  min-height: 0;
 }
 
 .ranking-card-head {
@@ -1191,6 +1200,25 @@ body[data-page="ranking"] .nav-btn:hover {
   gap: 28px;
   min-height: 178px;
   padding: 24px 34px;
+}
+
+.ranking-summary-card.ranking-empty-card {
+  grid-template-columns: 1fr;
+  place-items: center;
+}
+
+.ranking-dashboard .ranking-goal-card.ranking-empty-card {
+  min-height: 340px;
+  align-content: center;
+  justify-items: center;
+}
+
+.ranking-empty-message {
+  margin: 0;
+  color: #64748b;
+  font-size: 1rem;
+  font-weight: 700;
+  text-align: center;
 }
 
 .ranking-current-rank,
@@ -8838,6 +8866,10 @@ body[data-page="ai-recommend"] .ai-pool-list {
 }
 
 .ai-pool-list[hidden] {
+  display: none;
+}
+
+.ai-pool-header[hidden] {
   display: none;
 }
 

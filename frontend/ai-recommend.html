@@ -34,13 +34,13 @@
         <p>오답 이력을 분석해 약점 영역 문제를 최대 5개 준비합니다.</p>
 
         <!-- 풀 상태 헤더 -->
-        <div class="ai-pool-header is-pending">
+        <div class="ai-pool-header" hidden>
           <div id="aiPoolStatusMsg" class="ai-pool-status-msg"></div>
         </div>
       </div>
 
       <!-- 풀 카드 목록 (JS가 동적으로 채움) -->
-      <div class="ai-pool-list" id="aiPoolList" aria-live="polite"></div>
+      <div class="ai-pool-list" id="aiPoolList" aria-live="polite" hidden></div>
 
       <!-- 숨겨진 레거시 IDs (state.js 참조용, 실제 사용 안 함) -->
       <div hidden>

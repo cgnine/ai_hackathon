@@ -421,7 +421,8 @@
         commentCard.querySelectorAll("p").forEach((row) => row.remove());
         commentCard.querySelector(".ai-inline-loading")?.remove();
         const image = commentCard.querySelector(".subject-comment-image");
-        const text = String(comment || `${subject} 과목의 강점은 유지하고 취약 영역은 쉬운 문제부터 다시 점검해 보세요. 꾸준히 이어가면 다음 점수에서 변화를 만들 수 있어요.`).trim();
+        const text = String(comment || "").trim();
+        if (!text) return;
         const paragraph = document.createElement("p");
         paragraph.textContent = text;
         if (image) {
@@ -435,6 +436,7 @@
         if (!commentCard) return;
         commentCard.querySelector(".ai-inline-loading")?.remove();
         if (!isLoading) return;
+        commentCard.querySelectorAll("p").forEach((row) => row.remove());
         const loading = document.createElement("div");
         const spinner = document.createElement("span");
         const text = document.createElement("span");
@@ -478,6 +480,9 @@
           })
           .catch(() => {
             setSubjectAiCommentLoading(false);
+            if (activeSubjectCode === subjectCode) {
+              renderAiComment("AI 코멘트를 불러오지 못했습니다.", subject);
+            }
           })
           .finally(() => {
             subjectCommentaryRequests.delete(subjectCode);
@@ -495,14 +500,17 @@
         const rate = link.dataset.rate || score;
         const average = link.dataset.average || "76";
         const percentile = link.dataset.percentile || "15";
-        const examCount = link.dataset.examCount || "8";
-        const gradeBadge = link.dataset.gradeBadge || "우수";
-        const summaryTitle = link.dataset.summaryTitle || `${subject} 역량이 매우 우수해요!`;
+        const examCount = link.dataset.examCount || "0";
+        const hasExamHistory = Number(examCount) > 0;
+        const gradeBadge = hasExamHistory ? (link.dataset.gradeBadge || "-") : "응시 내역 없음";
+        const summaryTitle = hasExamHistory
+          ? (link.dataset.summaryTitle || `${subject} 역량 분석 결과입니다.`)
+          : "응시 내역이 없습니다.";
         subjectTexts.forEach((el) => { el.textContent = subject; });
         if (scoreText) scoreText.textContent = score;
         if (rateText) rateText.textContent = rate;
         if (averageText) averageText.textContent = `${average}점`;
-        if (percentileText) percentileText.textContent = `상위 ${percentile}%`;
+        if (percentileText) percentileText.textContent = hasExamHistory ? `상위 ${percentile}%` : "-";
         if (examCountText) examCountText.textContent = `${examCount}회`;
         if (gradeBadgeText) gradeBadgeText.textContent = gradeBadge;
         if (summaryTitleText) summaryTitleText.textContent = summaryTitle;
@@ -511,11 +519,15 @@
         renderTrend(modalData.trend || []);
         renderUnitList(strongList, modalData.strongUnits || []);
         renderUnitList(weakList, modalData.weakUnits || []);
-        renderAiComment(modalData.comment, subject);
+        renderAiComment("", subject);
         modal.classList.add("is-open");
         modal.setAttribute("aria-hidden", "false");
         document.body.classList.add("modal-open");
-        refreshSubjectAiComment(subjectCode, subject);
+        if (hasExamHistory) {
+          refreshSubjectAiComment(subjectCode, subject);
+        } else {
+          renderAiComment("응시 내역이 없습니다.", subject);
+        }
       }
 
       function closeSubjectModal() {

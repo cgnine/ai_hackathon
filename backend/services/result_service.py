@@ -2573,6 +2573,8 @@ def get_analysis_subject_commentary(member_id: str, subject_code: str) -> dict[s
     )
     if not subject:
         raise HTTPException(status_code=404, detail="Subject analysis not found")
+    if int(subject.get("answered") or 0) <= 0:
+        raise HTTPException(status_code=422, detail="NO_HISTORY")
 
     modal = subject.get("modal") if isinstance(subject.get("modal"), dict) else {}
     strengths = [dict(item) for item in modal.get("strongUnits", []) if isinstance(item, dict)]

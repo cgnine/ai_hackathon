@@ -15,8 +15,7 @@ let mainRankingResumeTimer = null;
 let mainRankingAutoRollInitialized = false;
 let latestRankingGoal = null;
 let rankingGoalCommentaryRequest = null;
-const RANKING_PAGE_SIZE = 17;
-const RANKING_MAX_ITEMS = 50;
+const RANKING_MAX_ITEMS = 15;
 const MAIN_RANKING_PAGE_SIZE = 5;
 const MAIN_RANKING_MAX_ITEMS = 10;
 const MAIN_RANKING_AUTO_ROLL_MS = 4500;
@@ -56,8 +55,8 @@ function renderMonthlyRanking(items) {
   const isRankingPage = pageType === "ranking";
   const isMainPage = pageType === "main";
   const maxItems = isRankingPage ? RANKING_MAX_ITEMS : MAIN_RANKING_MAX_ITEMS;
-  const pageSize = isRankingPage ? RANKING_PAGE_SIZE : MAIN_RANKING_PAGE_SIZE;
-  const isPagedRanking = isRankingPage || isMainPage;
+  const pageSize = isRankingPage ? RANKING_MAX_ITEMS : MAIN_RANKING_PAGE_SIZE;
+  const isPagedRanking = isMainPage;
   monthlyRankingItems = Array.isArray(items) ? items.slice(0, maxItems) : [];
   const pageCount = isPagedRanking ? Math.max(1, Math.ceil(maxItems / pageSize)) : 1;
   const safePage = Math.max(1, Math.min(monthlyRankingPage, pageCount));
@@ -97,28 +96,6 @@ function renderMonthlyRanking(items) {
   });
 
   renderTopRankingPodium(items);
-  renderRankingPagination();
-}
-
-function renderRankingPagination() {
-  const pagination = document.getElementById("rankingPagination");
-  if (!pagination) return;
-
-  pagination.replaceChildren();
-  const pageCount = Math.ceil(RANKING_MAX_ITEMS / RANKING_PAGE_SIZE);
-  for (let page = 1; page <= pageCount; page += 1) {
-    const button = document.createElement("button");
-    button.type = "button";
-    button.textContent = page;
-    button.classList.toggle("active", page === monthlyRankingPage);
-    button.setAttribute("aria-label", `${page}페이지`);
-    button.setAttribute("aria-current", page === monthlyRankingPage ? "page" : "false");
-    button.addEventListener("click", () => {
-      monthlyRankingPage = page;
-      renderMonthlyRanking(monthlyRankingItems);
-    });
-    pagination.appendChild(button);
-  }
 }
 
 function pageCountForMainRanking() {
@@ -435,8 +412,8 @@ function renderRankingLearningPattern(pattern) {
   const list = document.getElementById("rankingLearningList");
   if (!list) return;
 
-  const recommendations = Array.isArray(pattern.recommendations) ? pattern.recommendations.slice(0, 4) : [];
-  if (recommendations.length === 4) {
+  const recommendations = Array.isArray(pattern.recommendations) ? pattern.recommendations.slice(0, 3) : [];
+  if (recommendations.length === 3) {
     list.replaceChildren();
     recommendations.forEach((recommendation) => {
       const row = document.createElement("li");
@@ -457,8 +434,7 @@ function renderRankingLearningPattern(pattern) {
   const items = [
     `상위권 평균 ${formatRankingNumber(pattern.avgExamCount)}회 응시`,
     `평균 ${formatRankingNumber(pattern.avgSubjectCount)}개 과목 학습`,
-    `실무형 문제 비중 ${formatRankingNumber(pattern.avgPracticalRate)}%`,
-    `${pattern.weakSubject || "취약 과목"} 집중 보완`
+    `실무형 문제 비중 ${formatRankingNumber(pattern.avgPracticalRate)}%`
   ];
 
   list.replaceChildren();
@@ -503,6 +479,25 @@ function renderRankingGoal(goal) {
   renderRankingRival(goal.rival);
   renderRankingStrengthKeywords(goal.strengthKeywords);
   renderRankingLearningPattern(goal.learningPattern);
+}
+
+function renderRankingGoalEmpty(message, hideDashboard = false) {
+  const emptyMessage = String(message || "응시 내역이 없습니다.");
+  const summaryCard = document.querySelector(".ranking-summary-card");
+  const goalCard = document.querySelector(".ranking-goal-card");
+  const dashboard = document.querySelector(".ranking-dashboard");
+  const content = document.getElementById("rankingContent");
+  const cards = hideDashboard ? [summaryCard] : [summaryCard, goalCard];
+  if (dashboard) dashboard.hidden = hideDashboard;
+  if (content) content.classList.toggle("ranking-empty-content", hideDashboard);
+  cards.forEach((card) => {
+    if (!card) return;
+    const empty = document.createElement("p");
+    empty.className = "ranking-empty-message";
+    empty.textContent = emptyMessage;
+    card.replaceChildren(empty);
+    card.classList.add("ranking-empty-card");
+  });
 }
 
 function createRankingInlineLoading(message) {
@@ -607,12 +602,16 @@ async function loadRankingGoal() {
 
   try {
     const response = await fetch(`${API_BASE}/results/ranking/goal?member_id=${encodeURIComponent(memberId)}`);
+    if (response.status === 404) {
+      renderRankingGoalEmpty("응시 내역이 없습니다.", true);
+      return;
+    }
     if (!response.ok) throw new Error(`HTTP ${response.status}`);
     const data = await response.json();
     renderRankingGoal(data);
     refreshRankingGoalCommentary();
   } catch {
-    // Keep the static fallback values when the member has no ranking data yet.
+    renderRankingGoalEmpty("랭킹 정보를 불러오지 못했습니다.");
   }
 }
 

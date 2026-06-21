@@ -59,9 +59,15 @@ function setPoolStatus(text) {
   if (!el) return;
   const message = String(text || "").trim();
   el.textContent = message;
-  el.closest(".ai-pool-header")?.classList.toggle("is-pending", !message);
+  const header = el.closest(".ai-pool-header");
+  if (header) {
+    header.hidden = !message;
+    header.classList.toggle("is-pending", !message);
+  }
   const list = document.getElementById("aiPoolList");
-  if (list) list.hidden = message === "생성 가능한 추천 문제가 없습니다.";
+  if (list) {
+    list.hidden = !message || message === "생성 가능한 추천 문제가 없습니다.";
+  }
 }
 
 function recommendErrorMessage(detail) {
