@@ -133,7 +133,7 @@
       position: absolute;
       inset: 0;
       z-index: -1;
-      background: url("assets/brand/main-hero.png") right clamp(18px, 6vw, 86px) center / min(720px, 52vw) auto no-repeat;
+      background: url("assets/brand/main-hero.png") right clamp(14px, 5vw, 72px) center / min(780px, 56vw) auto no-repeat;
       opacity: 0.15;
       pointer-events: none;
     }
@@ -146,7 +146,7 @@
 
     .hero-main {
       display: grid;
-      grid-template-columns: minmax(0, 1fr) minmax(360px, 500px);
+      grid-template-columns: minmax(0, 1fr) minmax(440px, 560px);
       gap: clamp(26px, 5vw, 56px);
       align-items: center;
     }
@@ -258,13 +258,13 @@
 
     .hero-ranking {
       display: grid;
-      gap: 18px;
-      width: min(390px, 100%);
+      gap: 20px;
+      width: min(470px, 100%);
       justify-self: center;
       align-self: center;
       position: relative;
       z-index: 1;
-      padding: 24px;
+      padding: 30px;
       border: 1px solid rgba(255, 255, 255, 0.76);
       border-radius: 8px;
       background: rgba(255, 255, 255, 0.9);
@@ -322,27 +322,27 @@
 
     .hero-ranking ol {
       display: grid;
-      gap: 11px;
+      gap: 13px;
       list-style: none;
     }
 
     .hero-ranking li {
       display: grid;
-      grid-template-columns: 34px minmax(0, 1fr) 64px;
-      gap: 9px;
+      grid-template-columns: 40px minmax(0, 1fr) 76px;
+      gap: 12px;
       align-items: center;
-      min-height: 42px;
+      min-height: 48px;
     }
 
     .hero-ranking b {
       display: inline-grid;
       place-items: center;
-      width: 30px;
-      height: 30px;
+      width: 34px;
+      height: 34px;
       border-radius: 8px;
       background: #111827;
       color: #fff;
-      font-size: 0.86rem;
+      font-size: 0.92rem;
     }
 
     .hero-ranking li:first-child b {
@@ -359,7 +359,7 @@
     .hero-ranking p {
       min-width: 0;
       color: #374151;
-      font-size: 0.96rem;
+      font-size: 1.02rem;
       font-weight: 800;
       white-space: nowrap;
       overflow: hidden;
@@ -399,7 +399,7 @@
     .hero-ranking .ranking-name {
       min-width: 0;
       color: #374151;
-      font-size: 0.96rem;
+      font-size: 1.02rem;
       font-weight: 900;
       white-space: nowrap;
       overflow: hidden;
@@ -432,7 +432,7 @@
     .hero-ranking strong {
       justify-self: end;
       color: #111827;
-      font-size: 0.96rem;
+      font-size: 1.02rem;
       text-align: right;
       white-space: nowrap;
     }
@@ -478,6 +478,12 @@
       font-size: clamp(2rem, 4vw, 3.8rem);
       font-weight: 900;
       line-height: 1.04;
+    }
+
+    #flowTitle {
+      width: 100%;
+      font-size: clamp(1.8rem, 3.2vw, 3.2rem);
+      white-space: nowrap;
     }
 
     .section-head p {
@@ -677,6 +683,10 @@
 
       .hero-title {
         font-size: 2.84rem;
+      }
+
+      #flowTitle {
+        font-size: 1.18rem;
       }
 
       .hero::after {
