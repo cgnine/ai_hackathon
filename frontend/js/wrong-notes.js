@@ -308,7 +308,7 @@ function setSelectedWrongSubjectTitle(title) {
   const icon = document.createElement("img");
   const label = document.createElement("span");
   icon.className = "wrong-round-title-icon";
-  icon.src = "assets/subjects/wrong-round-title-ui23.png";
+  icon.src = "assets/subjects/wrong-round-title-transparent.png";
   icon.alt = "";
   label.className = "wrong-round-title-label";
   label.textContent = title;

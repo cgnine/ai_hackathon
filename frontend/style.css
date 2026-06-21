@@ -4047,17 +4047,20 @@ body[data-page="exam-history"] .pagination {
 
 .wrong-round-title-icon {
   display: inline-block;
-  width: 34px;
-  height: 34px;
+  width: clamp(128px, 15vw, 176px);
+  height: auto;
+  aspect-ratio: 855 / 363;
   object-fit: contain;
+  border-radius: 4px;
   vertical-align: middle;
 }
 
-.wrong-round-title-label {
+.wrong-round-head .wrong-round-title-label {
   display: inline-block;
   color: #071341;
-  font-size: 1.14rem;
-  font-weight: 800;
+  font-size: clamp(1.35rem, 2vw, 1.65rem);
+  font-weight: 400;
+  line-height: 1.2;
   vertical-align: middle;
 }
 
@@ -4260,7 +4263,7 @@ body[data-page="exam-history"] .pagination {
 
 .wrong-set-card {
   display: grid;
-  grid-template-columns: minmax(220px, 1.35fr) minmax(110px, 0.75fr) minmax(96px, 0.65fr) minmax(96px, 0.65fr) minmax(128px, 0.68fr);
+  grid-template-columns: minmax(220px, 1.35fr) minmax(110px, 0.75fr) minmax(96px, 0.65fr) minmax(96px, 0.65fr) minmax(168px, 0.82fr);
   width: 100%;
   min-height: 86px;
   align-items: center;
@@ -4386,10 +4389,10 @@ body[data-page="exam-history"] .pagination {
 .wrong-set-action-cell {
   display: flex;
   align-items: center;
-  gap: 6px;
-  justify-content: center;
+  gap: 24px;
+  justify-content: space-between;
   justify-self: stretch;
-  min-width: 128px;
+  min-width: 168px;
 }
 
 .wrong-set-action-cell span {
@@ -8357,24 +8360,14 @@ body.modal-open {
   letter-spacing: -0.02em;
 }
 
-.subject-modal-card h3::before {
+.subject-modal-card h3 .analysis-warning.subject-section-icon {
   display: inline-grid !important;
   flex: 0 0 18px;
-  width: 18px !important;
-  height: 17px !important;
+  width: 18px;
+  height: 17px;
   place-items: center;
-  clip-path: polygon(50% 0, 100% 90%, 0 90%) !important;
-  background: var(--yellow) !important;
-  color: #ffffff !important;
-  font-size: 0.6rem !important;
-  font-weight: 700 !important;
-  line-height: 1 !important;
-  padding-top: 1px;
-  content: "!" !important;
-}
-
-.subject-section-icon {
-  display: none !important;
+  background: var(--yellow);
+  color: #ffffff;
 }
 
 .subject-score-detail {
@@ -8630,7 +8623,7 @@ body.modal-open {
   }
 
   .wrong-set-action-cell {
-    justify-content: flex-end;
+    justify-content: space-between;
     justify-self: stretch;
     min-width: 0;
   }
