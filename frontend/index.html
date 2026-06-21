@@ -146,10 +146,26 @@
     }
 
     .hero-kicker {
-      color: var(--yellow-deep);
-      font-size: clamp(0.9rem, 1vw, 1rem);
+      margin-top: 18px;
+      color: #111827;
+      font-size: clamp(1.18rem, 1.7vw, 1.65rem);
       font-weight: 900;
       line-height: 1.35;
+    }
+
+    .hero-kicker span {
+      display: block;
+    }
+
+    .hero-kicker .kb {
+      display: inline;
+      color: var(--yellow-deep);
+    }
+
+    .hero-kicker .ai {
+      display: inline;
+      color: var(--yellow-deep);
+      font-size: 1.12em;
     }
 
     .hero-title {
@@ -746,14 +762,14 @@
       <div class="demo-inner hero-inner">
         <div class="hero-main">
           <div>
-            <p class="hero-kicker">AI 기반 개발자 역량진단</p>
             <h1 class="hero-title" id="demoHeroTitle">
               <span>WE</span>
               <span><span class="typing-word" id="heroTypingWord">MAKE</span></span>
               <mark>GROWTH</mark>
             </h1>
-            <p class="hero-copy">
-              개발자 역량평가 대비를 위한 실전 CBT, 오답 복습, AI 취약점 분석, 맞춤 학습 리포트.
+            <p class="hero-kicker">
+              <span><span class="kb">KB</span>금융그룹을 위한</span>
+              <span><span class="ai">AI</span> 기반 개발자 역량진단</span>
             </p>
             <div class="hero-actions">
               <a class="demo-button" href="login.html">시작하기</a>
