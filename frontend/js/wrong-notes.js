@@ -432,6 +432,7 @@ function createWrongSetCard(selectedGroup, roundGroup) {
   const rateCell = document.createElement("div");
   const wrongCell = document.createElement("div");
   const actionCell = document.createElement("div");
+  const actionLabel = document.createElement("small");
   const retry = document.createElement("span");
   const deleteButton = document.createElement("button");
   const totalCount = roundGroup.totalCount || roundGroup.total || roundGroup.notes.length;
@@ -458,16 +459,18 @@ function createWrongSetCard(selectedGroup, roundGroup) {
   wrongCell.className = "wrong-set-metric wrong";
   wrongCell.innerHTML = `<small>오답</small><strong><span>${wrongCount}</span>문항</strong>`;
   actionCell.className = "wrong-set-action-cell";
+  actionLabel.textContent = "오답노트";
+  retry.className = "wrong-set-retry-label";
   retry.textContent = "다시 풀기";
   deleteButton.type = "button";
   deleteButton.className = "wrong-set-delete-btn";
   deleteButton.setAttribute("aria-label", `${roundGroup.roundTitle} 오답노트 삭제`);
-  deleteButton.textContent = "×";
+  deleteButton.textContent = "삭제";
   deleteButton.addEventListener("click", (event) => {
     event.stopPropagation();
     deleteWrongReviewSet(selectedGroup, roundGroup);
   });
-  actionCell.append(retry, deleteButton);
+  actionCell.append(actionLabel, retry, deleteButton);
 
   button.append(dateCell, roundCell, rateCell, wrongCell, actionCell);
   button.addEventListener("click", () => startWrongReviewSet(selectedGroup, roundGroup));
