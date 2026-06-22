@@ -41,7 +41,7 @@ function initMobileMenu() {
   button.setAttribute("aria-label", "메뉴 열기");
   button.setAttribute("aria-expanded", "false");
   button.innerHTML = "<span></span><span></span><span></span>";
-  memberLabel.className = "mobile-member-name";
+  memberLabel.className = "mobile-menu-member";
   memberLabel.textContent = `${currentMemberName() || state.profileName || "응시자"}님`;
 
   overlay.className = "mobile-menu-overlay";
@@ -67,6 +67,7 @@ function initMobileMenu() {
     }
   });
   overlay.addEventListener("click", closeMenu);
+  nav.appendChild(memberLabel);
   mobileItems.forEach((item) => {
     const link = document.createElement("a");
     link.className = "nav-btn mobile-nav-item";
@@ -88,7 +89,6 @@ function initMobileMenu() {
     if (event.key === "Escape") closeMenu();
   });
 
-  topbar.insertBefore(memberLabel, nav);
   topbar.insertBefore(button, nav);
   document.body.appendChild(overlay);
 }
