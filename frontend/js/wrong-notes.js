@@ -199,7 +199,9 @@ function renderWrongNotes() {
     card.type = "button";
     card.className = `subject-card wrong-subject-card ${visual.className}`;
     card.style.setProperty("--wrong-card-accent", visual.color);
-    if (selectedGroup && String(group.subjectId || "").toUpperCase() === selectedSubject.id) card.classList.add("active");
+    card.style.setProperty("--wrong-card-strong", visual.strongColor);
+    const isSelected = Boolean(selectedGroup && String(group.subjectId || "").toUpperCase() === selectedSubject.id);
+    if (isSelected) card.classList.add("active");
     card.innerHTML = `
       <span class="wrong-subject-visual" aria-hidden="true">
         <img class="wrong-subject-character" src="${characterImages.defaultSrc}" alt="" data-default-src="${characterImages.defaultSrc}" ${characterImages.hoverSrc ? `data-hover-src="${characterImages.hoverSrc}"` : ""} />
@@ -211,18 +213,24 @@ function renderWrongNotes() {
       </span>
     `;
     const character = card.querySelector(".wrong-subject-character");
+    const usesMobileSelectedImage = () => card.classList.contains("active") && window.matchMedia("(max-width: 700px)").matches;
+    const restoreCharacterImage = () => {
+      if (!character) return;
+      character.src = usesMobileSelectedImage() && character.dataset.hoverSrc
+        ? character.dataset.hoverSrc
+        : character.dataset.defaultSrc;
+    };
+    if (isSelected && character?.dataset.hoverSrc && window.matchMedia("(max-width: 700px)").matches) {
+      character.src = character.dataset.hoverSrc;
+    }
     card.addEventListener("mouseenter", () => {
       if (character?.dataset.hoverSrc) character.src = character.dataset.hoverSrc;
     });
-    card.addEventListener("mouseleave", () => {
-      if (character?.dataset.defaultSrc) character.src = character.dataset.defaultSrc;
-    });
+    card.addEventListener("mouseleave", restoreCharacterImage);
     card.addEventListener("focus", () => {
       if (character?.dataset.hoverSrc) character.src = character.dataset.hoverSrc;
     });
-    card.addEventListener("blur", () => {
-      if (character?.dataset.defaultSrc) character.src = character.dataset.defaultSrc;
-    });
+    card.addEventListener("blur", restoreCharacterImage);
     card.addEventListener("click", () => {
       state.wrongSubjectId = subject.id;
       state.wrongOpenDateKey = null;
@@ -368,22 +376,27 @@ function getWrongSubjectVisual(subject) {
   const icons = {
     SW: {
       color: "#9fb8f4",
+      strongColor: "#4167b1",
       className: "wrong-theme-sw"
     },
     CD: {
       color: "#a7d9b8",
+      strongColor: "#3b8b58",
       className: "wrong-theme-cd"
     },
     CA: {
       color: "#c7b7f4",
+      strongColor: "#6f55bd",
       className: "wrong-theme-ca"
     },
     DE: {
       color: "#f4c98b",
+      strongColor: "#b56d0a",
       className: "wrong-theme-de"
     },
     AI: {
       color: "#d9a0c2",
+      strongColor: "#9d3c78",
       className: "wrong-theme-ai"
     }
   };
