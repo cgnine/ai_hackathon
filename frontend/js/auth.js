@@ -148,6 +148,16 @@ function setResetPasswordMessage(message, isError = false) {
   els.resetPasswordMessage.classList.toggle("error", isError);
 }
 
+function bindAuthHomeLink() {
+  const homeLink = document.querySelector(".auth-logo-link");
+  if (!homeLink || homeLink.dataset.homeBound === "true") return;
+  homeLink.dataset.homeBound = "true";
+  homeLink.addEventListener("click", (event) => {
+    event.preventDefault();
+    window.location.replace(new URL("index.html", document.baseURI).href);
+  });
+}
+
 function normalizeRequestError(error, fallbackMessage) {
   if (error instanceof TypeError) {
     return "서버에 연결할 수 없습니다. 백엔드가 실행 중인지 확인해주세요.";
@@ -336,6 +346,7 @@ async function submitResetPassword(event) {
 
 function initLoginPage() {
   if (!els.loginForm) return;
+  bindAuthHomeLink();
   const memberId = currentMemberId();
   if (memberId) {
     window.location.href = PAGE_URLS.subjects;
@@ -365,6 +376,7 @@ function initLoginPage() {
 
 function initSignupPage() {
   if (!els.signupForm) return;
+  bindAuthHomeLink();
   const memberId = currentMemberId();
   if (memberId) {
     window.location.href = PAGE_URLS.subjects;
@@ -389,7 +401,16 @@ function initSignupPage() {
 
 function initResetPasswordPage() {
   if (!els.resetPasswordForm) return;
+  bindAuthHomeLink();
   clearAuthSession();
+
+  const returnLoginLink = document.getElementById("resetReturnLoginLink");
+  const mobileQuery = window.matchMedia("(max-width: 720px)");
+  const syncReturnLoginLink = () => {
+    if (returnLoginLink) returnLoginLink.href = mobileQuery.matches ? "login.html" : "index.html";
+  };
+  syncReturnLoginLink();
+  mobileQuery.addEventListener?.("change", syncReturnLoginLink);
 
   const prefill = readResetPasswordPrefill();
   if (prefill?.memberId && els.resetMemberIdInput) {

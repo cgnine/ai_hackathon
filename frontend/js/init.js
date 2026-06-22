@@ -30,9 +30,9 @@ function initMobileMenu() {
     { label: "시험응시", href: PAGE_URLS.profile },
     { label: "오답노트", href: PAGE_URLS.wrong },
     { label: "AI 맞춤형 추천문제", href: PAGE_URLS.aiRecommend },
-    { label: "AI랭킹", href: PAGE_URLS.ranking },
     { label: "응시내역", href: PAGE_URLS.examHistory },
     { label: "종합평가", href: PAGE_URLS.analysis },
+    { label: "AI 랭킹", href: PAGE_URLS.ranking },
   ];
 
   button.type = "button";
