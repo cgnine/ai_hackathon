@@ -2,6 +2,29 @@ const AUTH_SESSION_KEY = "kbCbtAuthSession";
 const AUTH_TTL_MS = 12 * 60 * 60 * 1000;
 const SIGNUP_PREFILL_KEY = "kbCbtSignupPrefill";
 const RESET_PASSWORD_PREFILL_KEY = "kbCbtResetPasswordPrefill";
+const LOGIN_RETURN_PATH_KEY = "kbCbtLoginReturnPath";
+const LOGIN_RETURN_PATHS = new Set([
+  "profile.html",
+  "subjects.html",
+  "wrong.html",
+  "ai-recommend.html",
+  "ranking.html",
+  "history.html",
+  "analysis.html"
+]);
+
+function requestedLoginDestination() {
+  const queryPath = new URLSearchParams(window.location.search).get("next") || "";
+  const savedPath = sessionStorage.getItem(LOGIN_RETURN_PATH_KEY) || "";
+  const destination = queryPath || savedPath;
+  return LOGIN_RETURN_PATHS.has(destination) ? destination : PAGE_URLS.subjects;
+}
+
+function consumeLoginDestination() {
+  const destination = requestedLoginDestination();
+  sessionStorage.removeItem(LOGIN_RETURN_PATH_KEY);
+  return destination;
+}
 
 function readAuthSession() {
   try {
@@ -217,7 +240,7 @@ async function submitLogin(event) {
     clearSignupPrefill();
     clearResetPasswordPrefill();
     saveAuthSession(data.member_id, data.member_name);
-    window.location.href = PAGE_URLS.subjects;
+    window.location.href = consumeLoginDestination();
   } catch (error) {
     setLoginMessage(normalizeRequestError(error, "로그인에 실패했습니다."), true);
   } finally {
@@ -349,7 +372,7 @@ function initLoginPage() {
   bindAuthHomeLink();
   const memberId = currentMemberId();
   if (memberId) {
-    window.location.href = PAGE_URLS.subjects;
+    window.location.href = consumeLoginDestination();
     return;
   }
 
@@ -382,6 +405,12 @@ function initSignupPage() {
     window.location.href = PAGE_URLS.subjects;
     return;
   }
+
+  const returnLoginLink = document.getElementById("signupReturnLoginLink");
+  returnLoginLink?.addEventListener("click", (event) => {
+    event.preventDefault();
+    window.location.replace(`login.html?from=signup&refresh=${Date.now()}`);
+  });
 
   const prefill = readSignupPrefill();
   if (prefill?.memberId && els.signupMemberIdInput) {

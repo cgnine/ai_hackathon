@@ -11373,6 +11373,13 @@ body.demo-reference-layout .main-side-stack .main-feature-list p {
     background: rgba(255, 255, 255, 0.97);
   }
 
+  html:has(body:not(.demo-reference-layout):not(.login-body).mobile-menu-open),
+  body:not(.demo-reference-layout):not(.login-body).mobile-menu-open {
+    overflow: hidden;
+    overscroll-behavior: none;
+    touch-action: none;
+  }
+
   body:not(.demo-reference-layout):not(.login-body) .brand {
     max-width: calc(100% - 60px);
     flex: 1 1 auto;

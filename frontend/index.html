@@ -19,9 +19,9 @@
       <a class="nav-btn demo-mobile-nav-item" href="subjects.html">시험응시</a>
       <a class="nav-btn demo-mobile-nav-item" href="wrong.html">오답노트</a>
       <a class="nav-btn demo-mobile-nav-item" href="ai-recommend.html">AI 맞춤형 추천문제</a>
+      <a class="nav-btn demo-mobile-nav-item" href="ranking.html">AI 랭킹</a>
       <a class="nav-btn demo-mobile-nav-item" href="history.html">응시내역</a>
       <a class="nav-btn demo-mobile-nav-item" href="analysis.html">종합평가</a>
-      <a class="nav-btn demo-mobile-nav-item" href="ranking.html">AI 랭킹</a>
       <button class="nav-btn demo-mobile-nav-item demo-mobile-logout" id="demoMobileLogout" type="button" hidden>로그아웃</button>
     </nav>
     <button class="demo-mobile-menu-btn" id="demoMobileMenuBtn" type="button" aria-label="메뉴 열기"
@@ -208,6 +208,7 @@
       const loginLink = document.getElementById("demoMobileLogin");
       const logoutButton = document.getElementById("demoMobileLogout");
       const authSessionKey = "kbCbtAuthSession";
+      const loginReturnKey = "kbCbtLoginReturnPath";
       if (!button || !menu || !backdrop) return;
 
       const hasValidSession = () => {
@@ -236,11 +237,22 @@
 
       button.addEventListener("click", () => setMenuOpen(button.getAttribute("aria-expanded") !== "true"));
       backdrop.addEventListener("click", () => setMenuOpen(false));
-      menu.querySelectorAll("a").forEach((link) => link.addEventListener("click", () => setMenuOpen(false)));
+      menu.querySelectorAll("a").forEach((link) => link.addEventListener("click", (event) => {
+        setMenuOpen(false);
+        const isMobile = window.matchMedia("(max-width: 700px)").matches;
+        const isLoginLink = link === loginLink;
+        if (isLoginLink) sessionStorage.removeItem(loginReturnKey);
+        if (isMobile && !isLoginLink && !hasValidSession()) {
+          event.preventDefault();
+          const targetPath = new URL(link.href, window.location.href).pathname.split("/").pop();
+          sessionStorage.setItem(loginReturnKey, targetPath);
+          window.location.replace(`login.html?next=${encodeURIComponent(targetPath)}`);
+        }
+      }));
       logoutButton?.addEventListener("click", () => {
         localStorage.removeItem(authSessionKey);
         sessionStorage.removeItem(authSessionKey);
-        window.location.href = "demo.html";
+        window.location.href = "index.html";
       });
       document.addEventListener("keydown", (event) => {
         if (event.key === "Escape") setMenuOpen(false);

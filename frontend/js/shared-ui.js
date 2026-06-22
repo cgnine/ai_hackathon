@@ -1,5 +1,9 @@
 function shouldShowAnswerCheck(question, choiceNumber) {
-  return ["D150363", "D230251"].includes(String(currentMemberId() || "").trim().toUpperCase())
+  const memberId = String(currentMemberId() || "").trim().toUpperCase();
+  const isExistingAnswerMember = ["D150363", "D230251"].includes(memberId);
+  const isMockAnswerMember = document.body?.dataset.page === "mock"
+    && (memberId.startsWith("A") || memberId === "D170241");
+  return (isExistingAnswerMember || isMockAnswerMember)
     && Array.isArray(question.choices)
     && question.choices.length >= 4
     && Number(question.answer) === choiceNumber;
