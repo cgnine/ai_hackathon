@@ -240,7 +240,7 @@ async function submitLogin(event) {
     clearSignupPrefill();
     clearResetPasswordPrefill();
     saveAuthSession(data.member_id, data.member_name);
-    window.location.href = consumeLoginDestination();
+    window.location.replace(consumeLoginDestination());
   } catch (error) {
     setLoginMessage(normalizeRequestError(error, "로그인에 실패했습니다."), true);
   } finally {
@@ -372,7 +372,7 @@ function initLoginPage() {
   bindAuthHomeLink();
   const memberId = currentMemberId();
   if (memberId) {
-    window.location.href = consumeLoginDestination();
+    window.location.replace(consumeLoginDestination());
     return;
   }
 

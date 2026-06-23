@@ -239,7 +239,7 @@
       backdrop.addEventListener("click", () => setMenuOpen(false));
       menu.querySelectorAll("a").forEach((link) => link.addEventListener("click", (event) => {
         setMenuOpen(false);
-        const isMobile = window.matchMedia("(max-width: 700px)").matches;
+        const isMobile = window.matchMedia("(max-width: 980px)").matches;
         const isLoginLink = link === loginLink;
         if (isLoginLink) sessionStorage.removeItem(loginReturnKey);
         if (isMobile && !isLoginLink && !hasValidSession()) {
@@ -258,7 +258,7 @@
         if (event.key === "Escape") setMenuOpen(false);
       });
       window.addEventListener("resize", () => {
-        if (window.innerWidth > 700) setMenuOpen(false);
+        if (window.innerWidth > 980) setMenuOpen(false);
       });
       window.addEventListener("storage", syncAuthMenu);
       syncAuthMenu();
