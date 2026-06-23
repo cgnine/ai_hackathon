@@ -10807,6 +10807,7 @@ body.demo-reference-layout .demo-mobile-menu-backdrop {
 }
 
 body.demo-reference-layout .main-hero {
+  position: relative;
   grid-area: hero;
   width: 100%;
   max-width: none;
@@ -10826,6 +10827,43 @@ body.demo-reference-layout .main-hero-image {
   object-fit: cover;
   object-position: center;
   border-radius: inherit;
+}
+
+body.demo-reference-layout .main-hero-start-btn {
+  position: absolute;
+  right: clamp(14px, 4vw, 28px);
+  bottom: clamp(14px, 3.5vw, 28px);
+  z-index: 2;
+  display: inline-flex;
+  min-height: 42px;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 0 17px;
+  border: 1px solid rgba(130, 86, 0, 0.22);
+  border-radius: 999px;
+  background: linear-gradient(135deg, #ffe45c, #f4bd00);
+  color: #3f2d00;
+  font-size: 0.9rem;
+  font-weight: 800;
+  line-height: 1;
+  text-decoration: none;
+  box-shadow: 0 8px 20px rgba(91, 55, 0, 0.24), inset 0 1px 0 rgba(255, 255, 255, 0.72);
+  transition: transform 160ms ease, box-shadow 160ms ease, filter 160ms ease;
+}
+
+body.demo-reference-layout .main-hero-start-btn span {
+  font-size: 1.25rem;
+  font-weight: 500;
+  line-height: 0;
+}
+
+body.demo-reference-layout .main-hero-start-btn:hover,
+body.demo-reference-layout .main-hero-start-btn:focus-visible {
+  outline: none;
+  filter: brightness(1.03);
+  transform: translateY(-2px);
+  box-shadow: 0 10px 24px rgba(91, 55, 0, 0.28), inset 0 1px 0 rgba(255, 255, 255, 0.78);
 }
 
 body.demo-reference-layout .main-dashboard {
@@ -11891,6 +11929,29 @@ body.demo-reference-layout .main-side-stack .main-feature-list p {
     padding: 0 5px;
     font-size: 0.65rem;
     font-weight: 600;
+  }
+}
+
+/* Result score-and-comment headings on mobile. */
+@media (max-width: 700px) {
+  body[data-page="result"] .diagnosis-bar-head {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    justify-content: initial;
+    gap: 5px;
+  }
+
+  body[data-page="result"] .diagnosis-bar-head strong {
+    font-size: clamp(0.8rem, 3.5vw, 0.95rem);
+    white-space: nowrap;
+  }
+
+  body[data-page="result"] .diagnosis-bar-head span {
+    justify-self: start;
+    max-width: 100%;
+    font-size: clamp(0.54rem, 2.4vw, 0.7rem);
+    letter-spacing: -0.035em;
+    white-space: nowrap;
   }
 }
 

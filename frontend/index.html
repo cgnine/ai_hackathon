@@ -5,7 +5,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>KB 역량진단 모의고사</title>
-  <link rel="stylesheet" href="style.css?v=20260622-demo-mobile-auth" />
+  <link rel="stylesheet" href="style.css?v=20260623-main-start" />
 </head>
 
 <body data-page="main" class="main-stats-loading demo-reference-layout">
@@ -40,6 +40,7 @@
 
     <section class="main-hero" aria-label="KB 역량진단 메인">
       <img class="main-hero-image" src="assets/brand/main-hero.png" alt="KB 스타 마스터즈 역량평가" />
+      <a class="main-hero-start-btn" id="mainHeroStartBtn" href="subjects.html">시작하기 <span aria-hidden="true">›</span></a>
     </section>
 
     <section class="main-dashboard" aria-label="메인 현황">
@@ -207,6 +208,7 @@
       const backdrop = document.getElementById("demoMobileMenuBackdrop");
       const loginLink = document.getElementById("demoMobileLogin");
       const logoutButton = document.getElementById("demoMobileLogout");
+      const startButton = document.getElementById("mainHeroStartBtn");
       const authSessionKey = "kbCbtAuthSession";
       const loginReturnKey = "kbCbtLoginReturnPath";
       if (!button || !menu || !backdrop) return;
@@ -249,6 +251,12 @@
           window.location.replace(`login.html?next=${encodeURIComponent(targetPath)}`);
         }
       }));
+      startButton?.addEventListener("click", (event) => {
+        if (hasValidSession()) return;
+        event.preventDefault();
+        sessionStorage.setItem(loginReturnKey, "subjects.html");
+        window.location.href = "login.html?next=subjects.html";
+      });
       logoutButton?.addEventListener("click", () => {
         localStorage.removeItem(authSessionKey);
         sessionStorage.removeItem(authSessionKey);
