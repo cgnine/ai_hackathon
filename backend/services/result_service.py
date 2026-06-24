@@ -3651,11 +3651,11 @@ def get_ranking_goal(member_id: str) -> dict[str, Any]:
         for subject_row in subject_rows
     ]
     gap_score = float(row["gap_score"] or 0)
-    if gap_score == 0:
+    if int(row["my_rank"]) == 1:
         goal_coach_message = "현재 1위를 유지 중입니다."
         goal_actions = [
-            {"title": "현재 순위 유지 학습", "expected": "+0점 예상"},
-            {"title": "취약 과목 보완 학습", "expected": "+0점 예상"},
+            {"title": "현재 순위 유지 학습", "expected": "선두 유지"},
+            {"title": "취약 과목 보완 학습", "expected": "안정성 강화"},
         ]
     else:
         goal_coach_message = _fallback_ranking_goal_coach(
@@ -3785,7 +3785,7 @@ def get_ranking_goal_commentary(member_id: str) -> dict[str, Any]:
     } if learning_pattern else None
 
     gap_score = float(goal.get("gapScore") or 0)
-    if gap_score == 0:
+    if int(goal.get("myRank") or 0) == 1:
         goal_coach_message = goal.get("goalCoachMessage")
         goal_actions = goal.get("goalActions") or []
     else:

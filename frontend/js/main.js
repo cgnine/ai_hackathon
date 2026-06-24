@@ -332,7 +332,7 @@ function maskKoreanName(name) {
   return `${text[0]}○${text.slice(2)}`;
 }
 
-function renderRankingSubjectTargets(subjectTargets) {
+function renderRankingSubjectTargets(subjectTargets, isLeader = false) {
   const items = Array.isArray(subjectTargets) ? subjectTargets.slice(0, 2) : [];
   if (!items.length) return;
 
@@ -340,7 +340,10 @@ function renderRankingSubjectTargets(subjectTargets) {
   if (targetList) {
     const title = targetList.querySelector(":scope > span");
     targetList.replaceChildren();
-    if (title) targetList.appendChild(title);
+    if (title) {
+      title.textContent = isLeader ? "선두 유지 추천 과목" : "과목별 목표 점수";
+      targetList.appendChild(title);
+    }
 
     items.forEach((item) => {
       const row = document.createElement("p");
@@ -352,7 +355,9 @@ function renderRankingSubjectTargets(subjectTargets) {
 
       name.textContent = item.subjectCode || item.subjectName || "-";
       fill.style.width = `${targetScore}%`;
-      up.textContent = `+${formatRankingNumber(item.expectedUpScore)}점 필요`;
+      up.textContent = isLeader
+        ? `+${formatRankingNumber(item.expectedUpScore)}점 향상 목표`
+        : `+${formatRankingNumber(item.expectedUpScore)}점 필요`;
 
       bar.appendChild(fill);
       row.append(name, bar, up);
@@ -362,15 +367,25 @@ function renderRankingSubjectTargets(subjectTargets) {
 
 }
 
-function renderRankingGoalActions(actions, subjectTargets) {
+function renderRankingGoalActions(actions, subjectTargets, isLeader = false) {
   const recommendationList = document.getElementById("rankingSubjectRecommendations");
   if (!recommendationList) return;
 
+  const leaderItems = [
+    { title: "현재 순위 유지 학습", expected: "선두 유지" },
+    { title: "취약 과목 보완 학습", expected: "안정성 강화" }
+  ];
   const fallback = (Array.isArray(subjectTargets) ? subjectTargets.slice(0, 2) : []).map((item) => ({
     title: item.recommendTitle || `${item.subjectName || item.subjectCode || "과목"} 집중 학습`,
-    expected: `+${formatRankingNumber(item.expectedUpScore)}점 예상`
+    expected: isLeader
+      ? `+${formatRankingNumber(item.expectedUpScore)}점 향상 목표`
+      : `+${formatRankingNumber(item.expectedUpScore)}점 예상`
   }));
-  const items = Array.isArray(actions) && actions.length === 2 ? actions : fallback;
+  const items = isLeader
+    ? leaderItems
+    : Array.isArray(actions) && actions.length === 2
+      ? actions
+      : fallback;
   if (!items.length) return;
 
   recommendationList.replaceChildren();
@@ -530,6 +545,12 @@ function renderRankingGoal(goal) {
   const targetScore = formatRankingNumber(goal.targetScore);
   const gapScore = formatRankingNumber(goal.gapScore);
   const successRate = Number(goal.successRate) || 0;
+  const isLeader = myRank === 1;
+  const rivalRank = Number(goal.rival?.rivalRank) || 0;
+  const rivalScore = formatRankingNumber(goal.rival?.rivalScore);
+  const rivalGap = formatRankingNumber(goal.rival?.scoreGap);
+  const isSharedLeader = isLeader && rivalRank === 1 && Number(goal.rival?.scoreGap || 0) === 0;
+  document.body.classList.toggle("ranking-leader", isLeader);
 
   setRankingText("rankingMyRank", myRank);
   setRankingText("rankingChangeMyRank", myRank);
@@ -542,9 +563,42 @@ function renderRankingGoal(goal) {
   setRankingText("rankingGoalGapScore", gapScore);
   setRankingText("rankingGoalTargetRank", targetRank);
   setRankingText("rankingGoalGapScoreRing", gapScore);
+
+  const rankTransition = document.getElementById("rankingRankTransition");
+  const leaderStatus = document.getElementById("rankingLeaderStatus");
+  const changeDetail = document.getElementById("rankingChangeDetail");
+  if (rankTransition) rankTransition.hidden = isLeader;
+  if (changeDetail) changeDetail.hidden = isLeader;
+  if (leaderStatus) {
+    leaderStatus.hidden = !isLeader;
+    if (isLeader) leaderStatus.textContent = isSharedLeader ? "공동 선두 유지 중" : "선두 유지 중";
+  }
+
+  if (isLeader) {
+    setRankingText("rankingChangeLabel", "현재 순위 상태");
+    setRankingText("rankingGoalCardTitle", "AI 선두 유지 추천");
+    setRankingText("rankingGoalTargetScoreLabel", goal.rival ? "가장 가까운 경쟁자 점수" : "현재 1위 점수");
+    setRankingText("rankingGoalTargetScore", goal.rival ? rivalScore : myScore);
+    setRankingText("rankingGoalGapLabel", isSharedLeader ? "공동 선두" : "선두 격차");
+    setRankingText("rankingGoalGapScore", goal.rival ? rivalGap : 0);
+    setRankingText("rankingGoalRingLabel", isSharedLeader ? "현재 공동 선두" : "현재 선두");
+    const ringValue = document.getElementById("rankingGoalRingValue");
+    if (ringValue) {
+      if (goal.rival && !isSharedLeader) {
+        ringValue.replaceChildren(
+          document.createTextNode(`${rivalGap}점 앞서고`),
+          document.createElement("br"),
+          document.createTextNode("있어요")
+        );
+      } else {
+        ringValue.textContent = isSharedLeader ? "공동 1위 유지 중" : "1위 유지 중";
+      }
+    }
+  }
+
   if (goal.goalCoachMessage) setRankingText("rankingGoalCoach", goal.goalCoachMessage);
-  renderRankingSubjectTargets(goal.subjectTargets);
-  renderRankingGoalActions(goal.goalActions, goal.subjectTargets);
+  renderRankingSubjectTargets(goal.subjectTargets, isLeader);
+  renderRankingGoalActions(goal.goalActions, goal.subjectTargets, isLeader);
   renderRankingRival(goal.rival);
   renderRankingStrengthKeywords(goal.strengthKeywords);
   renderRankingLearningPattern(goal.learningPattern);
@@ -599,7 +653,11 @@ function applyRankingGoalCommentary(commentary) {
     setRankingText("rankingGoalCoach", commentary.goalCoachMessage);
   }
   if (Array.isArray(commentary.goalActions)) {
-    renderRankingGoalActions(commentary.goalActions, latestRankingGoal.subjectTargets);
+    renderRankingGoalActions(
+      commentary.goalActions,
+      latestRankingGoal.subjectTargets,
+      Number(latestRankingGoal.myRank) === 1
+    );
   }
   if (latestRankingGoal.rival && commentary.rivalCoachMessage) {
     latestRankingGoal.rival.rivalCoachMessage = commentary.rivalCoachMessage;

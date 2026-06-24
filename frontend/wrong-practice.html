@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>오답 다시 풀기 | KB 개발자 역량평가 CBT</title>
-  <link rel="stylesheet" href="style.css?v=20260622-mobile-header" />
+  <link rel="stylesheet" href="style.css?v=20260624-review-complete" />
 </head>
 <body data-page="wrong-practice">
   <header class="topbar">
@@ -75,15 +75,17 @@
 
       <article class="review-complete-panel" id="reviewCompletePanel" hidden>
         <div class="review-complete-visual">
-          <img src="assets/wrong-review-complete.png" alt="오답 리뷰 완료" />
-          <div class="review-complete-image-message">
-            <strong id="reviewCompleteTitle">다시 시작해도 괜찮아요!</strong>
-            <p id="reviewCompleteDescription">오답을 확인한 것만으로도 학습은 이미 시작됐어요.</p>
-          </div>
-          <div class="review-complete-score review-complete-image-score" id="reviewCompleteScore">
-            <strong id="reviewCompleteCorrect">0문항</strong>
-            <span aria-hidden="true">/</span>
-            <p>총 <strong id="reviewCompleteTotal">0문항</strong></p>
+          <img src="assets/wrong-review-complete-clean.png" alt="오답 리뷰 완료" />
+          <div class="review-complete-dynamic">
+            <div class="review-complete-image-message">
+              <strong id="reviewCompleteTitle">다시 시작해도 괜찮아요!</strong>
+              <p id="reviewCompleteDescription">오답을 확인한 것만으로도 학습은 이미 시작됐어요.</p>
+            </div>
+            <div class="review-complete-score review-complete-image-score" id="reviewCompleteScore">
+              <strong id="reviewCompleteCorrect">0문항</strong>
+              <span aria-hidden="true">/</span>
+              <p>총 <strong id="reviewCompleteTotal">0문항</strong></p>
+            </div>
           </div>
           <a class="review-complete-image-link back" id="reviewBackBtn" href="wrong.html">
             <span class="sr-only">오답노트로 돌아가기</span>
