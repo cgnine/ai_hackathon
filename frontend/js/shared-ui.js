@@ -1,6 +1,6 @@
 function shouldShowAnswerCheck(question, choiceNumber) {
   const memberId = String(currentMemberId() || "").trim().toUpperCase();
-  const isExistingAnswerMember = ["D150363", "D230251"].includes(memberId);
+  const isExistingAnswerMember = ["D150363", "D230251", "B249201", "A220495"].includes(memberId);
   const isMockAnswerMember = document.body?.dataset.page === "mock"
     && (memberId.startsWith("A") || memberId === "D170241");
   return (isExistingAnswerMember || isMockAnswerMember)

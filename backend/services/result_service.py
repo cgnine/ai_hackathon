@@ -2997,9 +2997,10 @@ def get_exam_history(
                     s.subject_code,
                     COALESCE(s.subject_name, s.subject_description, s.subject_code) AS subject_name,
                     COUNT(e.exam_id) AS exam_count
-                FROM exam_tb e
-                JOIN subject_tb s ON s.subject_code = e.subject_code
-                WHERE e.member_id = %s
+                FROM subject_tb s
+                LEFT JOIN exam_tb e
+                  ON e.subject_code = s.subject_code
+                 AND LOWER(e.member_id) = LOWER(%s)
                 GROUP BY s.subject_code, s.subject_name, s.subject_description
                 ORDER BY s.subject_code
                 """,

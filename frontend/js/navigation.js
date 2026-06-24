@@ -186,7 +186,7 @@ function renderMyExamHistory(items, selectedSubjectCode = "all", meta = {}) {
   if (!items.length) {
     els.myExamHistoryList.innerHTML = `
       <div class="my-history-empty">
-        <strong>응시내역이 없습니다.</strong>
+        <span class="history-empty-message">조회된 내역이 없습니다.</span>
         <p>시험을 응시하면 최근 결과가 여기에 표시됩니다.</p>
       </div>
     `;
@@ -486,7 +486,7 @@ function renderExamHistoryList(items = [], page = 1, pageSize = 8, meta = null) 
   if (pageItems.length === 0) {
     target.innerHTML = `
       <div class="my-history-empty">
-        <strong>응시내역이 없습니다.</strong>
+        <span class="history-empty-message">조회된 내역이 없습니다.</span>
       </div>
     `;
   } else {

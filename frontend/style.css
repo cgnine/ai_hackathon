@@ -3061,6 +3061,12 @@ body[data-page="my-info"] .screen-head,
   color: var(--ink);
 }
 
+.my-history-empty .history-empty-message {
+  color: var(--ink);
+  font-size: 0.92rem;
+  font-weight: 400;
+}
+
 .my-history-empty p {
   margin: 6px 0 0;
 }
