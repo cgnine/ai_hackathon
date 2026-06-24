@@ -209,7 +209,7 @@ const els = {
   myInfoMemberId: $("myInfoMemberId"),
   myInfoMetrics: $("myInfoMetrics"),
   myExamHistoryList: $("myExamHistoryList"),
-  myExamHistoryPagination: $("myExamHistoryPagination"),
+  myExamHistoryPagination: $("examHistoryPagination"),
   historySubjectTabs: $("historySubjectTabs"),
   radarChart: $("radarChart"),
   subjectBars: $("subjectBars"),

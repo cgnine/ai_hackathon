@@ -3037,17 +3037,14 @@ def get_exam_history(
                                 100,
                                 CEIL(
                                     (
-                                        SELECT COUNT(*)
-                                        FROM exam_scores x
-                                        WHERE x.subject_code = es.subject_code
-                                          AND x.score > es.score
+                                        RANK() OVER (
+                                            PARTITION BY es.subject_code
+                                            ORDER BY es.score DESC NULLS LAST
+                                        ) - 1
                                     ) * 100.0
                                     / NULLIF(
-                                        (
-                                            SELECT COUNT(*)
-                                            FROM exam_scores x
-                                            WHERE x.subject_code = es.subject_code
-                                              AND x.score IS NOT NULL
+                                        COUNT(es.score) OVER (
+                                            PARTITION BY es.subject_code
                                         ),
                                         0
                                     )

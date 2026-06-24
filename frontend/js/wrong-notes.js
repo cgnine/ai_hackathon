@@ -979,6 +979,14 @@ function renderWrongPractice() {
   showWrongPracticeScreen();
 }
 
+function gradeWrongReviewAnswer(note, answer) {
+  const question = note.question;
+  const correct = question.type === "coding"
+    ? evaluateCodingAnswer(question, answer)
+    : answer === question.answer;
+  return { selected: answer, correct };
+}
+
 function submitWrongPractice() {
   const note = state.reviewQuestion;
   const hasAnswer = typeof state.reviewAnswer === "string"
@@ -990,13 +998,7 @@ function submitWrongPractice() {
   }
 
   const question = note.question;
-  const correct = question.type === "coding"
-    ? evaluateCodingAnswer(question, state.reviewAnswer)
-    : state.reviewAnswer === question.answer;
-  const checkedAnswer = {
-    selected: state.reviewAnswer,
-    correct
-  };
+  const checkedAnswer = gradeWrongReviewAnswer(note, state.reviewAnswer);
   const set = activeWrongReviewSet();
   if (set) {
     set.answers[set.currentIndex] = state.reviewAnswer;
@@ -1060,6 +1062,13 @@ function moveWrongReview(delta) {
   if (delta > 0 && !hasAnswer) {
     showToast("먼저 답안을 선택하세요.");
     return;
+  }
+  if (delta > 0 && !set.checked[set.currentIndex]) {
+    set.answers[set.currentIndex] = state.reviewAnswer;
+    set.checked[set.currentIndex] = gradeWrongReviewAnswer(
+      set.notes[set.currentIndex],
+      state.reviewAnswer
+    );
   }
   const nextIndex = set.currentIndex + delta;
   if (nextIndex >= set.notes.length) {

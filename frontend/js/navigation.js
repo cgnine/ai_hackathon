@@ -143,7 +143,8 @@ function renderProfileButton() {
 const examHistoryState = {
   selectedSubjectCode: "all",
   page: 1,
-  pageSize: 10
+  pageSize: 8,
+  cache: new Map()
 };
 
 function renderHistorySubjectTabs(subjectFilters = [], total = 0, selectedSubjectCode = "all") {
@@ -251,6 +252,24 @@ function renderExamHistoryPagination(page, totalPages) {
   });
 }
 
+function applyMyExamHistoryData(data) {
+  const items = data.items || [];
+  state.attemptHistory = items;
+  state.examHistorySummary = data.summary || null;
+  state.examHistorySubjectId = examHistoryState.selectedSubjectCode === "all"
+    ? null
+    : examHistoryState.selectedSubjectCode;
+  saveState();
+  renderExamTabs(data.subjectFilters || []);
+  renderExamHistorySummary(items, data.summary || null);
+  renderExamHistoryList(items, data.page || examHistoryState.page, examHistoryState.pageSize, {
+    serverPage: true,
+    totalPages: data.totalPages || 1,
+    summary: data.summary || null
+  });
+  document.body.classList.add("history-ready");
+}
+
 async function loadMyExamHistory(page = examHistoryState.page, subjectCode = examHistoryState.selectedSubjectCode) {
   if (!els.myExamHistoryList) return;
 
@@ -263,36 +282,33 @@ async function loadMyExamHistory(page = examHistoryState.page, subjectCode = exa
 
   examHistoryState.page = Math.max(1, Number(page) || 1);
   examHistoryState.selectedSubjectCode = subjectCode || "all";
+  const cacheKey = `${memberId}:${examHistoryState.selectedSubjectCode}:${examHistoryState.page}`;
+  const cachedData = examHistoryState.cache.get(cacheKey);
+  if (cachedData) {
+    applyMyExamHistoryData(cachedData);
+    return;
+  }
   els.myExamHistoryList.innerHTML = `
     <div class="my-history-empty">
-      <strong>AI가 응시내역을 분석중입니다.</strong>
       <p>잠시만 기다려주십시오.</p>
     </div>
   `;
   if (els.myExamHistoryPagination) els.myExamHistoryPagination.innerHTML = "";
 
   try {
-    // Fetch a larger page to enable client-side subject filtering and paging
-    const response = await fetch(`${API_BASE}/results/history?member_id=${encodeURIComponent(memberId)}&limit=100`);
+    const params = new URLSearchParams({
+      member_id: memberId,
+      page: String(examHistoryState.page),
+      page_size: String(examHistoryState.pageSize)
+    });
+    if (examHistoryState.selectedSubjectCode !== "all") {
+      params.set("subject_code", examHistoryState.selectedSubjectCode);
+    }
+    const response = await fetch(`${API_BASE}/results/history?${params.toString()}`);
     if (!response.ok) throw new Error(`HTTP ${response.status}`);
     const data = await response.json();
-    const items = data.items || [];
-    // persist to state for client-side filtering/paging
-    state.attemptHistory = items;
-    state.examHistorySummary = data.summary || null;
-    saveState();
-    // ensure subjects are loaded so tabs show proper names
-    if (!Array.isArray(subjects) || subjects.length === 0) {
-      try {
-        await loadAvailableSubjects();
-      } catch (e) {
-        // ignore subject load errors, fallback to items
-      }
-    }
-    renderExamTabs((subjects || []).slice(0, 5));
-    renderExamHistorySummary(items, data.summary || null);
-    renderExamHistoryList(items, 1, 8);
-    document.body.classList.add("history-ready");
+    examHistoryState.cache.set(cacheKey, data);
+    applyMyExamHistoryData(data);
   } catch (error) {
     els.myExamHistoryList.innerHTML = `
       <div class="my-history-empty error">
@@ -338,11 +354,7 @@ function renderExamTabs(list) {
   allTab.style.color = '#374151';
   allTab.style.background = 'rgba(15,23,42,0.06)';
   allTab.addEventListener('click', () => {
-    state.examHistorySubjectId = null;
-    saveState();
-    container.querySelectorAll('.subject-tab').forEach((t) => t.classList.remove('active'));
-    allTab.classList.add('active');
-    renderExamHistoryList(state.attemptHistory || [], 1, 8);
+    loadMyExamHistory(1, "all");
   });
   container.appendChild(allTab);
 
@@ -372,14 +384,7 @@ function renderExamTabs(list) {
     }
 
     btn.addEventListener('click', () => {
-      state.examHistorySubjectId = code;
-      saveState();
-      // update active styles
-      container.querySelectorAll('.subject-tab').forEach((t) => t.classList.remove('active'));
-      btn.classList.add('active');
-      // active background tint (slightly stronger for visibility)
-      btn.style.background = hexToRgba(visual.color || '#60a5fa', 0.18);
-      renderExamHistoryList(state.attemptHistory || [], 1, 8);
+      loadMyExamHistory(1, code);
     });
     container.appendChild(btn);
   });
@@ -449,27 +454,34 @@ function renderExamHistoryBadges(item = {}) {
   return badges.map((badge) => `<span>${badge}</span>`).join("");
 }
 
-function renderExamHistoryList(items = [], page = 1, pageSize = 8) {
+function renderExamHistoryList(items = [], page = 1, pageSize = 8, meta = null) {
   const target = document.getElementById('myExamHistoryList');
   const pager = document.getElementById('examHistoryPagination');
   if (!target) return;
 
   // filter
-  const filtered = state.examHistorySubjectId
+  const isServerPage = Boolean(meta?.serverPage);
+  const filtered = isServerPage
+    ? (items || []).slice()
+    : state.examHistorySubjectId
     ? (items || []).filter(i => String((i.subjectCode || i.subjectId || i.subjectName || '')).toUpperCase() === String(state.examHistorySubjectId || '').toUpperCase())
     : (items || []).slice();
 
-  const useServerSummary = !state.examHistorySubjectId && state.examHistorySummary;
-  renderExamHistorySummary(filtered, useServerSummary ? state.examHistorySummary : null);
+  const useServerSummary = isServerPage
+    ? meta.summary
+    : !state.examHistorySubjectId && state.examHistorySummary;
+  renderExamHistorySummary(filtered, useServerSummary || null);
 
   // sort by date desc
   filtered.sort((a, b) => new Date(b.createdAt || b.examDate || 0) - new Date(a.createdAt || a.examDate || 0));
 
   const total = filtered.length;
-  const totalPages = Math.max(1, Math.ceil(total / pageSize));
+  const totalPages = isServerPage
+    ? Math.max(1, Number(meta.totalPages) || 1)
+    : Math.max(1, Math.ceil(total / pageSize));
   const currentPage = Math.min(Math.max(1, page), totalPages);
   const start = (currentPage - 1) * pageSize;
-  const pageItems = filtered.slice(start, start + pageSize);
+  const pageItems = isServerPage ? filtered : filtered.slice(start, start + pageSize);
 
   if (pageItems.length === 0) {
     target.innerHTML = `
@@ -518,6 +530,10 @@ function renderExamHistoryList(items = [], page = 1, pageSize = 8) {
 
   // render pagination
   if (pager) {
+    if (isServerPage) {
+      renderExamHistoryPagination(currentPage, totalPages);
+      return;
+    }
     pager.innerHTML = '';
     for (let i = 1; i <= totalPages; i++) {
       const btn = document.createElement('button');
