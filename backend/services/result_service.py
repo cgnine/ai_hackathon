@@ -702,6 +702,7 @@ def _fallback_modal_keyword(value: Any) -> str:
         major = str(value.get("majorUnit") or value.get("major_unit") or "").strip()
         minor = str(value.get("minorUnit") or value.get("minor_unit") or value.get("keyword") or "").strip()
         minor = re.sub(r"^SECTION\s*\d+\.\s*", "", minor, flags=re.IGNORECASE).strip()
+        minor = re.sub(r"^Chapter\s*\d+\.\s*", "", minor, flags=re.IGNORECASE).strip()
         minor = re.sub(r"^\d+\.\s*", "", minor).strip()
         text = major if minor in weak_minor_units and major else minor or major
     else:
@@ -709,8 +710,11 @@ def _fallback_modal_keyword(value: Any) -> str:
     if not text:
         return "미분류"
     text = re.sub(r"^SECTION\s*\d+\.\s*", "", text, flags=re.IGNORECASE).strip()
+    text = re.sub(r"^Chapter\s*\d+\.\s*", "", text, flags=re.IGNORECASE).strip()
     text = re.sub(r"^\d+\.\s*", "", text).strip()
     replacements = (
+        ("하이브리드 및 멀티 클라우드", "하이브리드 클라우드"),
+        ("하이브리드 및 멀티클라우드", "하이브리드 클라우드"),
         ("에 대한 이해", ""),
         ("이해하기", ""),
         ("의 종류 및 정형 데이터와의 비교", ""),
@@ -723,7 +727,9 @@ def _fallback_modal_keyword(value: Any) -> str:
     text = re.sub(r"\s+", " ", text).strip(" -_/")
     if len(text) > 15:
         words = text.split()
-        compact = " ".join(words[:2]) if len(words) >= 2 else text[:15]
+        take = 3 if len(words) >= 3 and words[1] in {"및", "와", "과", "또는"} else 2
+        compact = " ".join(words[:take]) if len(words) >= 2 else text[:15]
+        compact = re.sub(r"\s+(및|와|과|또는)$", "", compact).strip()
         text = compact if len(compact) <= 15 else text[:15]
     return text or "미분류"
 
@@ -2452,66 +2458,63 @@ def get_analysis(member_id: str, include_commentary: bool = True) -> dict[str, A
                 min(100, round(((higher_count + 1) / len(score_values)) * 100)),
             )
 
-    attempted_subject_stats = [
-        item for item in subject_stats
-        if int(item.get("answered") or 0) > 0
-    ]
-    weak_subject = min(
-        attempted_subject_stats,
-        key=lambda item: (item["score"], -item["answered"]),
+    recent_analysis_rows = list(analysis_rows)[-200:]
+    wrong_recent_rows = [row for row in recent_analysis_rows if not bool(row["is_correct"])]
+    target_recent_rows = wrong_recent_rows or recent_analysis_rows
+    weak_area_map: dict[tuple[str, str], dict[str, Any]] = {}
+    for row in target_recent_rows:
+        subject_code = str(row["subject_code"] or "-")
+        unit = str(row["unit"] or "미분류")
+        area = weak_area_map.setdefault(
+            (subject_code, unit),
+            {
+                "subjectCode": subject_code,
+                "subjectName": row["subject_name"] or subject_code,
+                "unit": unit,
+                "questionType": row["question_type"],
+                "totalCount": 0,
+                "wrongCount": 0,
+            },
+        )
+        area["totalCount"] += 1
+        area["wrongCount"] += 0 if bool(row["is_correct"]) else 1
+
+    weak_area = max(
+        weak_area_map.values(),
+        key=lambda item: (item["wrongCount"], item["totalCount"]),
         default=None,
     )
     weakness_analysis = None
-    if weak_subject:
-        weak_subject_code = weak_subject["subjectCode"]
-        weak_subject_type_stats = []
-        for (subject_code, question_type), item in subject_type_map.items():
-            if subject_code != weak_subject_code:
-                continue
-            score = _score(item["correct"], item["answered"])
-            weak_subject_type_stats.append(
-                {
-                    "type": question_type,
-                    "answered": item["answered"],
-                    "correct": item["correct"],
-                    "wrong": item["answered"] - item["correct"],
-                    "score": score,
-                }
-            )
-        weak_subject_type_stats.sort(key=lambda item: (item["score"], -item["wrong"]))
-        weak_units = [
-            item for item in unit_stats
-            if item["subjectCode"] == weak_subject_code
-        ][:3]
-        weak_question_type = weak_subject_type_stats[0]["type"] if weak_subject_type_stats else None
-        weak_unit = weak_units[0]["unit"] if weak_units else None
-        expected_gain = max(5, min(15, round((100 - weak_subject["score"]) * 0.28)))
-        weakness_payload = {
-            "weakSubject": weak_subject,
-            "weakSubjectTypeStats": weak_subject_type_stats,
-            "weakUnits": weak_units,
-            "weakQuestionType": weak_question_type,
-            "weakUnit": weak_unit,
-            "expectedGain": expected_gain,
-        }
-        weakness_commentary = _bedrock_analysis_weakness(weakness_payload, include_commentary)
+    if weak_area:
+        wrong_repeat_count = int(weak_area["wrongCount"] or 0)
+        if wrong_repeat_count >= 5:
+            priority = "높음"
+        elif wrong_repeat_count >= 2:
+            priority = "보통"
+        else:
+            priority = "낮음"
+        weak_area_keyword = _fallback_modal_keyword({
+            "majorUnit": weak_area["unit"],
+            "minorUnit": weak_area["unit"],
+        })
+        weak_area_label = f"{weak_area['subjectCode']} · {weak_area_keyword}"
+        analysis1 = (
+            "최근 응시에서 해당 영역의 오답이 가장 많이 반복되었습니다."
+            if wrong_repeat_count > 0
+            else "최근 응시 이력을 기준으로 보완할 영역을 선정했습니다."
+        )
         weakness_analysis = {
-            "weakArea": weak_subject["subjectName"],
-            "subjectCode": weak_subject_code,
-            "accuracy": weak_subject["score"],
-            "practicalAccuracy": next(
-                (item["score"] for item in weak_subject_type_stats if item["type"] == "실무형"),
-                None,
-            ),
-            "theoryAccuracy": next(
-                (item["score"] for item in weak_subject_type_stats if item["type"] == "이론형"),
-                None,
-            ),
-            "weakQuestionType": weak_question_type,
-            "weakUnit": weak_unit,
-            "analysis1": weakness_commentary["analysis1"],
-            "analysis2": weakness_commentary["analysis2"],
-            "expectedGain": expected_gain,
+            "weakArea": weak_area_label,
+            "subjectCode": weak_area["subjectCode"],
+            "subjectName": weak_area["subjectName"],
+            "weakKeyword": weak_area_keyword,
+            "wrongRepeatCount": wrong_repeat_count,
+            "priority": priority,
+            "recommendBasis": "최근 오답 반복",
+            "weakQuestionType": weak_area["questionType"],
+            "weakUnit": weak_area["unit"],
+            "analysis1": analysis1,
+            "analysis2": "AI 맞춤형 추천문제는 이 영역을 기준으로 생성됩니다.",
         }
 
     ai_summary = (
@@ -3295,6 +3298,7 @@ def get_ranking_goal(member_id: str) -> dict[str, Any]:
     cached = _RANKING_GOAL_CACHE.get(cache_key)
     if cached and cached.get("expires_at") and now < cached["expires_at"]:
         return cached["data"]
+    ranking_recommend_weak_row = None
 
     with get_conn() as conn:
         with conn.cursor(cursor_factory=RealDictCursor) as cur:
@@ -3688,6 +3692,52 @@ def get_ranking_goal(member_id: str) -> dict[str, Any]:
             )
             strength_keyword_row = cur.fetchone()
 
+            cur.execute(
+                """
+                WITH recent_rows AS (
+                    SELECT
+                        q.subject_code,
+                        COALESCE(NULLIF(q.major_unit, ''), '미분류') AS major_unit,
+                        CASE
+                            WHEN h.selected_number::text ~ '^[0-9]+$'
+                             AND q.answer_number::text ~ '^[0-9]+$'
+                             AND h.selected_number::integer = q.answer_number::integer
+                            THEN TRUE ELSE FALSE
+                        END AS is_correct
+                    FROM exam_tb e
+                    JOIN exam_history_tb h
+                      ON e.exam_id = h.exam_id
+                    JOIN question_tb q
+                      ON q.question_id = h.question_id
+                     AND q.subject_code = e.subject_code
+                    WHERE e.member_id = %s
+                    ORDER BY e.exam_date DESC, e.exam_time DESC, e.exam_id DESC, h.exam_question_id DESC
+                    LIMIT 200
+                ),
+                wrong_exists AS (
+                    SELECT EXISTS (SELECT 1 FROM recent_rows WHERE is_correct = FALSE) AS has_wrong
+                ),
+                target_rows AS (
+                    SELECT r.*
+                    FROM recent_rows r
+                    CROSS JOIN wrong_exists w
+                    WHERE (w.has_wrong = TRUE AND r.is_correct = FALSE)
+                       OR (w.has_wrong = FALSE)
+                )
+                SELECT
+                    subject_code AS weak_subject_code,
+                    major_unit AS weak_unit,
+                    COUNT(*) AS total_count,
+                    SUM(CASE WHEN is_correct = FALSE THEN 1 ELSE 0 END) AS wrong_count
+                FROM target_rows
+                GROUP BY subject_code, major_unit
+                ORDER BY wrong_count DESC, total_count DESC
+                LIMIT 1
+                """,
+                (normalized_member_id,),
+            )
+            ranking_recommend_weak_row = cur.fetchone()
+
     if not row:
         raise HTTPException(status_code=404, detail="Ranking goal not found")
 
@@ -3729,6 +3779,19 @@ def get_ranking_goal(member_id: str) -> dict[str, Any]:
         _fallback_ranking_learning_recommendations(learning_pattern_row)
         if learning_pattern_row
         else []
+    )
+    weak_subject_code = (
+        ranking_recommend_weak_row["weak_subject_code"]
+        if ranking_recommend_weak_row
+        else strength_keyword_row["weak_subject_code"] if strength_keyword_row else None
+    )
+    weak_keyword = (
+        _fallback_modal_keyword({
+            "majorUnit": ranking_recommend_weak_row["weak_unit"],
+            "minorUnit": ranking_recommend_weak_row["weak_unit"],
+        })
+        if ranking_recommend_weak_row
+        else strength_keyword_row["weak_keyword"] if strength_keyword_row else None
     )
 
     return {
@@ -3772,9 +3835,9 @@ def get_ranking_goal(member_id: str) -> dict[str, Any]:
             "strongSubjectCode": strength_keyword_row["strong_subject_code"],
             "strongSubjectName": strength_keyword_row["strong_subject_name"],
             "strongKeyword": strength_keyword_row["strong_keyword"],
-            "weakSubjectCode": strength_keyword_row["weak_subject_code"],
-            "weakSubjectName": strength_keyword_row["weak_subject_name"],
-            "weakKeyword": strength_keyword_row["weak_keyword"],
+            "weakSubjectCode": weak_subject_code,
+            "weakSubjectName": weak_subject_code,
+            "weakKeyword": weak_keyword,
         } if strength_keyword_row else None,
     }
     _RANKING_GOAL_CACHE[cache_key] = {

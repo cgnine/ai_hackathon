@@ -406,17 +406,25 @@ function renderAnalysisReportAiComments(commentary = [], aiComment = null) {
 
 function renderAnalysisReportWeakness(weaknessAnalysis = null) {
   if (!weaknessAnalysis) return;
-  setAnalysisReportText("analysisWeakArea", weaknessAnalysis.weakArea || weaknessAnalysis.subjectCode || "-");
-  setAnalysisReportText(
-    "analysisWeakAccuracy",
-    Number.isFinite(Number(weaknessAnalysis.accuracy)) ? `${Math.round(Number(weaknessAnalysis.accuracy))}%` : "-"
-  );
+  const weakAreaTarget = document.getElementById("analysisWeakArea");
+  if (weakAreaTarget) {
+    const subjectCode = String(weaknessAnalysis.subjectCode || "").trim();
+    const keyword = String(
+      weaknessAnalysis.weakKeyword
+      || String(weaknessAnalysis.weakArea || "").split("·").pop()
+      || "-"
+    ).trim();
+    weakAreaTarget.innerHTML = "";
+    const code = document.createElement("span");
+    const area = document.createElement("small");
+    const strategy = document.createElement("em");
+    code.textContent = subjectCode || "-";
+    area.textContent = keyword.replace(/\s*전략$/, "").trim() || keyword;
+    strategy.textContent = "전략";
+    weakAreaTarget.append(code, area, strategy);
+  }
   setAnalysisReportText("analysisWeakAnalysis1", weaknessAnalysis.analysis1 || "취약 원인을 분석하고 있습니다.");
   setAnalysisReportText("analysisWeakAnalysis2", weaknessAnalysis.analysis2 || "우선 학습 행동을 정리하고 있습니다.");
-  setAnalysisReportText(
-    "analysisWeakExpectedGain",
-    Number.isFinite(Number(weaknessAnalysis.expectedGain)) ? `+${Math.round(Number(weaknessAnalysis.expectedGain))}점` : "-"
-  );
 }
 
 function renderAnalysisReportData(data) {
