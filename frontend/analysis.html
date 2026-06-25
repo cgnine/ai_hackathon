@@ -241,15 +241,15 @@
         <div class="subject-insight-grid">
           <section class="subject-modal-card subject-list-card strong">
             <h3><span class="analysis-warning subject-section-icon" style="display:inline-grid!important;width:18px;height:17px;place-items:center;clip-path:polygon(50% 0,100% 90%,0 90%);background:#f5b800;color:#fff;font-size:10px;line-height:1;padding-top:1px;">!</span>강점 영역</h3>
-            <p><span>프롬프트 엔지니어링</span><strong>96%</strong></p>
-            <p><span>생성형 AI 활용</span><strong>94%</strong></p>
-            <p><span>기계학습 기본 개념</span><strong>93%</strong></p>
+            <p><span>프롬프트 엔지니어링</span></p>
+            <p><span>생성형 AI 활용</span></p>
+            <p><span>기계학습 기본 개념</span></p>
           </section>
           <section class="subject-modal-card subject-list-card weak">
             <h3><span class="analysis-warning subject-section-icon" style="display:inline-grid!important;width:18px;height:17px;place-items:center;clip-path:polygon(50% 0,100% 90%,0 90%);background:#f5b800;color:#fff;font-size:10px;line-height:1;padding-top:1px;">!</span>취약 영역</h3>
-            <p><span>RAG (검색 증강 생성)</span><strong>72%</strong></p>
-            <p><span>벡터 DB 이해</span><strong>70%</strong></p>
-            <p><span>모델 평가 지표</span><strong>75%</strong></p>
+            <p><span>RAG (검색 증강 생성)</span></p>
+            <p><span>벡터 DB 이해</span></p>
+            <p><span>모델 평가 지표</span></p>
           </section>
           <section class="subject-modal-card subject-comment-card">
             <h3><span class="analysis-warning subject-section-icon" style="display:inline-grid!important;width:18px;height:17px;place-items:center;clip-path:polygon(50% 0,100% 90%,0 90%);background:#f5b800;color:#fff;font-size:10px;line-height:1;padding-top:1px;">!</span>AI 코멘트</h3>
@@ -288,6 +288,30 @@
       function roundedPercent(value) {
         const number = Number(value);
         return Number.isFinite(number) ? Math.round(number) : 0;
+      }
+
+      function compactUnitKeyword(value) {
+        let text = String(value || "").trim();
+        if (!text) return "미분류";
+        text = text
+          .replace(/^SECTION\s*\d+\.\s*/i, "")
+          .replace(/^Chapter\s*\d+\.\s*/i, "")
+          .replace(/^\d+\.\s*/, "")
+          .replace(/하이브리드 및 멀티\s*클라우드/g, "하이브리드 클라우드")
+          .replace(/에 대한 이해/g, "")
+          .replace(/이해하기/g, "")
+          .replace(/의 종류 및 정형 데이터와의 비교/g, "")
+          .replace(/의 이해/g, "")
+          .replace(/개요 및 활용법/g, "")
+          .replace(/개요/g, "")
+          .replace(/에서의 구성/g, "")
+          .replace(/에서의 활용/g, "")
+          .replace(/에서의/g, "")
+          .replace(/\s+/g, " ")
+          .trim()
+          .replace(/\s*(의|에서|에 대한|및|와|과|또는)$/, "")
+          .trim();
+        return text || "미분류";
       }
 
       function renderDetailRows(detail = []) {
@@ -394,19 +418,15 @@
           const empty = document.createElement("p");
           const label = document.createElement("span");
           label.textContent = "분석 가능한 영역이 없습니다";
-          const value = document.createElement("strong");
-          value.textContent = "-";
-          empty.append(label, value);
+          empty.appendChild(label);
           target.appendChild(empty);
           return;
         }
         items.slice(0, 3).forEach((item) => {
           const row = document.createElement("p");
           const label = document.createElement("span");
-          label.textContent = item.keyword || "미분류";
-          const value = document.createElement("strong");
-          value.textContent = `${roundedPercent(item.correctRate)}%`;
-          row.append(label, value);
+          label.textContent = compactUnitKeyword(item.keyword || item.sourceKeyword || item.minorUnit || item.majorUnit);
+          row.appendChild(label);
           target.appendChild(row);
         });
       }

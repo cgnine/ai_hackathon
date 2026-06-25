@@ -978,8 +978,8 @@ body[data-page="ranking"] .nav-btn:hover {
   height: 28px;
   place-items: center;
   border-radius: 50%;
-  background: #fff7d6;
-  color: #b7791f;
+  background: #dff7e8;
+  color: #15803d;
   font-size: 0.82rem;
   font-weight: 700;
 }
@@ -6354,6 +6354,28 @@ body[data-page="mock"] .choice-btn.selected {
   line-height: 1.62;
 }
 
+.comment-card.is-loading p {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.comment-card-spinner {
+  width: 15px;
+  height: 15px;
+  flex: 0 0 auto;
+  border: 2px solid #dbeafe;
+  border-top-color: #2563eb;
+  border-radius: 50%;
+  animation: comment-card-spin 0.85s linear infinite;
+}
+
+@keyframes comment-card-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
 .report-bottom {
   display: grid;
   grid-template-columns: minmax(0, 1fr);
@@ -8698,10 +8720,9 @@ body.modal-open {
 }
 
 .subject-list-card p {
-  display: flex;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
   align-items: center;
-  justify-content: space-between;
-  gap: 12px;
   margin: 0;
   padding: 11px 14px;
   border-radius: 8px;
@@ -8715,6 +8736,15 @@ body.modal-open {
 .subject-list-card p strong {
   color: #050505;
   font-weight: 500;
+}
+
+.subject-list-card p span {
+  display: block;
+  min-width: 0;
+  color: #243553;
+  line-height: 1.28;
+  white-space: normal;
+  word-break: keep-all;
 }
 
 .subject-comment-card {
@@ -10486,12 +10516,27 @@ body[data-page="main"] .ranking-list li.ranking-position-1 .ranking-rank {
   color: #a16207;
 }
 
+body[data-page="ranking"] .ranking-list li.ranking-position-1 .ranking-rank {
+  background: #ffe8a3;
+  color: #a16207;
+}
+
 body[data-page="main"] .ranking-list li.ranking-position-2 .ranking-rank {
   background: #e5e7eb;
   color: #374151;
 }
 
+body[data-page="ranking"] .ranking-list li.ranking-position-2 .ranking-rank {
+  background: #e5e7eb;
+  color: #374151;
+}
+
 body[data-page="main"] .ranking-list li.ranking-position-3 .ranking-rank {
+  background: #fed7aa;
+  color: #9a3412;
+}
+
+body[data-page="ranking"] .ranking-list li.ranking-position-3 .ranking-rank {
   background: #fed7aa;
   color: #9a3412;
 }
@@ -11520,14 +11565,17 @@ body.demo-reference-layout .main-side-stack .main-feature-list p {
   }
 
   body.demo-reference-layout .demo-ranking-viewport .ranking-list li {
-    grid-template-columns: 26px minmax(0, 1fr) max-content;
+    grid-template-columns: 26px max-content minmax(0, 1fr) max-content;
     height: 44px;
     min-height: 44px;
   }
 
-  body.demo-reference-layout .ranking-affiliation,
   body.demo-reference-layout .ranking-name small {
     display: none;
+  }
+
+  body.demo-reference-layout .ranking-affiliation {
+    display: inline;
   }
 
   body.demo-reference-layout .main-stat-grid {
