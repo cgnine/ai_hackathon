@@ -11225,6 +11225,8 @@ body.demo-reference-layout .main-side-stack .main-feature-list p {
   body.demo-reference-layout .brand {
     width: auto;
     max-width: calc(100% - 58px);
+    min-width: 0;
+    flex: 1 1 auto;
   }
 
   body.demo-reference-layout .brand-logo {
@@ -11234,12 +11236,14 @@ body.demo-reference-layout .main-side-stack .main-feature-list p {
 
   body.demo-reference-layout .demo-mobile-menu-btn {
     position: relative;
+    order: 3;
     z-index: 103;
     display: inline-grid;
     width: 44px;
     height: 44px;
     flex: 0 0 auto;
     place-items: center;
+    margin-left: auto;
     border: 0;
     border-radius: 8px;
     background: transparent;
@@ -12391,7 +12395,7 @@ body.demo-reference-layout .main-side-stack .main-feature-list p {
   }
 
   body.demo-reference-layout .demo-mobile-menu-backdrop {
-    z-index: 3300;
+    z-index: 3100;
   }
 
   body.demo-reference-layout .demo-mobile-menu-backdrop.is-open {
