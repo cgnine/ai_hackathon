@@ -332,35 +332,88 @@ function maskKoreanName(name) {
   return `${text[0]}○${text.slice(2)}`;
 }
 
-function renderRankingSubjectTargets(subjectTargets, isLeader = false) {
+function renderRankingSubjectTargets(subjectTargets, isLeader = false, strengthKeywords = null) {
   const items = Array.isArray(subjectTargets) ? subjectTargets.slice(0, 2) : [];
-  if (!items.length) return;
 
   const targetList = document.getElementById("rankingSubjectTargets");
   if (targetList) {
     const title = targetList.querySelector(":scope > span");
     targetList.replaceChildren();
+    targetList.classList.toggle("ranking-strength-summary", !!strengthKeywords);
     if (title) {
-      title.textContent = isLeader ? "선두 유지 추천 과목" : "과목별 목표 점수";
-      targetList.appendChild(title);
+      title.textContent = strengthKeywords ? "강점 · 취약 영역" : isLeader ? "선두 과목 평균 비교" : "과목별 평균 비교";
+      if (!strengthKeywords) targetList.appendChild(title);
     }
+
+    if (strengthKeywords) {
+      [
+        {
+          label: "강점",
+          keyword: strengthKeywords.strongKeyword,
+          subject: strengthKeywords.strongSubjectCode || strengthKeywords.strongSubjectName,
+          className: "",
+        },
+        {
+          label: "취약",
+          keyword: strengthKeywords.weakKeyword,
+          subject: strengthKeywords.weakSubjectCode || strengthKeywords.weakSubjectName,
+          className: "weak",
+        },
+      ].forEach((item) => {
+        const row = document.createElement("p");
+        const label = document.createElement("strong");
+        const value = document.createElement("em");
+
+        row.className = item.className;
+        label.textContent = item.label;
+        value.textContent = item.subject ? `${item.subject} · ${item.keyword || "-"}` : item.keyword || "-";
+        row.append(label, value);
+        targetList.appendChild(row);
+      });
+      return;
+    }
+
+    if (!items.length) return;
 
     items.forEach((item) => {
       const row = document.createElement("p");
       const name = document.createElement("strong");
+      const barWrap = document.createElement("div");
       const bar = document.createElement("i");
-      const fill = document.createElement("b");
-      const up = document.createElement("em");
-      const targetScore = Math.max(0, Math.min(100, Number(item.targetSubjectScore) || 0));
+      const currentFill = document.createElement("b");
+      const averageMarker = document.createElement("b");
+      const scoreText = document.createElement("small");
+      const gap = document.createElement("em");
+      const rawCurrentScore = Number(item.currentScore);
+      const rawAverageScore = Number(item.overallAverageScore ?? item.targetSubjectScore);
+      const currentScore = Math.max(
+        0,
+        Math.min(
+          100,
+          Number.isFinite(rawCurrentScore) ? rawCurrentScore : 0,
+        ),
+      );
+      const averageScore = Math.max(
+        0,
+        Math.min(
+          100,
+          Number.isFinite(rawAverageScore) ? rawAverageScore : currentScore,
+        ),
+      );
+      const scoreGap = currentScore - averageScore;
+      const gapPrefix = scoreGap > 0 ? "+" : "";
 
       name.textContent = item.subjectCode || item.subjectName || "-";
-      fill.style.width = `${targetScore}%`;
-      up.textContent = isLeader
-        ? `+${formatRankingNumber(item.expectedUpScore)}점 향상 목표`
-        : `+${formatRankingNumber(item.expectedUpScore)}점 필요`;
+      currentFill.className = "ranking-target-current";
+      averageMarker.className = "ranking-target-average";
+      currentFill.style.width = `${currentScore}%`;
+      averageMarker.style.left = `${averageScore}%`;
+      scoreText.textContent = `내 ${formatRankingNumber(currentScore)}점 / 전체평균 ${formatRankingNumber(averageScore)}점`;
+      gap.textContent = `평균보다 ${gapPrefix}${formatRankingNumber(scoreGap)}점`;
 
-      bar.appendChild(fill);
-      row.append(name, bar, up);
+      bar.append(currentFill, averageMarker);
+      barWrap.append(bar, scoreText);
+      row.append(name, barWrap, gap);
       targetList.appendChild(row);
     });
   }
@@ -378,8 +431,8 @@ function renderRankingGoalActions(actions, subjectTargets, isLeader = false) {
   const fallback = (Array.isArray(subjectTargets) ? subjectTargets.slice(0, 2) : []).map((item) => ({
     title: item.recommendTitle || `${item.subjectName || item.subjectCode || "과목"} 집중 학습`,
     expected: isLeader
-      ? `+${formatRankingNumber(item.expectedUpScore)}점 향상 목표`
-      : `+${formatRankingNumber(item.expectedUpScore)}점 예상`
+      ? "강점 유지"
+      : Number(item.expectedUpScore) > 0 ? "평균 보완" : "강점 유지"
   }));
   const items = isLeader
     ? leaderItems
@@ -471,6 +524,8 @@ function renderRankingStrengthKeywords(keywords) {
 
   const strongKeyword = keywords.strongKeyword || "강점 분석중";
   const weakKeyword = keywords.weakKeyword || "취약 분석중";
+  const strongSubject = keywords.strongSubjectCode || keywords.strongSubjectName || "";
+  const weakSubject = keywords.weakSubjectCode || keywords.weakSubjectName || "";
   const strong = document.createElement("span");
   const strongLabel = document.createElement("b");
   const strongValue = document.createElement("em");
@@ -481,11 +536,11 @@ function renderRankingStrengthKeywords(keywords) {
   strongValue.className = "ranking-keyword";
   weakValue.className = "ranking-keyword";
   strongLabel.textContent = "강점";
-  strongValue.textContent = strongKeyword;
+  strongValue.textContent = strongSubject ? `${strongSubject} · ${strongKeyword}` : strongKeyword;
   strong.append(strongLabel, strongValue);
   weak.className = "weak";
   weakLabel.textContent = "취약";
-  weakValue.textContent = weakKeyword;
+  weakValue.textContent = weakSubject ? `${weakSubject} · ${weakKeyword}` : weakKeyword;
   weak.append(weakLabel, weakValue);
   target.replaceChildren(strong, weak);
 }
@@ -597,7 +652,7 @@ function renderRankingGoal(goal) {
   }
 
   if (goal.goalCoachMessage) setRankingText("rankingGoalCoach", goal.goalCoachMessage);
-  renderRankingSubjectTargets(goal.subjectTargets, isLeader);
+  renderRankingSubjectTargets(goal.subjectTargets, isLeader, goal.strengthKeywords);
   renderRankingGoalActions(goal.goalActions, goal.subjectTargets, isLeader);
   renderRankingRival(goal.rival);
   renderRankingStrengthKeywords(goal.strengthKeywords);

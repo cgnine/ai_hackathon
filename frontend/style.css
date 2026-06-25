@@ -1197,11 +1197,11 @@ body[data-page="ranking"] .nav-btn:hover {
 }
 
 .ranking-summary-card {
-  grid-template-columns: minmax(210px, 0.82fr) minmax(190px, 0.7fr) minmax(300px, 1.2fr);
+  grid-template-columns: minmax(120px, 0.42fr) minmax(150px, 0.58fr) minmax(340px, 1.3fr);
   align-items: center;
-  gap: 28px;
+  gap: 20px;
   min-height: 178px;
-  padding: 24px 34px;
+  padding: 24px 30px;
 }
 
 .ranking-summary-card.ranking-empty-card {
@@ -1230,6 +1230,12 @@ body[data-page="ranking"] .nav-btn:hover {
   color: #07135f;
 }
 
+.ranking-current-rank {
+  align-content: center;
+  justify-content: center;
+  text-align: center;
+}
+
 .ranking-current-rank > span,
 .ranking-rank-change > div:first-child > span,
 .ranking-target-scores span {
@@ -1239,14 +1245,20 @@ body[data-page="ranking"] .nav-btn:hover {
 }
 
 .ranking-current-rank strong {
+  display: inline-flex;
+  align-items: baseline;
+  flex-wrap: nowrap;
+  width: max-content;
   color: #07135f;
   font-size: clamp(2.2rem, 3.8vw, 3.25rem);
   font-weight: 800;
   line-height: 1;
+  white-space: nowrap;
 }
 
 .ranking-current-rank strong span,
 .ranking-rank-change strong span {
+  flex: 0 0 auto;
   color: inherit;
   font: inherit;
 }
@@ -1258,14 +1270,15 @@ body[data-page="ranking"] .nav-btn:hover {
 }
 
 .ranking-strength-tags {
-  display: flex;
+  display: none;
   flex-wrap: wrap;
   gap: 8px;
-  max-width: 190px;
+  max-width: min(360px, 100%);
 }
 
 .ranking-strength-tags span {
   display: inline-flex;
+  max-width: 100%;
   min-height: 28px;
   align-items: center;
   gap: 5px;
@@ -1293,9 +1306,13 @@ body[data-page="ranking"] .nav-btn:hover {
 }
 
 .ranking-strength-tags .ranking-keyword {
+  max-width: 260px;
+  overflow: hidden;
   background: #f3f0f8 !important;
   color: #4b5563 !important;
   font-weight: 700;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .ranking-strength-tags .weak b {
@@ -1304,9 +1321,12 @@ body[data-page="ranking"] .nav-btn:hover {
 }
 
 .ranking-current-rank small {
+  display: inline-block;
+  flex: 0 0 auto;
   margin-left: 4px;
   font-size: 1.25rem;
   font-weight: 700;
+  white-space: nowrap;
 }
 
 .ranking-current-rank p,
@@ -1348,7 +1368,7 @@ body[data-page="ranking"] .nav-btn:hover {
   display: grid;
   min-height: 132px;
   place-items: center;
-  border-inline: 1px solid #e5eaf0;
+  border-left: 1px solid #e5eaf0;
   overflow: hidden;
 }
 
@@ -1361,14 +1381,15 @@ body[data-page="ranking"] .nav-btn:hover {
 }
 
 .ranking-rank-change {
-  grid-template-columns: minmax(130px, 0.8fr) minmax(180px, 1fr);
+  grid-template-columns: minmax(120px, 0.7fr) minmax(210px, 1fr);
   align-items: center;
+  gap: 16px;
 }
 
 .ranking-rank-change > div:first-child {
   display: grid;
   gap: 10px;
-  padding-right: 24px;
+  padding-right: 18px;
   border-right: 1px solid #e5eaf0;
 }
 
@@ -1398,7 +1419,7 @@ body.ranking-leader #rankingGoalRingValue {
 }
 
 body.ranking-leader .ranking-target-scores p {
-  grid-template-columns: 42px minmax(40px, 1fr) max-content;
+  grid-template-columns: 42px minmax(72px, 1fr) max-content;
   gap: 6px;
 }
 
@@ -1415,7 +1436,7 @@ body.ranking-leader .ranking-target-scores p em {
 
 .ranking-target-scores p {
   display: grid;
-  grid-template-columns: minmax(54px, 0.32fr) minmax(90px, 1fr) 84px;
+  grid-template-columns: minmax(54px, 0.32fr) minmax(100px, 1fr) 84px;
   align-items: center;
   gap: 10px;
   margin: 0;
@@ -1430,7 +1451,13 @@ body.ranking-leader .ranking-target-scores p em {
   white-space: nowrap;
 }
 
+.ranking-target-scores p > div {
+  display: grid;
+  gap: 4px;
+}
+
 .ranking-target-scores p i {
+  position: relative;
   display: block;
   height: 10px;
   overflow: hidden;
@@ -1439,10 +1466,32 @@ body.ranking-leader .ranking-target-scores p em {
 }
 
 .ranking-target-scores p b {
-  display: block;
+  position: absolute;
+  top: 0;
+  bottom: 0;
   height: 100%;
+}
+
+.ranking-target-scores p b.ranking-target-current {
+  left: 0;
   border-radius: inherit;
   background: #3b82f6;
+}
+
+.ranking-target-scores p b.ranking-target-average {
+  width: 3px;
+  transform: translateX(-50%);
+  border-radius: 999px;
+  background: #f59e0b;
+  box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.9);
+}
+
+.ranking-target-scores p small {
+  color: #64748b;
+  font-size: 0.72rem;
+  font-weight: 600;
+  line-height: 1;
+  white-space: nowrap;
 }
 
 .ranking-target-scores p em {
@@ -1451,6 +1500,54 @@ body.ranking-leader .ranking-target-scores p em {
   font-style: normal;
   font-weight: 900;
   text-align: right;
+}
+
+.ranking-target-scores.ranking-strength-summary {
+  gap: 8px;
+}
+
+.ranking-target-scores.ranking-strength-summary p {
+  grid-template-columns: 44px minmax(0, 1fr);
+  gap: 8px;
+}
+
+.ranking-target-scores.ranking-strength-summary p strong,
+.ranking-target-scores.ranking-strength-summary p em {
+  min-height: 28px;
+  display: inline-flex;
+  align-items: center;
+  border-radius: 6px;
+  line-height: 1;
+}
+
+.ranking-target-scores.ranking-strength-summary p strong {
+  justify-content: center;
+  padding: 0 8px;
+  background: #e9f8ef;
+  color: #15803d;
+  font-size: 0.78rem;
+  font-weight: 800;
+}
+
+.ranking-target-scores.ranking-strength-summary p em {
+  width: fit-content;
+  max-width: 100%;
+  min-width: 0;
+  overflow: hidden;
+  justify-content: flex-start;
+  padding: 0 10px;
+  background: #f3f0f8;
+  color: #4b5563;
+  font-size: 0.78rem;
+  font-weight: 700;
+  text-align: left;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ranking-target-scores.ranking-strength-summary p.weak strong {
+  background: #fff1e8;
+  color: #ea580c;
 }
 
 .ranking-podium-card {

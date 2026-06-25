@@ -271,7 +271,7 @@ def _fallback_ranking_goal_actions(subject_targets: list[dict[str, Any]]) -> lis
     for item in subject_targets[:2]:
         subject = str(item.get("subjectName") or item.get("subjectCode") or "과목").strip()
         expected = item.get("expectedUpScore") or 0
-        expected_text = format_ranking_expected_score(expected)
+        expected_text = "평균 보완" if expected > 0 else "강점 유지"
         if subject == "SW":
             title = "SW 실무 문제 집중 학습"
         elif subject == "Cloud":
@@ -2102,6 +2102,15 @@ def get_analysis(member_id: str, include_commentary: bool = True) -> dict[str, A
                 """
                 WITH unit_stats AS (
                     SELECT
+                        q.subject_code,
+                        CASE
+                            WHEN q.subject_code = 'AI' THEN 'AI'
+                            WHEN q.subject_code = 'CA' THEN 'Cloud'
+                            WHEN q.subject_code = 'DE' THEN 'Data'
+                            WHEN q.subject_code = 'CD' THEN 'Cloud Dev'
+                            WHEN q.subject_code = 'SA' THEN 'SW'
+                            ELSE COALESCE(s.subject_name, q.subject_code)
+                        END AS subject_name,
                         q.minor_unit,
                         TRIM(
                             REGEXP_REPLACE(
@@ -2149,11 +2158,15 @@ def get_analysis(member_id: str, include_commentary: bool = True) -> dict[str, A
                       ON e.exam_id = h.exam_id
                     JOIN question_tb q
                       ON h.question_id = q.question_id
+                    LEFT JOIN subject_tb s
+                      ON q.subject_code = s.subject_code
                     WHERE e.member_id = %s
-                    GROUP BY q.minor_unit
+                    GROUP BY q.subject_code, s.subject_name, q.minor_unit
                 ),
                 strong_unit AS (
                     SELECT
+                        subject_code AS strong_subject_code,
+                        subject_name AS strong_subject_name,
                         display_keyword AS strong_keyword
                     FROM unit_stats
                     WHERE total_count >= 2
@@ -2162,6 +2175,8 @@ def get_analysis(member_id: str, include_commentary: bool = True) -> dict[str, A
                 ),
                 weak_unit AS (
                     SELECT
+                        subject_code AS weak_subject_code,
+                        subject_name AS weak_subject_name,
                         display_keyword AS weak_keyword
                     FROM unit_stats
                     WHERE total_count >= 2
@@ -2169,7 +2184,11 @@ def get_analysis(member_id: str, include_commentary: bool = True) -> dict[str, A
                     LIMIT 1
                 )
                 SELECT
+                    strong_unit.strong_subject_code,
+                    strong_unit.strong_subject_name,
                     strong_unit.strong_keyword,
+                    weak_unit.weak_subject_code,
+                    weak_unit.weak_subject_name,
                     weak_unit.weak_keyword
                 FROM strong_unit
                 CROSS JOIN weak_unit
@@ -3356,7 +3375,16 @@ def get_ranking_goal(member_id: str) -> dict[str, Any]:
 
             cur.execute(
                 """
-                WITH subject_avg AS (
+                WITH valid_exam AS (
+                    SELECT
+                        e.member_id,
+                        e.subject_code,
+                        CAST(e.exam_score AS DECIMAL(5,2)) AS score
+                    FROM exam_tb e
+                    WHERE e.exam_score IS NOT NULL
+                      AND e.exam_score::text ~ '^[0-9]+(\\.[0-9]+)?$'
+                ),
+                subject_avg AS (
                     SELECT
                         e.subject_code,
                         CASE
@@ -3367,34 +3395,41 @@ def get_ranking_goal(member_id: str) -> dict[str, Any]:
                             WHEN e.subject_code = 'SA' THEN 'SW'
                             ELSE s.subject_name
                         END AS subject_name,
-                        ROUND(AVG(CAST(e.exam_score AS DECIMAL(5,2))), 1) AS current_score
-                    FROM exam_tb e
+                        ROUND(AVG(e.score), 1) AS current_score
+                    FROM valid_exam e
                     JOIN subject_tb s
                       ON e.subject_code = s.subject_code
                     WHERE e.member_id = %s
-                      AND e.exam_score IS NOT NULL
-                      AND e.exam_score::text ~ '^[0-9]+(\\.[0-9]+)?$'
                     GROUP BY e.subject_code, s.subject_name
+                ),
+                overall_subject_avg AS (
+                    SELECT
+                        subject_code,
+                        ROUND(AVG(score), 1) AS overall_score
+                    FROM valid_exam
+                    GROUP BY subject_code
                 ),
                 ranked_subject AS (
                     SELECT
-                        *,
-                        ROW_NUMBER() OVER (ORDER BY current_score ASC) AS subject_rank
-                    FROM subject_avg
+                        sa.*,
+                        osa.overall_score,
+                        ROUND(osa.overall_score - sa.current_score, 1) AS score_gap,
+                        ROW_NUMBER() OVER (
+                            ORDER BY GREATEST(osa.overall_score - sa.current_score, 0) DESC,
+                                     sa.current_score ASC
+                        ) AS subject_rank
+                    FROM subject_avg sa
+                    JOIN overall_subject_avg osa
+                      ON sa.subject_code = osa.subject_code
                 )
                 SELECT
                     subject_code,
                     subject_name,
                     current_score,
-                    CASE
-                        WHEN subject_rank = 1 THEN 3
-                        WHEN subject_rank = 2 THEN 2
-                    END AS expected_up_score,
-                    current_score +
-                    CASE
-                        WHEN subject_rank = 1 THEN 3
-                        WHEN subject_rank = 2 THEN 2
-                    END AS target_subject_score,
+                    overall_score,
+                    score_gap,
+                    GREATEST(score_gap, 0) AS expected_up_score,
+                    overall_score AS target_subject_score,
                     CONCAT(subject_name, ' 집중 학습') AS recommend_title
                 FROM ranked_subject
                 WHERE subject_rank <= 2
@@ -3569,6 +3604,15 @@ def get_ranking_goal(member_id: str) -> dict[str, Any]:
                 """
                 WITH unit_stats AS (
                     SELECT
+                        q.subject_code,
+                        CASE
+                            WHEN q.subject_code = 'AI' THEN 'AI'
+                            WHEN q.subject_code = 'CA' THEN 'Cloud'
+                            WHEN q.subject_code = 'DE' THEN 'Data'
+                            WHEN q.subject_code = 'CD' THEN 'Cloud Dev'
+                            WHEN q.subject_code = 'SA' THEN 'SW'
+                            ELSE COALESCE(s.subject_name, q.subject_code)
+                        END AS subject_name,
                         q.minor_unit,
                         TRIM(
                             REGEXP_REPLACE(
@@ -3605,11 +3649,15 @@ def get_ranking_goal(member_id: str) -> dict[str, Any]:
                       ON e.exam_id = h.exam_id
                     JOIN question_tb q
                       ON h.question_id = q.question_id
+                    LEFT JOIN subject_tb s
+                      ON q.subject_code = s.subject_code
                     WHERE e.member_id = %s
-                    GROUP BY q.minor_unit
+                    GROUP BY q.subject_code, s.subject_name, q.minor_unit
                 ),
                 strong_unit AS (
                     SELECT
+                        subject_code AS strong_subject_code,
+                        subject_name AS strong_subject_name,
                         display_keyword AS strong_keyword
                     FROM unit_stats
                     WHERE total_count >= 2
@@ -3618,6 +3666,8 @@ def get_ranking_goal(member_id: str) -> dict[str, Any]:
                 ),
                 weak_unit AS (
                     SELECT
+                        subject_code AS weak_subject_code,
+                        subject_name AS weak_subject_name,
                         display_keyword AS weak_keyword
                     FROM unit_stats
                     WHERE total_count >= 2
@@ -3625,7 +3675,11 @@ def get_ranking_goal(member_id: str) -> dict[str, Any]:
                     LIMIT 1
                 )
                 SELECT
+                    strong_unit.strong_subject_code,
+                    strong_unit.strong_subject_name,
                     strong_unit.strong_keyword,
+                    weak_unit.weak_subject_code,
+                    weak_unit.weak_subject_name,
                     weak_unit.weak_keyword
                 FROM strong_unit
                 CROSS JOIN weak_unit
@@ -3642,6 +3696,8 @@ def get_ranking_goal(member_id: str) -> dict[str, Any]:
             "subjectCode": subject_row["subject_code"],
             "subjectName": subject_row["subject_name"],
             "currentScore": float(subject_row["current_score"] or 0),
+            "overallAverageScore": float(subject_row["overall_score"] or 0),
+            "scoreGap": float(subject_row["score_gap"] or 0),
             "expectedUpScore": float(subject_row["expected_up_score"] or 0),
             "targetSubjectScore": float(subject_row["target_subject_score"] or 0),
             "recommendTitle": subject_row["recommend_title"],
@@ -3713,7 +3769,11 @@ def get_ranking_goal(member_id: str) -> dict[str, Any]:
             "recommendations": learning_recommendations,
         } if learning_pattern_row else None,
         "strengthKeywords": {
+            "strongSubjectCode": strength_keyword_row["strong_subject_code"],
+            "strongSubjectName": strength_keyword_row["strong_subject_name"],
             "strongKeyword": strength_keyword_row["strong_keyword"],
+            "weakSubjectCode": strength_keyword_row["weak_subject_code"],
+            "weakSubjectName": strength_keyword_row["weak_subject_name"],
             "weakKeyword": strength_keyword_row["weak_keyword"],
         } if strength_keyword_row else None,
     }
@@ -3749,6 +3809,8 @@ def get_ranking_goal_commentary(member_id: str) -> dict[str, Any]:
             "subjectCode": item.get("subjectCode"),
             "subjectName": item.get("subjectName"),
             "currentScore": item.get("currentScore"),
+            "overallAverageScore": item.get("overallAverageScore"),
+            "scoreGap": item.get("scoreGap"),
             "expectedUpScore": item.get("expectedUpScore"),
             "targetSubjectScore": item.get("targetSubjectScore"),
             "recommendTitle": item.get("recommendTitle"),
