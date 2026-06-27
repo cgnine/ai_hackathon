@@ -757,16 +757,22 @@ def _validate_modal_keywords(payload: dict[str, Any], fallback: dict[str, list[s
             continue
         keywords: list[str] = []
         seen: set[str] = set()
-        for value in values:
-            keyword = str(value or "").strip()
+        for index, fallback_keyword in enumerate(fallback[key]):
+            keyword = str(values[index] or "").strip() if index < len(values) else ""
             if len(keyword) < 2 or keyword in seen or len(keyword) > 15:
+                keyword = fallback_keyword
+            if keyword in seen:
                 continue
             seen.add(keyword)
             keywords.append(keyword)
-            if len(keywords) >= 3:
-                break
         result[key] = keywords or fallback[key]
     return result
+
+
+def _apply_modal_keywords(items: list[dict[str, Any]], keywords: list[str]) -> None:
+    for index, item in enumerate(items):
+        keyword = str(keywords[index] or "").strip() if index < len(keywords) else ""
+        item["keyword"] = keyword or _fallback_modal_keyword(item)
 
 
 def _fallback_result_radar_label(value: dict[str, Any]) -> str:
@@ -2357,10 +2363,8 @@ def get_analysis(member_id: str, include_commentary: bool = True) -> dict[str, A
             subject_weak_map.get(subject_code, []),
             include_commentary=False,
         )
-        for item, keyword in zip(subject_strong_map.get(subject_code, []), keyword_payload["strengths"]):
-            item["keyword"] = keyword
-        for item, keyword in zip(subject_weak_map.get(subject_code, []), keyword_payload["weaknesses"]):
-            item["keyword"] = keyword
+        _apply_modal_keywords(subject_strong_map.get(subject_code, []), keyword_payload["strengths"])
+        _apply_modal_keywords(subject_weak_map.get(subject_code, []), keyword_payload["weaknesses"])
     subject_modal_ai_map: dict[str, dict[str, Any]] = {}
     for subject_code in set(subject_strong_map) | set(subject_weak_map) | set(subject_detail_map) | set(subject_trend_map):
         subject_item = subject_map.get(subject_code, {})
@@ -2611,10 +2615,8 @@ def get_analysis_subject_commentary(member_id: str, subject_code: str) -> dict[s
     strengths = [dict(item) for item in modal.get("strongUnits", []) if isinstance(item, dict)]
     weaknesses = [dict(item) for item in modal.get("weakUnits", []) if isinstance(item, dict)]
     keyword_payload = _bedrock_modal_keywords(strengths, weaknesses, include_commentary=True)
-    for item, keyword in zip(strengths, keyword_payload["strengths"]):
-        item["keyword"] = keyword
-    for item, keyword in zip(weaknesses, keyword_payload["weaknesses"]):
-        item["keyword"] = keyword
+    _apply_modal_keywords(strengths, keyword_payload["strengths"])
+    _apply_modal_keywords(weaknesses, keyword_payload["weaknesses"])
 
     modal_payload = {
         "subjectCode": normalized_subject_code,
