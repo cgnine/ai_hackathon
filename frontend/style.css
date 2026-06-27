@@ -2573,13 +2573,18 @@ body[data-page="my-info"] .my-info-panel {
 
 .member-activity-item {
   display: flex;
-  min-height: 88px;
+  min-height: 104px;
   align-items: center;
   gap: 14px;
-  padding: 16px 12px;
+  padding: 18px 12px;
   border: 1px solid #e5eaf2;
   border-radius: 6px;
   background: #ffffff;
+}
+
+.member-activity-item > div {
+  flex: 1;
+  min-width: 0;
 }
 
 .member-activity-icon {
@@ -2609,19 +2614,19 @@ body[data-page="my-info"] .my-info-panel {
 .member-activity-item strong {
   display: block;
   min-width: 0;
-  overflow: hidden;
   color: #06143a;
   font-size: 0.95rem;
   font-weight: 900;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+  white-space: normal;
 }
 
 .member-activity-date {
   font-size: 0.74rem;
-  line-height: 1.2;
+  line-height: 1.35;
   letter-spacing: 0;
-  white-space: nowrap;
+  white-space: normal;
 }
 
 .member-reset-open-btn {
@@ -6352,28 +6357,6 @@ body[data-page="mock"] .choice-btn.selected {
   color: #64748b;
   font-size: 0.9rem;
   line-height: 1.62;
-}
-
-.comment-card.is-loading p {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.comment-card-spinner {
-  width: 15px;
-  height: 15px;
-  flex: 0 0 auto;
-  border: 2px solid #dbeafe;
-  border-top-color: #2563eb;
-  border-radius: 50%;
-  animation: comment-card-spin 0.85s linear infinite;
-}
-
-@keyframes comment-card-spin {
-  to {
-    transform: rotate(360deg);
-  }
 }
 
 .report-bottom {

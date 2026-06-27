@@ -283,5 +283,5 @@ async function gradeMock(useBedrockCommentary = false) {
     savePayload: pendingSavePayload
   });
   completeMockGradingLoading();
-  window.location.href = PAGE_URLS.result;
+  window.location.replace(PAGE_URLS.result);
 }

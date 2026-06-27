@@ -5,6 +5,7 @@ import re
 from collections import defaultdict
 from datetime import datetime, timedelta
 from typing import Any
+from zoneinfo import ZoneInfo
 
 from fastapi import HTTPException
 from psycopg2.extras import RealDictCursor
@@ -3951,7 +3952,7 @@ def get_wrong_items(attempt_id: str) -> dict[str, Any]:
 
 
 def save_wrong_note(attempt_id: str, question_ids: list[str] | None = None) -> dict[str, Any]:
-    saved_at = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    saved_at = datetime.now(ZoneInfo("Asia/Seoul")).strftime("%Y-%m-%d %H:%M:%S")
     with get_conn() as conn:
         with conn.cursor() as cur:
             if question_ids:

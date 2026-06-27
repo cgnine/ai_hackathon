@@ -265,9 +265,6 @@ async function initPage() {
     const pageFileMap = {
       main: "index.html",
       subjects: "index.html",
-      "my-info": "profile.html",
-      "exam-history": "history.html",
-      analysis: "index.html",
       wrong: "wrong.html",
       "wrong-practice": "wrong.html",
       result: "index.html",
@@ -277,8 +274,12 @@ async function initPage() {
       mock: "index.html",
     };
     const targetFile = pageFileMap[pageName];
-    if (!targetFile) return;
-    document.querySelectorAll(".main-nav .nav-btn").forEach((btn) => {
+    const topNavButtons = document.querySelectorAll(".main-nav .nav-btn");
+    topNavButtons.forEach((btn) => {
+      if (!targetFile) {
+        btn.classList.remove("active");
+        return;
+      }
       btn.classList.toggle("active", (btn.getAttribute("href") || "").includes(targetFile));
     });
   })();
