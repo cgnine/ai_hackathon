@@ -226,6 +226,8 @@ async function initPage() {
     await loadSubjectsForPage(page, true);
   }
   if (page === "subjects") {
+    setSubjectLoading(false);
+    window.addEventListener("pageshow", () => setSubjectLoading(false));
     state.subjectId = null;
     saveState();
   } else if (waitForSubjects && (!state.subjectId || !subjects.some((subject) => subject.id === state.subjectId))) {

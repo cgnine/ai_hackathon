@@ -1211,6 +1211,7 @@ function startMock() {
   state.selected = state.mockAnswers[0] || null;
   saveState();
   if (!els.mockSubject) {
+    setSubjectLoading(false);
     showScreen("mock");
     return;
   }
