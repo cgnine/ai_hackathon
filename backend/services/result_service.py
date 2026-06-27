@@ -2078,18 +2078,27 @@ def get_analysis(member_id: str, include_commentary: bool = True) -> dict[str, A
                             ORDER BY correct_rate DESC, answer_count DESC, major_unit, minor_unit
                         ) AS row_no
                     FROM unit_rates
+                    WHERE correct_rate > 0
                 ),
                 weak_units AS (
                     SELECT
-                        subject_code,
-                        major_unit,
-                        minor_unit,
-                        correct_rate,
+                        u.subject_code,
+                        u.major_unit,
+                        u.minor_unit,
+                        u.correct_rate,
                         ROW_NUMBER() OVER (
-                            PARTITION BY subject_code
-                            ORDER BY correct_rate ASC, answer_count DESC, major_unit, minor_unit
+                            PARTITION BY u.subject_code
+                            ORDER BY u.correct_rate ASC, u.answer_count DESC, u.major_unit, u.minor_unit
                         ) AS row_no
-                    FROM unit_rates
+                    FROM unit_rates u
+                    WHERE NOT EXISTS (
+                        SELECT 1
+                        FROM strong_units s
+                        WHERE s.subject_code = u.subject_code
+                          AND s.row_no <= 3
+                          AND s.major_unit IS NOT DISTINCT FROM u.major_unit
+                          AND s.minor_unit IS NOT DISTINCT FROM u.minor_unit
+                    )
                 )
                 SELECT 'strong' AS list_type, subject_code, major_unit, minor_unit, correct_rate, row_no
                 FROM strong_units
